@@ -25,7 +25,7 @@ uk: {
  upg: {atk:['Сила удару','+атака'],hp:['Витривалість','+здоров’я'],def:['Загартування','+захист'],crit:['Холодний розрахунок','+0,5% шанс криту (макс. 25%)']},
  dng: ['Нора щурів','Вовче лігво','Склеп короля','Болотне капище','Вогняна кузня','Крижана печера','Затонулий храм','Зала дзеркал','Серце безодні','Трон попелу'],
  t: {
-  tab_hero:'Герой',tab_bag:'Сумка',tab_forge:'Кузня',tab_dng:'Данжі',tab_train:'Сила',tab_log:'Журнал',
+  sub_eq:'Спорядження',sub_train:'Тренування',sub_log:'Журнал',sub_res:'Ресурси',sub_ench:'Заточка',sub_myth:'Міфік',sub_ast:'Астрал',tab_hero:'Герой',tab_bag:'Сумка',tab_forge:'Кузня',tab_dng:'Данжі',tab_train:'Сила',tab_log:'Журнал',
   hero_name:'Мандрівник',dead:'💀 Ти загинув…',stage:'Етап {n}',power:'Сила {n}',lang:'Мова',
   boss_fight:'⚔️ Бій з босом!',stage_done:'✓ Етап пройдено — фарм',call_boss:'⚔️ Викликати боса',too_hard:'💀 Тут занадто важко',boss_prog:'⚔️ Бос: {k}/{n}',auto_boss:'Авто-бос: {s}',on:'увімк',off:'вимк',
   boss_win:'👑 Бос переможений!',boss_timeout:'⏳ Час вийшов — бос утік',boss_lose:'💀 Бос сильніший. Прокачайся!',
@@ -81,7 +81,7 @@ en: {
  upg: {atk:['Strike Power','+attack'],hp:['Endurance','+health'],def:['Hardening','+defense'],crit:['Cold Calculation','+0.5% crit chance (max 25%)']},
  dng: ['Rat Burrow','Wolf Den','King’s Crypt','Swamp Shrine','Fire Forge','Ice Cave','Sunken Temple','Hall of Mirrors','Heart of the Abyss','Throne of Ashes'],
  t: {
-  tab_hero:'Hero',tab_bag:'Bag',tab_forge:'Forge',tab_dng:'Dungeons',tab_train:'Train',tab_log:'Log',
+  sub_eq:'Gear',sub_train:'Training',sub_log:'Log',sub_res:'Resources',sub_ench:'Enchant',sub_myth:'Mythic',sub_ast:'Astral',tab_hero:'Hero',tab_bag:'Bag',tab_forge:'Forge',tab_dng:'Dungeons',tab_train:'Train',tab_log:'Log',
   hero_name:'Wanderer',dead:'💀 You died…',stage:'Stage {n}',power:'Power {n}',lang:'Language',
   boss_fight:'⚔️ Boss fight!',stage_done:'✓ Stage cleared — farming',call_boss:'⚔️ Summon the boss',too_hard:'💀 Too hard here',boss_prog:'⚔️ Boss: {k}/{n}',auto_boss:'Auto-boss: {s}',on:'on',off:'off',
   boss_win:'👑 Boss defeated!',boss_timeout:'⏳ Time’s up — the boss escaped',boss_lose:'💀 The boss is stronger. Level up!',
@@ -137,7 +137,7 @@ ru: {
  upg: {atk:['Сила удара','+атака'],hp:['Выносливость','+здоровье'],def:['Закалка','+защита'],crit:['Холодный расчёт','+0,5% шанс крита (макс. 25%)']},
  dng: ['Крысиная нора','Волчье логово','Склеп короля','Болотное капище','Огненная кузня','Ледяная пещера','Затонувший храм','Зал зеркал','Сердце бездны','Трон пепла'],
  t: {
-  tab_hero:'Герой',tab_bag:'Сумка',tab_forge:'Кузня',tab_dng:'Данжи',tab_train:'Сила',tab_log:'Журнал',
+  sub_eq:'Снаряжение',sub_train:'Тренировка',sub_log:'Журнал',sub_res:'Ресурсы',sub_ench:'Заточка',sub_myth:'Мифик',sub_ast:'Астрал',tab_hero:'Герой',tab_bag:'Сумка',tab_forge:'Кузня',tab_dng:'Данжи',tab_train:'Сила',tab_log:'Журнал',
   hero_name:'Странник',dead:'💀 Ты погиб…',stage:'Этап {n}',power:'Сила {n}',lang:'Язык',
   boss_fight:'⚔️ Бой с боссом!',stage_done:'✓ Этап пройден — фарм',call_boss:'⚔️ Вызвать босса',too_hard:'💀 Здесь слишком тяжело',boss_prog:'⚔️ Босс: {k}/{n}',auto_boss:'Авто-босс: {s}',on:'вкл',off:'выкл',
   boss_win:'👑 Босс повержен!',boss_timeout:'⏳ Время вышло — босс сбежал',boss_lose:'💀 Босс сильнее. Прокачайся!',

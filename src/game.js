@@ -246,7 +246,7 @@ function renderBag(){
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
 function dismantle(ids){act('dismantle',{ids,mode:G.dismode},r=>toast(disMsg(r.out)))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
-let mSlot=null,mN=3;
+let mSlot=null,mN=3,fsub='res';
 function renderForge(){
  const F=V.forge,legs=s=>G.inv.filter(i=>i.r===4&&i.slot===s);
  if(!mSlot||!legs(mSlot).length)mSlot=SLOTS.find(s=>legs(s).length>=3)||SLOTS.find(s=>legs(s).length)||'weapon';
@@ -255,38 +255,38 @@ function renderForge(){
  const extra=Math.max(0,mN-need),fails=G.mythFails||0,chance=Math.min(F.myth.cap,F.myth.base+F.myth.extra*extra+F.myth.fail*fails);
  const il=LG.length?Math.max(...LG.slice(0,mN).map(i=>i.il)):0,souls=Math.round(150+il*5);
  const ec=F.ench,legAll=G.inv.filter(i=>i.r===4).length,eMax=G.ench>=F.enchMax;
- let h=`<div class="card"><h4>${T('res')}</h4><div class="resg">
+ let h='';if(fsub==='res')h+=`<div class="card"><h4>${T('res')}</h4><div class="resg">
   <div><span>${T('souls')}</span><b>${fmt(G.souls)}</b></div><div><span>${T('ash')}</span><b>${fmt(G.ash)}</b></div>
   <div><span>${T('shards')}</span><b>${fmt(G.shards)}</b></div><div><span>${T('cats')}</span><b>${G.cat}</b></div>
   <div><span>${T('ess')}</span><b>${G.ess||0}</b></div><div><span>${T('mats')}</span><b>${MATN.map((x,i)=>x+':'+fmt((G.mats||[])[i]||0)).join(' ')}</b></div></div>
   <p class="hint">${T('forge_hint',{r:fmt(F.soulsPerHour)})}</p></div>`;
- h+=`<div class="card"><h4>${T('dis_title')}</h4>
+ if(fsub==='res')h+=`<div class="card"><h4>${T('dis_title')}</h4>
   <div class="chips"><button data-dm="shards" class="${G.dismode!=='xp'?'act':''}">${T('to_shards')}</button><button data-dm="xp" class="${G.dismode==='xp'?'act':''}">${T('to_xp')}</button></div>
   <div class="row"><button class="btn pri" id="disJunk" ${F.junk?'':'disabled'}>${T('dis_junk',{n:F.junk})}</button></div>
   <p class="hint">${T('dis_hint')}</p></div>`;
- h+=`<div class="card"><h4>${T('ench_title',{l:G.ench,m:F.enchMax})}</h4>
+ if(fsub==='ench')h+=`<div class="card"><h4>${T('ench_title',{l:G.ench,m:F.enchMax})}</h4>
   <p class="hint">${T('ench_hint',{p:Math.round(F.enchStep*100),c:Math.round(G.ench*F.enchStep*100)})}</p>
   ${eMax?`<p>${T('max_reached')}</p>`:`<p class="hint">${T('ench_cost',{n:legAll})} · 🔩 ${fmt(ec.shards)} · 💰 ${fmt(ec.gold)}</p>
   <div class="row"><button class="btn pri" id="ench" ${legAll&&G.shards>=ec.shards&&G.gold>=ec.gold?'':'disabled'}>${T('ench_btn',{n:G.ench+1})}</button></div>`}</div>`;
- h+=`<div class="card"><h4><span style="color:${RAR[5].c}">◆</span> ${T('myth_title')}</h4>
+ if(fsub==='myth')h+=`<div class="card"><h4><span style="color:${RAR[5].c}">◆</span> ${T('myth_title')}</h4>
   <div class="chips">${SLOTS.map(s=>`<button data-ms="${s}" class="${s===mSlot?'act':''}">${SLOT[s].ic} ${legs(s).length}</button>`).join('')}</div>
   <p class="hint">${T('myth_have',{slot:SLOT[mSlot].n,n:LG.length,need,s:fmt(souls)})}</p>
   <div class="step"><button class="btn" id="mMinus">−</button><b>${T('anvil',{a:Math.min(mN,LG.length),b:need})}</b><button class="btn" id="mPlus">+</button></div>
   <p class="hint">${T('myth_chance',{c:chance,b:F.myth.base,e:F.myth.extra*extra,f:F.myth.fail*fails,m:F.myth.cap,need})}</p>
   <div class="row"><button class="btn pri" id="myth" ${LG.length>=need&&G.cat>=1&&G.souls>=souls?'':'disabled'}>${T('forge_btn',{c:chance})}</button></div></div>`;
  const myths=[...SLOTS.map(s=>G.eq[s]).filter(i=>i&&i.r===5),...G.inv.filter(i=>i.r===5)],A=F.ast;
- h+=`<div class="card"><h4><span style="color:${RAR[6].c}">✦</span> ${T('ast_title')}</h4>
+ if(fsub==='ast')h+=`<div class="card"><h4><span style="color:${RAR[6].c}">✦</span> ${T('ast_title')}</h4>
   <p class="hint">${T('ast_hint',{cat:A.cat,ess:A.ess,c:F.astChance,f:A.fail,m:A.cap})}</p>
   ${myths.length?myths.map(it=>{const so=Math.round(400+it.il*12),ok=G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=so;return `<div class="item" style="border-left-color:${RAR[5].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[5].c}">${itemName(it)}</div><div class="sub">${T('lvl',{n:it.il})} · 🔮${fmt(so)}${SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id)?' · '+T('equipped'):''}</div></div><div class="acts"><button class="btn pri" data-ast="${it.id}" ${ok?'':'disabled'}>✦ ${F.astChance}%</button></div></div>`}).join(''):`<p class="hint">${T('first_myth')}</p>`}</div>`;
  $('p-forge').innerHTML=h;
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
- $('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
+ if($('disJunk'))$('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
  const eb=$('ench');if(eb)eb.onclick=()=>act('enchant',{},r=>{toast(T('ench_done',{n:r.out.ench}));haptic('heavy')});
  $('p-forge').querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mSlot=b.dataset.ms;mN=need;renderForge()});
- $('mMinus').onclick=()=>{mN=Math.max(need,mN-1);renderForge()};
- $('mPlus').onclick=()=>{mN=Math.min(Math.max(need,maxN),mN+1);renderForge()};
+ if($('mMinus'))$('mMinus').onclick=()=>{mN=Math.max(need,mN-1);renderForge()};
+ if($('mPlus'))$('mPlus').onclick=()=>{mN=Math.min(Math.max(need,maxN),mN+1);renderForge()};
  $('p-forge').querySelectorAll('[data-ast]').forEach(b=>b.onclick=()=>act('astral',{id:+b.dataset.ast},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else toast(T('ast_fail',{c:r.out.chance}))}));
- $('myth').onclick=()=>{const ids=LG.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
+ if($('myth'))$('myth').onclick=()=>{const ids=LG.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
 }
 const DNG=[{n:'Нора щурів',bg:1},{n:'Вовче лігво',bg:1},{n:'Склеп короля',bg:2},{n:'Болотне капище',bg:3},{n:'Вогняна кузня',bg:4},{n:'Крижана печера',bg:5},{n:'Затонулий храм',bg:6},{n:'Зала дзеркал',bg:7},{n:'Серце безодні',bg:8},{n:'Трон попелу',bg:8}];
 const MATN=['I','II','III','IV'];
@@ -382,7 +382,7 @@ function setLang(l){
  if(!LANGS.includes(l)||l===LANG)return;LANG=l;try{localStorage.setItem('gt_lang',l)}catch(e){}
  applyLang();Object.keys(dirty).forEach(k=>dirty[k]=1);
  if(B.m&&!B.m.boss){B.m=null;B.resp=0.1}else if(B.m)$('mn').textContent='👑 '+B.m.n;
- renderBoss();paintArena();flush();
+ renderBoss();paintArena();flush();renderSub();
 }
 
 // ---------- старт ----------
@@ -400,10 +400,22 @@ async function start(){
  if(w){try{w.ready();w.expand();w.setHeaderColor&&w.setHeaderColor('#19161d');w.setBackgroundColor&&w.setBackgroundColor('#0e0c10')}catch(e){}}
  if(!w&&!DEV){boot(T('only_tg'));return}
  boot(T('loading'));
- try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();afterSync(r)}
+ try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r)}
  catch(e){boot(errT(e),true)}
 }
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush()});
+// головні вкладки й підвкладки
+const lastSub={hero:'hero'};
+const groupOf=t=>['hero','train','log'].includes(t)?'hero':t;
+function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
+function renderSub(){
+ const g=groupOf(tab),e=$('subtabs');
+ const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
+ if(!items){e.style.display='none';return}
+ const cur=g==='hero'?tab:fsub;e.style.display='flex';
+ e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');
+ e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='hero'){tab=k;lastSub.hero=k}else{fsub=k;dirty.forge=1}showPane()});
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=g==='hero'?lastSub.hero:g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
 $('next').onclick=()=>{if(G.stage<G.maxStage)act('stage',{s:G.stage+1},()=>{B.m=null;B.resp=0.1})};
 $('bossBtn').onclick=()=>{if(G.kills>=WAVES&&!B.rep){
