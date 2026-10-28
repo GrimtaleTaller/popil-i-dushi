@@ -152,7 +152,7 @@ function replayTick(dt){
  }
  if(R.i>=R.res.ev.length&&R.t>=(R.res.ev.length?R.res.ev[R.res.ev.length-1][0]:0)+0.4){
   const res=R.res;B.rep=null;B.boss=false;
-  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔮'+res.souls:'')+(res.cat?' +🧪':'')+(res.ash?' +⚱️'+res.ash:''));B.m=null;B.resp=0.8}
+  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:''));B.m=null;B.resp=0.8}
   else{B.dead=2.5;$('dead').style.display='grid';toast(T(res.timeout?'boss_timeout':'boss_lose'));B.m=null}
   R.after&&R.after();renderBoss();paintArena();
  }
@@ -277,7 +277,7 @@ function renderForge(){
  const myths=[...SLOTS.map(s=>G.eq[s]).filter(i=>i&&i.r===5),...G.inv.filter(i=>i.r===5)],A=F.ast;
  if(fsub==='ast')h+=`<div class="card"><h4><span style="color:${RAR[6].c}">✦</span> ${T('ast_title')}</h4>
   <p class="hint">${T('ast_hint',{cat:A.cat,ess:A.ess,c:F.astChance,f:A.fail,m:A.cap})}</p>
-  ${myths.length?myths.map(it=>{const so=Math.round(400+it.il*12),ok=G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=so;return `<div class="item" style="border-left-color:${RAR[5].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[5].c}">${itemName(it)}</div><div class="sub">${T('lvl',{n:it.il})} · 🔮${fmt(so)}${SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id)?' · '+T('equipped'):''}</div></div><div class="acts"><button class="btn pri" data-ast="${it.id}" ${ok?'':'disabled'}>✦ ${F.astChance}%</button></div></div>`}).join(''):`<p class="hint">${T('first_myth')}</p>`}</div>`;
+  ${myths.length?myths.map(it=>{const so=Math.round(400+it.il*12),ok=G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=so;return `<div class="item" style="border-left-color:${RAR[5].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[5].c}">${itemName(it)}</div><div class="sub">${T('lvl',{n:it.il})} · 🔥${fmt(so)}${SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id)?' · '+T('equipped'):''}</div></div><div class="acts"><button class="btn pri" data-ast="${it.id}" ${ok?'':'disabled'}>✦ ${F.astChance}%</button></div></div>`}).join(''):`<p class="hint">${T('first_myth')}</p>`}</div>`;
  $('p-forge').innerHTML=h;
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
  if($('disJunk'))$('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
@@ -298,7 +298,7 @@ function renderDng(){
   const ec=e==null?'':e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e';
   h+=`<div class="dcard ${T.open?'':'lock'}"><div class="th" style="background-image:url(${IMG('bg'+d.bg)})"><b>${ROMAN[T.t-1]||'I'}</b></div><div class="info">
    <div class="nm">${d.n} <span class="sub">· ${tr('tier',{n:T.t})}</span></div>
-   <div class="rw">🎁×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔮${rw.souls}${rw.catChance?' · 🧪'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
+   <div class="rw">🎁×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
    ${T.open?`<div class="sub">${tr('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span></div>
    <button class="btn pri" data-dng="${T.t}" ${busy||(!T.keys&&G.gold<T.price)?'disabled':''}>${T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.price)})}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
   </div></div>`}
@@ -313,27 +313,35 @@ function dngResult(o){
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
  haptic(o.full?'heavy':'medium');
 }
+function gateTxt(c){return '🔩'+fmt(c.shards)+(c.mat>=0?' · ⛏️'+MATN[c.mat]+'×'+c.matN:'')+(c.cat?' · 💎'+c.cat:'')}
+function gateOk(c){return G.shards>=c.shards&&(c.mat<0||((G.mats||[])[c.mat]||0)>=c.matN)&&G.cat>=c.cat}
 function renderTrain(){
- let h='';for(const u of UPG){const l=G.up[u.k],mx=u.max&&l>=u.max;
-  h+=`<div class="upg"><div class="ic">${u.ic}</div><div class="info"><b>${u.n} · ${T('lvl',{n:l})}</b><span>${u.d}: ${u.k==='crit'?u.val(l).toFixed(1)+'%':fmt(u.val(l))}${mx?'':' → '+(u.k==='crit'?u.val(l+1).toFixed(1)+'%':fmt(u.val(l+1)))}</span></div>
-  <button class="btn pri" data-up="${u.k}" ${mx?'disabled':''}>${mx?T('max'):'💰 '+fmt(u.cost(l))}</button></div>`}
- h+=`<p class="hint">${T('train_hint')}</p>`;
+ const TG=(V.train&&V.train.gate)||{};
+ let h='';for(const u of UPG){const l=G.up[u.k],mx=u.max&&l>=u.max,gc=TG[u.k];
+  const vv=x=>u.k==='crit'?u.val(x).toFixed(1)+'%':fmt(u.val(x));
+  h+=`<div class="upg"><div class="ic">${u.ic}</div><div class="info"><b>${u.n} · ${T('lvl',{n:l})}</b><span>${u.d}: ${vv(l)}${mx?'':' → '+vv(l+1)}</span></div>`;
+  if(mx)h+=`<button class="btn" disabled>${T('max')}</button>`;
+  else if(gc)h+=`<div class="gate"><span>⛰️ ${T('gate')}: ${gateTxt(gc)} · 💰${fmt(u.cost(l))}</span><button class="btn pri" data-up="${u.k}" data-n="1" data-gate="1">${T('gate')}</button></div>`;
+  else h+=`<div class="ubtns"><button class="btn pri" data-up="${u.k}" data-n="1">💰 ${fmt(u.cost(l))}</button><button class="btn" data-up="${u.k}" data-n="10">×10</button><button class="btn" data-up="${u.k}" data-n="0">${T('max_all')}</button></div>`;
+  h+='</div>'}
+ h+=`<p class="hint">${T('train_hint')} ${T('gate_hint')}</p>`;
  $('p-train').innerHTML=h;
- $('p-train').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>act('upgrade',{k:b.dataset.up},()=>haptic('light')));renderTrainBtns();
+ $('p-train').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>act('upgrade',{k:b.dataset.up,n:+b.dataset.n},r=>{haptic(r.out.gate?'heavy':'light');if(r.out.n>1)toast('+'+r.out.n+' · 💰'+fmt(r.out.cost))}));renderTrainBtns();
 }
-function renderTrainBtns(){$('p-train').querySelectorAll('[data-up]').forEach(b=>{const u=UPG.find(x=>x.k===b.dataset.up);const l=G.up[u.k];if(!(u.max&&l>=u.max))b.disabled=busy||G.gold<u.cost(l)})}
+function renderTrainBtns(){const TG=(V.train&&V.train.gate)||{};$('p-train').querySelectorAll('[data-up]').forEach(b=>{const u=UPG.find(x=>x.k===b.dataset.up);const l=G.up[u.k];b.disabled=busy||G.gold<u.cost(l)||(b.dataset.gate&&(!TG[u.k]||!gateOk(TG[u.k])))})}
 const LOGT={
  start:()=>T('log_start'),
  lvl:a=>T('log_lvl',{n:a[0]}),
  loot:a=>`<span style="color:${RAR[a[0]].c}">${SLOT[a[1]].ic} ${RAR[a[0]].n}: ${SLOT[a[1]].names[a[2]]||''}</span>`,
  bagfull:()=>T('log_bagfull'),
- offline:a=>T('log_offline',{h:Math.floor(a[0]/3600),m:Math.floor(a[0]%3600/60),g:fmt(a[1]),i:a[2]})+(a[3]?', +'+a[3]+' 🔮':''),
+ offline:a=>T('log_offline',{h:Math.floor(a[0]/3600),m:Math.floor(a[0]%3600/60),g:fmt(a[1]),i:a[2]})+(a[3]?', +'+a[3]+' 🔥':''),
  boss:a=>T('log_boss',{s:a[0],g:fmt(a[1])}),
  bossDeath:a=>T('log_bossDeath',{s:a[0]}),
  bossTimeout:a=>T('log_bossTimeout',{s:a[0]}),
  daily:a=>T('log_daily',{n:a[0]}),
  dis:a=>T('log_dis',{n:a[0],v:fmt(a[1])+' '+(a[2]==='xp'?'✨':'🔩')}),
  ench:a=>T('log_ench',{n:a[0]}),
+ gate:a=>T('log_gate',{s:(UPG.find(u=>u.k===a[0])||{n:a[0]}).n,n:a[1]}),
  dng:a=>T('log_dng',{d:DNG[a[0]-1].n,r:T(a[1]?'log_dng_ok':'log_dng_fail'),c:a[2]}),
  astral:a=>a[0]?`<span style="color:${RAR[6].c}">${T('log_ast_ok',{s:SLOT[a[1]].n})}</span>`:T('log_ast_fail',{c:a[2]}),
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})

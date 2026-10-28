@@ -68,6 +68,7 @@ function view(G: L.State, now: number) {
   return {
     s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
     forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G) },
+    train: { gateStep: L.GATE_STEP, gate: Object.fromEntries(Object.keys(L.UPG).map((k) => [k, L.gateCost(k, G.up[k as keyof L.State["up"]])])) },
     dng: {
       unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS,
       tiers: Array.from({ length: L.DNG_TIERS }, (_, i) => {
@@ -88,7 +89,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat, ess: G.ess };
     switch (action) {
       case "sync": break;
-      case "upgrade": out = L.actUpgrade(G, String(args.k)); break;
+      case "upgrade": out = L.actUpgrade(G, String(args.k), Number(args.n ?? 1)); break;
       case "equip": out = L.actEquip(G, Number(args.id)); break;
       case "equipBest": out = L.actEquipBest(G); break;
       case "sell": out = L.actSell(G, args.ids as number[]); break;

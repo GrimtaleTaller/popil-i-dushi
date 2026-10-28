@@ -18,7 +18,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 .bar{height:7px;background:#2a2430;border-radius:4px;overflow:hidden;margin-top:3px}
 .bar>i{display:block;height:100%;width:0;transition:width .15s}
 .gold{font-weight:800;color:var(--gold);font-size:15px;white-space:nowrap}
-.cur{text-align:right;line-height:1.15}.souls{font-weight:700;color:#b79cf0;font-size:12px;white-space:nowrap}
+.cur{text-align:right;line-height:1.15}.souls{font-weight:700;color:#ff9a4a;font-size:12px;white-space:nowrap}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
 .card h4{margin:0 0 6px;font-size:14px}.card .hint{margin:4px 0}
 .resg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.resg div{background:var(--panel2);border-radius:8px;padding:6px 8px;font-size:12px;display:flex;justify-content:space-between}
@@ -113,12 +113,14 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 .up{color:var(--green)}.dn{color:var(--red)}
 .item .acts{display:flex;flex-direction:column;gap:5px}
 .item .acts .btn{padding:6px 9px;font-size:12px}
-.upg{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
+.upg{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
 .upg .ic{font-size:28px}
 .upg .info{flex:1}
 .upg .info b{display:block}
 .upg .info span{font-size:12px;color:var(--mut)}
-.upg .btn{min-width:92px}
+.upg>.btn{min-width:92px}
+.ubtns{display:flex;gap:6px;width:100%}.ubtns .btn{flex:1;padding:8px 6px;font-size:12px}.ubtns .btn.pri{flex:1.6}
+.gate{display:flex;gap:8px;align-items:center;width:100%;background:#2a2016;border:1px solid #6b5126;border-radius:9px;padding:6px 8px}.gate span{flex:1;font-size:12px;color:#f0d9a8}.gate .btn{padding:7px 10px;font-size:12px}
 .log div{font-size:12px;padding:5px 0;border-bottom:1px solid #ffffff0d;color:#d4ccdb}
 .empty{color:var(--mut);text-align:center;padding:24px 0}
 .modal{position:fixed;inset:0;background:#000b;display:none;place-items:center;z-index:20;padding:20px}
@@ -146,7 +148,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
     <div class="xpl"><span id="pw">Сила 0</span><span id="xpt">0/0</span></div>
     <div class="bar"><i id="xpb" style="background:linear-gradient(90deg,#7b4fd0,#b07cf0)"></i></div>
   </div>
-  <div class="cur"><div class="gold">💰 <span id="gold">0</span></div><div class="souls">🔮 <span id="souls">0</span></div></div>
+  <div class="cur"><div class="gold">💰 <span id="gold">0</span></div><div class="souls">🔥 <span id="souls">0</span></div></div>
 </div>
 
 <div class="arena" id="arena">
@@ -172,7 +174,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
   <button data-t="hero" class="act">Герой</button>
   <button data-t="bag">Сумка<span class="badge" id="newb" style="display:none">0</span></button>
   <button data-t="forge">Кузня</button>
-  <button data-t="dng">Данжі</button>
+  <button data-t="dng">Підземелля</button>
 </div>
 <div class="subtabs" id="subtabs"></div>
 </div>
@@ -187,7 +189,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="src/i18n.js?v=2"></script>
-<script src="src/game.js?v=6"></script>
+<script src="src/i18n.js?v=3"></script>
+<script src="src/game.js?v=7"></script>
 </body>
 </html>

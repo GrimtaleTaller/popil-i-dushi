@@ -267,13 +267,39 @@ export function fightBoss(G: State): BossResult {
 export class GameError extends Error {}
 const fail = (m: string) => { throw new GameError(m); };
 
-export function actUpgrade(G: State, k: string) {
+// Прорив: кожні 25 рівнів тренування потрібні ресурси (уламки, далі матеріали й самоцвіти)
+export const GATE_STEP = 25;
+export function gateCost(k: string, l: number) {
+  if (l <= 0 || l % GATE_STEP !== 0) return null;
+  const g = l / GATE_STEP;
+  return { shards: 60 * g * g, mat: g >= 2 ? Math.min(3, g - 2) : -1, matN: g >= 2 ? 5 * g : 0, cat: g >= 3 ? g - 2 : 0 };
+}
+function gateOk(G: State, c: NonNullable<ReturnType<typeof gateCost>>) {
+  return G.shards >= c.shards && (c.mat < 0 || (G.mats[c.mat] || 0) >= c.matN) && G.cat >= c.cat;
+}
+// n: 1, 10 або 0 = «на всі гроші». Масове тренування зупиняється перед проривом;
+// прорив проходиться лише окремою дією (n = 1).
+export function actUpgrade(G: State, k: string, n = 1) {
   const u = UPG[k]; if (!u) fail("bad_upgrade");
-  const key = k as keyof State["up"], l = G.up[key];
-  if (u.max && l >= u.max) fail("max");
-  const c = u.cost(l); if (G.gold < c) fail("no_gold");
-  G.gold -= c; G.up[key]++;
-  return { cost: c };
+  const key = k as keyof State["up"];
+  const want = n === 0 ? 10000 : Math.max(1, Math.min(100, Math.floor(Number(n) || 1)));
+  let done = 0, spent = 0, gate: ReturnType<typeof gateCost> = null;
+  while (done < want) {
+    const l = G.up[key];
+    if (u.max && l >= u.max) { if (!done) fail("max"); break; }
+    const gc = gateCost(k, l);
+    if (gc && (done > 0 || want > 1)) { if (!done) fail("gate"); break; }
+    const c = u.cost(l);
+    if (G.gold < c) { if (!done) fail("no_gold"); break; }
+    if (gc) {
+      if (!gateOk(G, gc)) fail("gate_res");
+      G.shards -= gc.shards; if (gc.mat >= 0) G.mats[gc.mat] -= gc.matN; G.cat -= gc.cat; gate = gc;
+    }
+    G.gold -= c; G.up[key]++; spent += c; done++;
+    if (gc) break;
+  }
+  if (gate) log(G, "gate", [k, G.up[key]]);
+  return { n: done, cost: spent, gate };
 }
 export function actEquip(G: State, id: number) {
   const i = G.inv.findIndex((x) => x.id === id); if (i < 0) fail("no_item");
