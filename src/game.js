@@ -159,7 +159,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={hero:1,bag:1,forge:1,dng:1,train:1,log:1};
+const dirty={hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -341,13 +341,55 @@ const LOGT={
  daily:a=>T('log_daily',{n:a[0]}),
  dis:a=>T('log_dis',{n:a[0],v:fmt(a[1])+' '+(a[2]==='xp'?'✨':'🔩')}),
  ench:a=>T('log_ench',{n:a[0]}),
+ arena:a=>T('log_arena',{r:T(a[0]?'pvp_win':'pvp_lose'),n:esc(a[1]),d:(a[2]>=0?'+':'')+a[2]}),
  gate:a=>T('log_gate',{s:(UPG.find(u=>u.k===a[0])||{n:a[0]}).n,n:a[1]}),
  dng:a=>T('log_dng',{d:DNG[a[0]-1].n,r:T(a[1]?'log_dng_ok':'log_dng_fail'),c:a[2]}),
  astral:a=>a[0]?`<span style="color:${RAR[6].c}">${T('log_ast_ok',{s:SLOT[a[1]].n})}</span>`:T('log_ast_fail',{c:a[2]}),
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):`<div class="empty">${T('log_empty')}</div>`)+'</div>'}
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank})[tab]()}}
+
+// ---------- арена й рейтинги ----------
+let arenaInfo=null,arenaLoaded=false,topKind='stage',topBusy=false;const topData={};
+function renderArena(){
+ const A=V.arena,el=$('p-arena');
+ if(!A||G.maxStage<A.stage){el.innerHTML=`<div class="empty">${T('arena_unlock',{n:A?A.stage:10})}</div>`;return}
+ if(!arenaLoaded){arenaLoaded=true;el.innerHTML=`<div class="empty">${T('loading')}</div>`;act('arena',{},r=>{arenaInfo=r.out});return}
+ const dv=arenaInfo?T('div_'+arenaInfo.div)+' · '+T('top_pct',{p:arenaInfo.top}):'';
+ let h=`<div class="card arenah"><div><b>🏆 ${A.rating}</b><span>${dv}</span></div><div><b>⚔️ ${A.left}/${A.daily}</b><span>${T('fights_left')}</span></div><div><b>🎖️ ${A.pts}</b><span>${T('arena_pts')}</span></div></div>
+ <div class="row" style="margin:0 0 8px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('arena_w_l',{w:A.w,l:A.l})}</span><button class="btn" id="aRef">🔄 ${T('refresh')}</button></div>`;
+ A.opps.forEach((o,i)=>{const c=o.power>H.power*1.05?'#e0484e':o.power<H.power*0.95?'#56c271':'#f2c14e';
+  h+=`<div class="item" style="border-left-color:${c}"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(o.name)}</div><div class="sub">${T('lvl',{n:o.lvl})} · 🏆 ${o.rating}</div><div class="st" style="color:${c}">${T('power',{n:fmt(o.power)})}</div></div><div class="acts"><button class="btn pri" data-af="${i}" ${A.left&&!busy?'':'disabled'}>${T('to_fight')}</button></div></div>`});
+ h+=`<div class="card"><h4>🎖️ ${T('arena_shop')}</h4>`+Object.entries(A.shop).map(([k,v])=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('shop_'+k)}</span><button class="btn" data-ab="${k}" ${A.pts>=v.pts?'':'disabled'}>🎖️ ${v.pts}</button></div>`).join('')+'</div>';
+ h+=`<p class="hint">${T('arena_hint',{n:A.daily,w:A.win,l:A.lose})}</p>`;
+ el.innerHTML=h;
+ $('aRef').onclick=()=>act('arenaRefresh',{},r=>{arenaInfo=r.out});
+ el.querySelectorAll('[data-af]').forEach(b=>b.onclick=()=>act('arenaFight',{i:+b.dataset.af},r=>pvpResult(r.out)));
+ el.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>act('arenaShop',{item:b.dataset.ab},()=>{toast('✓ '+T('shop_'+b.dataset.ab));haptic('light')}));
+}
+function pvpResult(o){
+ modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T(o.win?'pvp_win':'pvp_lose')}</h3>
+ <div class="pvp"><div><span>${esc(T('hero_name'))}</span><div class="hpb"><i id="pA" style="width:100%;background:linear-gradient(90deg,#2f9a52,#5fd07c)"></i></div></div><div><span>${esc(o.opp.name)} · ${T('lvl',{n:o.opp.lvl})}</span><div class="hpb"><i id="pD" style="width:100%"></i></div></div></div>
+ <p>🏆 <b>${o.delta>=0?'+':''}${o.delta}</b>${o.rating!=null?' → '+o.rating:''} · 🎖️ +${o.pts}</p>`,T('ok'));
+ let ha=o.hpA,hd=o.hpD;const step=Math.min(110,2600/Math.max(1,o.ev.length));
+ o.ev.forEach((e,i)=>setTimeout(()=>{if(e[1]===0)hd-=e[2];else ha-=e[2];const a=$('pA'),d=$('pD');if(a)a.style.width=Math.max(0,ha/o.hpA*100)+'%';if(d)d.style.width=Math.max(0,hd/o.hpD*100)+'%'},250+i*step));
+ haptic(o.win?'heavy':'medium');
+}
+function renderRank(){
+ const el=$('p-top'),d=topData[topKind],val=r=>topKind==='power'?fmt(r.v):r.v;
+ let h=`<div class="chips">${['stage','power','lvl','rating'].map(k=>`<button data-tk="${k}" class="${k===topKind?'act':''}">${T('top_'+k)}</button>`).join('')}</div>`;
+ if(!d){h+=`<div class="empty">${T('loading')}</div>`;
+  if(!topBusy){topBusy=true;api('top',{kind:topKind}).then(r=>{topData[r.out.kind]=r.out}).catch(e=>toast(errT(e))).finally(()=>{topBusy=false;dirty.top=1})}}
+ else{
+  const row=r=>`<div class="${r.me?'me':''}"><b>${r.place<=3?['🥇','🥈','🥉'][r.place-1]:r.place}</b><span>${esc(r.name)}</span><i>${val(r)}</i></div>`;
+  h+='<div class="rank">'+d.rows.map(row).join('')+'</div>';
+  if(d.me&&!d.rows.some(r=>r.me))h+='<div class="rank" style="margin-top:8px">'+row(d.me)+'</div>';
+  h+=`<p class="hint">${T('top_total',{n:d.total})}</p><div class="row"><button class="btn" id="tRef">🔄 ${T('refresh')}</button></div>`}
+ el.innerHTML=h;
+ el.querySelectorAll('[data-tk]').forEach(b=>b.onclick=()=>{topKind=b.dataset.tk;renderRank()});
+ const tr=$('tRef');if(tr)tr.onclick=()=>{delete topData[topKind];renderRank()};
+}
 
 // дія на сервері: блокує кнопки, показує помилки
 async function act(a,args,ok){
@@ -412,18 +454,18 @@ async function start(){
  catch(e){boot(errT(e),true)}
 }
 // головні вкладки й підвкладки
-const lastSub={hero:'hero'};
-const groupOf=t=>['hero','train','log'].includes(t)?'hero':t;
+const lastSub={hero:'hero',arena:'arena'};
+const groupOf=t=>['hero','train','log'].includes(t)?'hero':t==='top'?'arena':t;
 function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 function renderSub(){
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
+ const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
  if(!items){e.style.display='none';return}
- const cur=g==='hero'?tab:fsub;e.style.display='flex';
+ const cur=g==='forge'?fsub:tab;e.style.display='flex';
  e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');
- e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='hero'){tab=k;lastSub.hero=k}else{fsub=k;dirty.forge=1}showPane()});
+ e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else{tab=k;lastSub[g]=k}showPane()});
 }
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=g==='hero'?lastSub.hero:g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
 $('next').onclick=()=>{if(G.stage<G.maxStage)act('stage',{s:G.stage+1},()=>{B.m=null;B.resp=0.1})};
 $('bossBtn').onclick=()=>{if(G.kills>=WAVES&&!B.rep){

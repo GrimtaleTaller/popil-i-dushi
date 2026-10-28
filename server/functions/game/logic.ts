@@ -80,7 +80,10 @@ export type State = {
   chests: Record<string, number>; // рівень предметів -> кількість скринь
   keys: Record<string, number>;   // тир -> ключі (кланові, з нагород)
   dng: { max: number; runs: number };
+  arena: ArenaState;
 };
+export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
+export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
 
 export function fresh(now: number): State {
   return {
@@ -90,13 +93,14 @@ export function fresh(now: number): State {
     tot: { kills: 0, bosses: 0, deaths: 0 }, log: [{ t: now, k: "start" }],
     souls: 0, ash: 0, shards: 0, cat: 0, soulFrac: 0, ench: 0, mythFails: 0, dismode: "shards",
     mats: [0, 0, 0, 0], ess: 0, astFails: 0, chests: {}, keys: {}, dng: { max: 0, runs: 0 },
+    arena: { day: "", used: 0, pts: 0, rating: 1000, w: 0, l: 0, opps: [] },
   };
 }
 // дописує нові поля до старих збережень
 export function migrate(G: State): State {
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
-  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng"]) if (g[k] === undefined) g[k] = d[k];
+  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena"]) if (g[k] === undefined) g[k] = d[k];
   return G;
 }
 
@@ -547,4 +551,43 @@ export function actAstral(G: State, id: number) {
     G.astFails = 0; log(G, "astral", [1, it!.slot]);
   } else { G.astFails++; log(G, "astral", [0, it!.slot, chance]); }
   return { win, chance, souls };
+}
+
+// ---------- арена ----------
+export const ARENA = { stage: 10, daily: 5, win: 10, lose: 3, time: 30 };
+export const ARENA_SHOP: Record<string, { pts: number }> = { chest: { pts: 60 }, gem: { pts: 150 } };
+const BOT_NAMES = ["Morwen", "Kairos", "Valdis", "Ingrid", "Torvald", "Seraphine", "Bram", "Elric", "Isolde", "Ragnar", "Vesna", "Dorian"];
+export function arenaDay(G: State, now: number) {
+  const d = dayStr(now);
+  if (G.arena.day !== d) { G.arena.day = d; G.arena.used = 0; }
+}
+export const heroSnap = (G: State) => { const H = hero(G); return { atk: Math.round(H.atk), hp: Math.round(H.hp), def: Math.round(H.def), crit: Math.round(H.crit * 10) / 10 }; };
+// суперник-бот: сила близька до гравця, коли живих суперників замало
+export function botOpp(G: State, k: number): ArenaOpp {
+  const H = hero(G), m = rnd(0.82, 1.12);
+  const st = { atk: Math.round(H.atk * m), hp: Math.round(H.hp * m), def: Math.round(H.def * m), crit: Math.round(H.crit * 10) / 10 };
+  return { id: null, name: BOT_NAMES[(G.nid + k * 5 + Math.floor(Math.random() * 12)) % BOT_NAMES.length], lvl: Math.max(1, G.lvl + Math.round(rnd(-3, 3))), power: power(st), rating: Math.max(0, G.arena.rating + Math.round(rnd(-60, 60))), st };
+}
+export type PvpEv = [number, 0 | 1, number, 0 | 1];
+// бій двох героїв: удар кожну секунду (захисник — зі зсувом 0,25 с); за 30 с перемагає той, у кого більше % здоров'я
+export function pvpFight(A: ArenaOpp["st"], D: ArenaOpp["st"]) {
+  // на арені здоров'я ×4, щоб бій тривав ~20 ударів і перший удар не вирішував усе
+  const PH = 4, mA = A.hp * PH, mD = D.hp * PH;
+  let ha = mA, hd = mD, ta = 1, td = 1.25;
+  const ev: PvpEv[] = [];
+  const hit = (x: ArenaOpp["st"], y: ArenaOpp["st"]) => { const cr = Math.random() * 100 < x.crit; return { d: Math.round(Math.max(x.atk * 0.25, x.atk - y.def * 0.6) * rnd(0.9, 1.1) * (cr ? 2 : 1)), cr }; };
+  while (Math.min(ta, td) <= ARENA.time && ha > 0 && hd > 0) {
+    if (ta <= td) { const h = hit(A, D); hd -= h.d; ev.push([r2(ta), 0, h.d, h.cr ? 1 : 0]); ta += 1; }
+    else { const h = hit(D, A); ha -= h.d; ev.push([r2(td), 1, h.d, h.cr ? 1 : 0]); td += 1; }
+  }
+  const win = hd <= 0 ? true : ha <= 0 ? false : ha / mA >= hd / mD;
+  return { win, ev, hpA: mA, hpD: mD };
+}
+export function actArenaShop(G: State, item: string) {
+  const it = ARENA_SHOP[item]; if (!it) fail("bad_item");
+  if (G.arena.pts < it.pts) fail("no_pts");
+  G.arena.pts -= it.pts;
+  if (item === "chest") { const il = String(G.maxStage); G.chests[il] = (G.chests[il] || 0) + 1; }
+  if (item === "gem") G.cat += 1;
+  return { item };
 }
