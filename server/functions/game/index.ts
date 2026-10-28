@@ -23,17 +23,19 @@ async function hmac(key: ArrayBuffer | Uint8Array, msg: string) {
 const hex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
 
 // Перевірка підпису Telegram WebApp initData
+let lastAuthErr = "";
 async function verify(initData: string): Promise<{ user: TgUser; start?: string } | null> {
-  if (!initData || !BOT_TOKEN) return null;
+  lastAuthErr = !initData ? "no_init_data" : !BOT_TOKEN ? "no_token" : "";
+  if (lastAuthErr) return null;
   const p = new URLSearchParams(initData);
-  const hash = p.get("hash"); if (!hash) return null;
+  const hash = p.get("hash"); if (!hash) { lastAuthErr = "no_hash"; return null; }
   p.delete("hash");
-  const dcs = [...p.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}=${v}`).join("\n");
+  const dcs = [...p.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([k, v]) => `${k}=${v}`).join("\n");
   const secret = await hmac(new TextEncoder().encode("WebAppData"), BOT_TOKEN);
   const calc = hex(await hmac(secret, dcs));
-  if (calc !== hash) return null;
+  if (calc !== hash) { lastAuthErr = "bad_hash"; return null; }
   const ad = Number(p.get("auth_date") || 0);
-  if (!ad || Date.now() / 1000 - ad > MAX_AGE) return null;
+  if (!ad || Date.now() / 1000 - ad > MAX_AGE) { lastAuthErr = "expired"; return null; }
   try { return { user: JSON.parse(p.get("user") || "null"), start: p.get("start_param") || undefined }; } catch { return null; }
 }
 
@@ -112,7 +114,7 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ ok: false, err: "bad_json" }, 400); }
   let auth = await verify(body.initData || "");
   if (!auth && DEV_KEY && req.headers.get("x-dev-key") === DEV_KEY && body.dev?.id) auth = { user: body.dev };
-  if (!auth || !auth.user?.id) return json({ ok: false, err: "auth" }, 401);
+  if (!auth || !auth.user?.id) { console.log("auth fail", lastAuthErr); return json({ ok: false, err: "auth", why: lastAuthErr }, 401); }
   try {
     const { data: pl } = await SB.from("players").select("banned").eq("tg_id", auth.user.id).maybeSingle();
     if (pl?.banned) return json({ ok: false, err: "banned" }, 403);
