@@ -67,7 +67,14 @@ function view(G: L.State, now: number) {
   const H = L.hero(G);
   return {
     s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
-    forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length },
+    forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G) },
+    dng: {
+      unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS,
+      tiers: Array.from({ length: L.DNG_TIERS }, (_, i) => {
+        const t = i + 1, open = L.dngOpen(G, t);
+        return { t, open, loc: L.dngLoc(t), stage: L.dngStage(t), price: L.keyPrice(t), keys: G.keys[String(t)] || 0, rw: L.dngRewards(t), est: open ? L.dngEstimate(G, t) : null };
+      }),
+    },
   };
 }
 
@@ -78,7 +85,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     const G = state;
     const prog = L.progress(G, now);
     let out: unknown = null;
-    const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat };
+    const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat, ess: G.ess };
     switch (action) {
       case "sync": break;
       case "upgrade": out = L.actUpgrade(G, String(args.k)); break;
@@ -94,6 +101,9 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "dismantleJunk": out = L.actDismantleJunk(G, String(args.mode)); break;
       case "enchant": out = L.actEnchant(G, args.id as number | undefined); break;
       case "mythic": out = L.actMythic(G, args.ids as number[]); break;
+      case "dungeon": out = L.actDungeon(G, Number(args.t)); break;
+      case "openChests": out = L.actOpenChests(G); break;
+      case "astral": out = L.actAstral(G, Number(args.id)); break;
       default: throw new L.GameError("bad_action");
     }
     const { data, error } = await SB.from("game_state")
@@ -108,9 +118,10 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
         player_id: user.id, reason: isNew ? "new_player" : action,
         delta: {
           gold: Math.round(G.gold - before.gold + prog.gold), souls: G.souls - before.souls + (prog.souls || 0), ash: G.ash - before.ash,
-          shards: G.shards - before.shards, cat: G.cat - before.cat,
+          shards: G.shards - before.shards, cat: G.cat - before.cat, ess: G.ess - before.ess,
           prog: { sec: Math.round(prog.sec), kills: prog.kills, items: prog.items, boss: prog.boss?.win }, stage: G.stage,
-          ...(action === "mythic" || action === "enchant" ? { out } : {}),
+          ...(action === "mythic" || action === "enchant" || action === "astral" ? { out } : {}),
+          ...(action === "dungeon" ? { dng: { t: (out as { t: number }).t, full: (out as { full: boolean }).full } } : {}),
         },
       });
     }

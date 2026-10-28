@@ -25,7 +25,17 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.chips button{padding:6px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:12px}
 .chips button.act{border-color:#e8455a;color:#fff}.chips button:disabled{opacity:.35}
 .step{display:flex;align-items:center;gap:8px;margin:6px 0}.step .btn{padding:4px 12px}
-.tabs button{padding:11px 2px;font-size:13px}
+.tabs button{padding:11px 1px;font-size:12px}
+.dcard{display:flex;gap:10px;align-items:stretch;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;margin-bottom:8px}
+.dcard .th{width:76px;min-height:76px;border-radius:9px;background-size:cover;background-position:center;flex:none;position:relative}
+.dcard .th b{position:absolute;left:4px;top:4px;background:#000b;border-radius:6px;padding:1px 6px;font-size:11px}
+.dcard .info{flex:1;min-width:0}.dcard .nm{font-weight:700}.dcard .sub{font-size:11px;color:var(--mut)}
+.dcard .rw{font-size:12px;margin:3px 0}.dcard .btn{padding:7px 10px;font-size:12px;margin-top:4px}
+.dcard.lock{opacity:.45}.est{font-weight:700}
+.rooms div{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #ffffff10;opacity:0;transition:opacity .25s}
+.rooms div.show{opacity:1}
+.chestbar{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#3a2a14,#22180c);border:1px solid #7a5a26;border-radius:12px;padding:9px 10px;margin-bottom:10px}
+.chestbar span{flex:1;font-weight:700}
 .arena{position:relative;height:300px;overflow:hidden;border-bottom:1px solid var(--line);background-size:cover;background-position:center 75%}
 .arena::after{content:'';position:absolute;inset:0;background:linear-gradient(#000a,#0003 30%,#0003 70%,#0008);pointer-events:none}
 .ahead{position:absolute;top:8px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:10px;z-index:2}
@@ -157,19 +167,21 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
   <button data-t="hero" class="act">Герой</button>
   <button data-t="bag">Сумка<span class="badge" id="newb" style="display:none">0</span></button>
   <button data-t="forge">Кузня</button>
-  <button data-t="train">Тренування</button>
+  <button data-t="dng">Данжі</button>
+  <button data-t="train">Сила</button>
   <button data-t="log">Журнал</button>
 </div>
 
 <div class="pane act" id="p-hero"></div>
 <div class="pane" id="p-bag"></div>
 <div class="pane" id="p-forge"></div>
+<div class="pane" id="p-dng"></div>
 <div class="pane" id="p-train"></div>
 <div class="pane" id="p-log"></div>
 
 <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="src/game.js?v=3"></script>
+<script src="src/game.js?v=4"></script>
 </body>
 </html>

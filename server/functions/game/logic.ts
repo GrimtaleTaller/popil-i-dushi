@@ -20,6 +20,7 @@ export const RAR = [
   { m: 3.2, w: 3 },
   { m: 5, w: 0.5 },
   { m: 7.5, w: 0 }, // міфічний — лише крафт
+  { m: 11, w: 0 }, // астральний — лише крафт з міфічного
 ];
 export const DROP_RAR = 5; // скільки рідкостей може випасти
 export const UPG: Record<string, { val: (l: number) => number; cost: (l: number) => number; max?: number }> = {
@@ -40,7 +41,7 @@ export const ENCH_STEP = 0.08, ENCH_MAX = 25;
 export const MYTH = { base: 30, extra: 10, fail: 5, cap: 80, need: 3 };
 // Душі: лише за рівень і час гри, донат на них не впливає
 export const soulsPerHour = (G: State) => (10 + 2 * G.lvl) * (1 + 0.06 * mythicCount(G));
-export const mythicCount = (G: State) => SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 5).length;
+export const mythicCount = (G: State) => SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 5).length + SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 6).length;
 export const catChance = (s: number) => (s % 10 === 0 ? 1 : 0.2); // каталізатор з боса; регіональний бос — завжди
 export const disXp = (it: Item) => Math.round(mobXp(it.il) * 3 * RAR[it.r].m);
 export const disShards = (it: Item) => Math.round((it.r + 1) * (it.r + 1) * (1 + it.il / 10));
@@ -74,6 +75,11 @@ export type State = {
   souls: number; ash: number; shards: number; cat: number;
   soulFrac: number;
   ench: number; mythFails: number; dismode: "xp" | "shards";
+  // данжі
+  mats: number[]; ess: number; astFails: number;
+  chests: Record<string, number>; // рівень предметів -> кількість скринь
+  keys: Record<string, number>;   // тир -> ключі (кланові, з нагород)
+  dng: { max: number; runs: number };
 };
 
 export function fresh(now: number): State {
@@ -83,13 +89,14 @@ export function fresh(now: number): State {
     eq: {}, inv: [], nid: 1, tick: now, daily: { date: "", streak: 0 },
     tot: { kills: 0, bosses: 0, deaths: 0 }, log: [{ t: now, k: "start" }],
     souls: 0, ash: 0, shards: 0, cat: 0, soulFrac: 0, ench: 0, mythFails: 0, dismode: "shards",
+    mats: [0, 0, 0, 0], ess: 0, astFails: 0, chests: {}, keys: {}, dng: { max: 0, runs: 0 },
   };
 }
 // дописує нові поля до старих збережень
 export function migrate(G: State): State {
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
-  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode"]) if (g[k] === undefined) g[k] = d[k];
+  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng"]) if (g[k] === undefined) g[k] = d[k];
   return G;
 }
 
@@ -394,4 +401,124 @@ export function actMythic(G: State, ids: number[]) {
     log(G, "myth", [0, slot, chance]);
   }
   return { win, chance, item, burned: burn.length, souls };
+}
+
+// ---------- данжі ----------
+export const DNG_TIERS = 10, DNG_ROOMS = 5, DNG_TIME = 75;
+export const DNG_UNLOCK_STAGE = 5;
+export const dngStage = (t: number) => 5 + 7 * (t - 1);           // сила ворогів як на етапі
+export const keyPrice = (t: number) => Math.round(mobGold(dngStage(t)) * 60);
+export const dngLoc = (t: number) => (t - 1) % REGIONS;           // фон/локація
+export function dngOpen(G: State, t: number) {
+  if (t < 1 || t > DNG_TIERS) return false;
+  if (G.maxStage < DNG_UNLOCK_STAGE) return false;
+  return t <= (G.dng?.max || 0) + 1;
+}
+export function dngRewards(t: number) {
+  return {
+    chests: 1 + t, chestIl: dngStage(t), mat: Math.min(3, Math.floor((t - 1) / 2.5)), matN: 3 + t,
+    souls: 2 * t, catChance: t >= 8 ? 1 : t >= 4 ? 0.5 : 0, essChance: t >= 8 ? 0.15 : 0,
+  };
+}
+type Foe = { hp: number; atk: number; boss: boolean };
+export type DngRoom = { boss: boolean; win: boolean; hpLeft: number };
+// бій з кімнатами поспіль: здоров'я героя не відновлюється між кімнатами (лише +10%)
+export function simDungeon(G: State, t: number) {
+  const s = dngStage(t), H = hero(G);
+  const foes: Foe[] = [];
+  for (let i = 0; i < DNG_ROOMS; i++) foes.push({ hp: mobHp(s) * 3, atk: mobAtk(s) * 1.2, boss: false });
+  foes.push({ hp: mobHp(s) * 12, atk: mobAtk(s) * 1.5, boss: true });
+  let hp = H.hp, total = 0; // загальний час забігу, с
+  const rooms: DngRoom[] = [];
+  for (const f of foes) {
+    let fh = f.hp, ht = 0, mt = 0.6, t = 0, win = false;
+    while (total + t < DNG_TIME) {
+      const nh = ht + 1, nm = mt + 1.4;
+      if (nh <= nm) {
+        ht = nh; t = nh;
+        const cr = Math.random() * 100 < H.crit;
+        fh -= H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1);
+        if (fh <= 0) { win = true; break; }
+        hp = Math.min(H.hp, hp + H.hp * 0.02);
+      } else {
+        mt = nm; t = nm;
+        hp -= Math.max(f.atk * 0.2, f.atk - H.def) * rnd(0.9, 1.1);
+        if (hp <= 0) break;
+      }
+    }
+    total += t;
+    rooms.push({ boss: f.boss, win, hpLeft: Math.max(0, Math.round(hp / H.hp * 100)) });
+    if (!win) break;
+    hp = Math.min(H.hp, hp + H.hp * 0.1);
+  }
+  return rooms;
+}
+export function dngEstimate(G: State, t: number, n = 24) {
+  let w = 0;
+  for (let i = 0; i < n; i++) { const r = simDungeon(G, t); if (r.length === DNG_ROOMS + 1 && r[DNG_ROOMS].win) w++; }
+  return Math.round(w / n * 100);
+}
+export function actDungeon(G: State, t: number) {
+  t = Math.floor(Number(t));
+  if (!dngOpen(G, t)) fail("dng_locked");
+  const key = String(t);
+  let paid = 0, usedKey = false;
+  if ((G.keys[key] || 0) > 0) { G.keys[key]--; usedKey = true; }
+  else { paid = keyPrice(t); if (G.gold < paid) fail("no_gold"); G.gold -= paid; }
+  const rooms = simDungeon(G, t);
+  const cleared = rooms.filter((r) => r.win && !r.boss).length;
+  const full = rooms.length === DNG_ROOMS + 1 && rooms[DNG_ROOMS].win;
+  const R = dngRewards(t);
+  // скрині й матеріали — пропорційно пройденим кімнатам; бос дає решту
+  const chests = full ? R.chests : Math.floor(R.chests * cleared / (DNG_ROOMS + 1));
+  const matN = full ? R.matN : Math.floor(R.matN * cleared / (DNG_ROOMS + 1));
+  const gain = { chests, chestIl: R.chestIl, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0 };
+  if (chests) G.chests[String(R.chestIl)] = (G.chests[String(R.chestIl)] || 0) + chests;
+  if (matN) G.mats[R.mat] += matN;
+  if (full) {
+    gain.souls = R.souls; G.souls += R.souls;
+    if (Math.random() < R.catChance) { gain.cat = 1; G.cat++; }
+    if (Math.random() < R.essChance) { gain.ess = 1; G.ess++; }
+    if (t > G.dng.max) G.dng.max = t;
+  }
+  G.dng.runs++;
+  log(G, "dng", [t, full ? 1 : 0, chests]);
+  return { t, rooms, full, paid, usedKey, gain };
+}
+export function actOpenChests(G: State, max = INV_MAX) {
+  const free = Math.max(0, INV_MAX - G.inv.length);
+  if (!free) fail("bag_full");
+  let n = 0; const got: Item[] = [];
+  for (const il of Object.keys(G.chests).sort((a, b) => Number(b) - Number(a))) {
+    while (G.chests[il] > 0 && n < free && n < max) {
+      G.chests[il]--; const it = makeItem(G, Number(il), 1); G.inv.unshift(it); got.push(it); n++;
+      if (it.r >= 3) log(G, "loot", [it.r, it.slot, it.nm, it.il]);
+    }
+    if (!G.chests[il]) delete G.chests[il];
+  }
+  if (!n) fail("no_chests");
+  return { n, best: Math.max(...got.map((i) => i.r)) };
+}
+// ---------- астрал ----------
+export const AST = { base: 30, fail: 5, cap: 80, cat: 2, ess: 1 };
+export const astSouls = (il: number) => Math.round(400 + il * 12);
+export const astChance = (G: State) => Math.min(AST.cap, AST.base + AST.fail * (G.astFails || 0));
+export function actAstral(G: State, id: number) {
+  const it = G.inv.find((i) => i.id === Number(id)) || SLOTS.map((s) => G.eq[s]).find((i) => i && i.id === Number(id));
+  if (!it) fail("no_item");
+  if (it!.r !== 5) fail("not_mythic");
+  const souls = astSouls(it!.il);
+  if (G.cat < AST.cat) fail("no_catalyst");
+  if (G.ess < AST.ess) fail("no_essence");
+  if (G.souls < souls) fail("no_souls");
+  const chance = astChance(G);
+  G.cat -= AST.cat; G.ess -= AST.ess; G.souls -= souls;
+  const win = Math.random() * 100 < chance;
+  if (win) {
+    const nw = buildItem(G, it!.il, 6, it!.slot);
+    nw.id = it!.id; delete nw.nw; G.nid--; // той самий предмет стає астральним
+    it!.r = 6; it!.st = nw.st;
+    G.astFails = 0; log(G, "astral", [1, it!.slot]);
+  } else { G.astFails++; log(G, "astral", [0, it!.slot, chance]); }
+  return { win, chance, souls };
 }

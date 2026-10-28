@@ -35,7 +35,7 @@ const SLOT={
  ring:{n:'Перстень',ic:'💍',names:['Мідний перстень','Перстень крові','Перстень вовка','Печатка мертвих']},
  amulet:{n:'Амулет',ic:'📿',names:['Амулет з ікла','Оберіг відьми','Око безодні','Серце попелу']}
 };
-const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:7.5}];
+const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:7.5},{n:'Астральний',c:'#3fd0d4',m:11}];
 const STATN={atk:'Атака',hp:'Здоров’я',def:'Захист',crit:'Крит'};
 const UPG=[
  {k:'atk',n:'Сила удару',ic:'⚔️',d:'+атака',val:l=>3*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l)},
@@ -69,7 +69,7 @@ function apply(v){
  V=v;G=v.s;H=v.hero;pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();
 }
-const ERR={no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
+const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
 const errT=e=>ERR[e.message]||('Помилка: '+e.message);
 
 // ---------- бій (лише анімація) ----------
@@ -149,7 +149,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={hero:1,bag:1,forge:1,train:1,log:1};
+const dirty={hero:1,bag:1,forge:1,dng:1,train:1,log:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -193,7 +193,7 @@ function invite(){
  try{navigator.clipboard.writeText(link);toast('Посилання скопійовано')}catch(e){toast(link)}
 }
 function renderHero(){
- let h='<div class="slots">';
+ let h='<div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">Одягнути найкраще</button><button class="btn" id="invBtn">👥 Запросити друга</button></div><div class="slots">';
  for(const s of SLOTS){const it=G.eq[s];
   h+=`<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
    (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sn">ур. ${it.il}</div>`:'<div class="sn" style="margin-top:6px">порожньо</div>')+'</div>'}
@@ -203,13 +203,14 @@ function renderHero(){
   <div><span>Макс. етап</span><b>${G.maxStage}</b></div><div><span>Вбито</span><b>${fmt(G.tot.kills)}</b></div>
   <div><span>Босів</span><b>${G.tot.bosses}</b></div><div><span>Смертей</span><b>${G.tot.deaths}</b></div>
   <div><span>Заточка</span><b>+${Math.round((G.ench||0)*V.forge.enchStep*100)}%</b></div><div><span>Душі/год</span><b>${fmt(V.forge.soulsPerHour)}</b></div></div>
-  <div class="row"><button class="btn pri" id="bestBtn">Одягнути найкраще</button><button class="btn" id="invBtn">👥 Запросити друга</button></div>
   <p class="hint">Герой б’ється сам, навіть коли гра закрита (до 8 годин, офлайн удвічі повільніше). Пройди 10 ворогів на етапі — і виклич боса, щоб відкрити наступний.</p>`;
  $('p-hero').innerHTML=h;$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?'Одягнуто предметів: '+r.out.n:'Усе найкраще вже на тобі'));
 }
 let bagFilter='all';
+function chestCount(){return Object.values(G.chests||{}).reduce((a,b)=>a+b,0)}
 function renderBag(){
- let h=`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?'Усе':SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
+ const cc=chestCount();
+ let h=(cc?`<div class="chestbar">🎁<span>Скрині: ${cc}</span><button class="btn pri" id="openC">Відкрити</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?'Усе':SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
  <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="sellC">Продати звичайні</button><button class="btn" id="sellW">Продати гірші</button><button class="btn ${G.autoSell?'pri':''}" id="autoS">Авто-продаж звич.: ${G.autoSell?'так':'ні'}</button></div>
  <div class="hint">${G.inv.length}/${INV_MAX} предметів</div>`;
  const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
@@ -220,6 +221,7 @@ function renderBag(){
    <div class="st">${statLine(it.st,eq?eq.st:{})}</div></div>
    <div class="acts"><button class="btn pri" data-eq="${it.id}">Одягти</button><button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>${it.r<4?`<button class="btn" data-dis="${it.id}">⚒️ ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
+ if(cc)$('openC').onclick=()=>act('openChests',{},r=>{toast('🎁 Відкрито: '+r.out.n+(r.out.best>=3?' · '+RAR[r.out.best].n+'!':''));if(r.out.best>=3)haptic('heavy')});
  if(G.inv.some(i=>i.nw)){G.inv.forEach(i=>delete i.nw);api('seen').catch(()=>{})}
  $('p-bag').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{bagFilter=b.dataset.f;renderBag()});
  $('p-bag').querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>act('equip',{id:+b.dataset.eq},()=>haptic('light')));
@@ -243,7 +245,8 @@ function renderForge(){
  const ec=F.ench,legAll=G.inv.filter(i=>i.r===4).length,eMax=G.ench>=F.enchMax;
  let h=`<div class="card"><h4>Ресурси</h4><div class="resg">
   <div><span>🔮 Душі</span><b>${fmt(G.souls)}</b></div><div><span>⚱️ Попіл</span><b>${fmt(G.ash)}</b></div>
-  <div><span>🔩 Уламки</span><b>${fmt(G.shards)}</b></div><div><span>🧪 Каталізатори</span><b>${G.cat}</b></div></div>
+  <div><span>🔩 Уламки</span><b>${fmt(G.shards)}</b></div><div><span>🧪 Каталізатори</span><b>${G.cat}</b></div>
+  <div><span>✦ Ес. астралу</span><b>${G.ess||0}</b></div><div><span>⛏️ Матеріали</span><b>${MATN.map((x,i)=>x+':'+fmt((G.mats||[])[i]||0)).join(' ')}</b></div></div>
   <p class="hint">Душі накопичуються самі: ${fmt(F.soulsPerHour)}/год (росте з рівнем і за кожен надітий міфік +6%). Каталізатори падають з босів, Попіл — за першу перемогу над босом регіону.</p></div>`;
  h+=`<div class="card"><h4>⚒️ Розбирання</h4>
   <div class="chips"><button data-dm="shards" class="${G.dismode!=='xp'?'act':''}">🔩 На уламки</button><button data-dm="xp" class="${G.dismode==='xp'?'act':''}">✨ На досвід</button></div>
@@ -259,7 +262,10 @@ function renderForge(){
   <div class="step"><button class="btn" id="mMinus">−</button><b>На ковадлі ${Math.min(mN,L.length)}/${need}</b><button class="btn" id="mPlus">+</button></div>
   <p class="hint">Шанс <b style="color:#fff">${chance}%</b> = база ${F.myth.base}% · лишні +${F.myth.extra*extra}% · невдачі +${F.myth.fail*fails}% (макс. ${F.myth.cap}%). При невдачі згорають лише лишні, основні ${need} лишаються.</p>
   <div class="row"><button class="btn pri" id="myth" ${L.length>=need&&G.cat>=1&&G.souls>=souls?'':'disabled'}>Кувати · ${chance}%</button></div></div>`;
- h+=`<div class="card" style="opacity:.6"><h4>🌌 Астрал</h4><p class="hint">Відкриється разом із данжами та світовим босом: міфік + 2 каталізатори + Астральна есенція.</p></div>`;
+ const myths=[...SLOTS.map(s=>G.eq[s]).filter(i=>i&&i.r===5),...G.inv.filter(i=>i.r===5)],A=F.ast;
+ h+=`<div class="card"><h4><span style="color:${RAR[6].c}">✦</span> Астрал</h4>
+  <p class="hint">Міфічний предмет стає астральним (×1,5 до характеристик). Ціна: 🧪${A.cat} + ✦${A.ess} + Душі. Шанс <b style="color:#fff">${F.astChance}%</b> (+${A.fail}% за кожну невдачу, макс. ${A.cap}%). При невдачі предмет лишається.</p>
+  ${myths.length?myths.map(it=>{const so=Math.round(400+it.il*12),ok=G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=so;return `<div class="item" style="border-left-color:${RAR[5].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[5].c}">${itemName(it)}</div><div class="sub">ур. ${it.il} · 🔮${fmt(so)}${SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id)?' · надіто':''}</div></div><div class="acts"><button class="btn pri" data-ast="${it.id}" ${ok?'':'disabled'}>✦ ${F.astChance}%</button></div></div>`}).join(''):'<p class="hint">Спершу скуй міфічний предмет.</p>'}</div>`;
  $('p-forge').innerHTML=h;
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
  $('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
@@ -267,7 +273,33 @@ function renderForge(){
  $('p-forge').querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mSlot=b.dataset.ms;mN=need;renderForge()});
  $('mMinus').onclick=()=>{mN=Math.max(need,mN-1);renderForge()};
  $('mPlus').onclick=()=>{mN=Math.min(Math.max(need,maxN),mN+1);renderForge()};
+ $('p-forge').querySelectorAll('[data-ast]').forEach(b=>b.onclick=()=>act('astral',{id:+b.dataset.ast},r=>{if(r.out.win){toast('✦ Предмет став астральним!');haptic('heavy')}else toast('Не вдалося ('+r.out.chance+'%). Предмет цілий')}));
  $('myth').onclick=()=>{const ids=L.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast('◆ Міфік скувався!');haptic('heavy')}else toast('Не вдалося ('+o.chance+'%). Наступна спроба +5%')})};
+}
+const DNG=[{n:'Нора щурів',bg:1},{n:'Вовче лігво',bg:1},{n:'Склеп короля',bg:2},{n:'Болотне капище',bg:3},{n:'Вогняна кузня',bg:4},{n:'Крижана печера',bg:5},{n:'Затонулий храм',bg:6},{n:'Зала дзеркал',bg:7},{n:'Серце безодні',bg:8},{n:'Трон попелу',bg:8}];
+const MATN=['I','II','III','IV'];
+function renderDng(){
+ const D=V.dng;
+ let h=`<p class="hint" style="margin-top:0">Данж — ${D.rooms} кімнат з елітними ворогами і бос. Здоров’я між кімнатами майже не відновлюється. Нагороди: скрині зі спорядженням, матеріали, Душі, каталізатори, а з глибоких — Астральна есенція. Вхід — ключ (купується за золото при вході).</p>`;
+ if(G.maxStage<D.unlockStage)h+=`<div class="empty">Данжі відкриються на етапі ${D.unlockStage}</div>`;
+ for(const T of D.tiers){const d=DNG[T.t-1],rw=T.rw,e=T.est;
+  const ec=e==null?'':e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e';
+  h+=`<div class="dcard ${T.open?'':'lock'}"><div class="th" style="background-image:url(${IMG('bg'+d.bg)})"><b>${ROMAN[T.t-1]||'I'}</b></div><div class="info">
+   <div class="nm">${d.n} <span class="sub">· тир ${T.t}</span></div>
+   <div class="rw">🎁×${rw.chests} (ур. ${rw.chestIl}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔮${rw.souls}${rw.catChance?' · 🧪'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
+   ${T.open?`<div class="sub">Шанс пройти: <span class="est" style="color:${ec}">~${e}%</span></div>
+   <button class="btn pri" data-dng="${T.t}" ${busy||(!T.keys&&G.gold<T.price)?'disabled':''}>${T.keys?'🗝️ Увійти (ключів: '+T.keys+')':'Увійти · 💰'+fmt(T.price)}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?'Етап '+D.unlockStage:'Спершу пройди тир '+(T.t-1)}</div>`}
+  </div></div>`}
+ $('p-dng').innerHTML=h;
+ $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dng},r=>dngResult(r.out)));
+}
+function dngResult(o){
+ const d=DNG[o.t-1],g=o.gain;
+ const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?'👑 Бос':'Кімната '+(i+1)}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
+ const rw=[g.chests?`🎁 Скринь: <b>${g.chests}</b>`:'',g.matN?`⛏️ Матеріал ${MATN[g.mat]}: <b>${g.matN}</b>`:'',g.souls?`🔮 Душі: <b>+${g.souls}</b>`:'',g.cat?'🧪 Каталізатор: <b>+1</b>':'',g.ess?`<span style="color:${RAR[6].c}">✦ Астральна есенція: <b>+1</b></span>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${o.full?'пройдено!':'поразка'}</h3><div class="rooms">${rows}</div>${rw||'<p class="hint">Нагород немає — стань сильнішим і спробуй знову.</p>'}${g.chests?'<p class="hint">Скрині відкриваються в Сумці.</p>':''}`,'Добре');
+ document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
+ haptic(o.full?'heavy':'medium');
 }
 function renderTrain(){
  let h='';for(const u of UPG){const l=G.up[u.k],mx=u.max&&l>=u.max;
@@ -290,10 +322,12 @@ const LOGT={
  daily:a=>'🎁 Щоденна нагорода, день '+a[0],
  dis:a=>`⚒️ Розібрано ${a[0]} предм.: +${fmt(a[1])} ${a[2]==='xp'?'✨':'🔩'}`,
  ench:a=>'✨ Заточка спорядження: ур. '+a[0],
+ dng:a=>`🏰 Данж «${DNG[a[0]-1].n}»: ${a[1]?'пройдено':'не пройдено'}, скринь: ${a[2]}`,
+ astral:a=>a[0]?`<span style="color:${RAR[6].c}">✦ Предмет став астральним: ${SLOT[a[1]].n}</span>`:`💥 Астрал не вдався (${a[2]}%)`,
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">◆ Скувано міфічний предмет: ${SLOT[a[1]].n}</span>`:`💥 Крафт міфіка не вдався (${a[2]}%)`
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):'<div class="empty">Подій ще немає</div>')+'</div>'}
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({hero:renderHero,bag:renderBag,forge:renderForge,train:renderTrain,log:renderLog})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog})[tab]()}}
 
 // дія на сервері: блокує кнопки, показує помилки
 async function act(a,args,ok){
