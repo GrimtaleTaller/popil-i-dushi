@@ -73,9 +73,12 @@ function view(G: L.State, now: number) {
       pts: G.arena.pts, rating: G.arena.rating, w: G.arena.w, l: G.arena.l, win: L.ARENA.win, lose: L.ARENA.lose, shop: L.ARENA_SHOP,
       opps: G.arena.opps.map((o) => ({ name: o.name, lvl: o.lvl, power: o.power, rating: o.rating })),
     },
+    xp: { need: L.xpNeed(G.lvl), mob: L.mobXp(G.stage) },
+    payout: { lvl: L.PAYOUT.lvl, days: L.PAYOUT.days, myDays: G.act.days, ok: G.lvl >= L.PAYOUT.lvl && G.act.days >= L.PAYOUT.days },
+    smelt: L.SMELT,
     train: { gateStep: L.GATE_STEP, gate: Object.fromEntries(Object.keys(L.UPG).map((k) => [k, L.gateCost(k, G.up[k as keyof L.State["up"]])])) },
     dng: {
-      unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS,
+      unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS, daily: L.DNG_DAILY, left: L.dngLeft(G, now),
       tiers: Array.from({ length: L.DNG_TIERS }, (_, i) => {
         const t = i + 1, open = L.dngOpen(G, t);
         return { t, open, loc: L.dngLoc(t), stage: L.dngStage(t), price: L.keyPrice(t), keys: G.keys[String(t)] || 0, rw: L.dngRewards(t), est: open ? L.dngEstimate(G, t) : null };
@@ -147,7 +150,8 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "dismantleJunk": out = L.actDismantleJunk(G, String(args.mode)); break;
       case "enchant": out = L.actEnchant(G, args.id as number | undefined); break;
       case "mythic": out = L.actMythic(G, args.ids as number[]); break;
-      case "dungeon": out = L.actDungeon(G, Number(args.t)); break;
+      case "dungeon": out = L.actDungeon(G, Number(args.t), now); break;
+      case "smelt": out = L.actSmelt(G, Number(args.n ?? 1)); break;
       case "openChests": out = L.actOpenChests(G); break;
       case "astral": out = L.actAstral(G, Number(args.id)); break;
       case "arena": case "arenaRefresh": {

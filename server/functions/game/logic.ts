@@ -54,8 +54,10 @@ export function mythChance(G: State, n: number) {
 export const mobHp = (s: number) => 25 * Math.pow(1.25, s - 1);
 export const mobAtk = (s: number) => 4 * Math.pow(1.19, s - 1);
 export const mobGold = (s: number) => 4 * Math.pow(1.17, s - 1);
-export const mobXp = (s: number) => 6 * Math.pow(1.14, s - 1);
-export const xpNeed = (l: number) => Math.floor(25 * Math.pow(1.2, l - 1));
+// крива досвіду: параметри винесено, щоб їх можна було підбирати симуляцією
+export const XPC = { mob: 1.07, need: 1.27, base: 25 }; // симуляція 28.10: 50 рівень за ~9–16 днів
+export const mobXp = (s: number) => 6 * Math.pow(XPC.mob, s - 1);
+export const xpNeed = (l: number) => Math.floor(XPC.base * Math.pow(XPC.need, l - 1));
 export const gearScale = (il: number) => Math.pow(1.16, il - 1);
 
 export type Item = { id: number; slot: Slot; r: number; il: number; nm: number; st: Stats; nw?: number };
@@ -81,6 +83,8 @@ export type State = {
   keys: Record<string, number>;   // тир -> ключі (кланові, з нагород)
   dng: { max: number; runs: number };
   arena: ArenaState;
+  act: { last: string; days: number };       // дні активності (допуск до виводу)
+  dngDay: { day: string; used: number };     // безкоштовні заходи в підземелля сьогодні
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
 export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
@@ -94,13 +98,14 @@ export function fresh(now: number): State {
     souls: 0, ash: 0, shards: 0, cat: 0, soulFrac: 0, ench: 0, mythFails: 0, dismode: "shards",
     mats: [0, 0, 0, 0], ess: 0, astFails: 0, chests: {}, keys: {}, dng: { max: 0, runs: 0 },
     arena: { day: "", used: 0, pts: 0, rating: 1000, w: 0, l: 0, opps: [] },
+    act: { last: "", days: 0 }, dngDay: { day: "", used: 0 },
   };
 }
 // дописує нові поля до старих збережень
 export function migrate(G: State): State {
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
-  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena"]) if (g[k] === undefined) g[k] = d[k];
+  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay"]) if (g[k] === undefined) g[k] = d[k];
   return G;
 }
 
@@ -188,6 +193,8 @@ export type Progress = { sec: number; offline: boolean; stage: number; kills: nu
 export function progress(G: State, now: number): Progress {
   const sec = Math.max(0, Math.min(OFFLINE_MAX, (now - G.tick) / 1000));
   G.tick = now;
+  const today = new Date(now).toISOString().slice(0, 10);
+  if (G.act.last !== today) { G.act.last = today; G.act.days++; }
   const offline = sec > ONLINE_WINDOW;
   const res: Progress = { sec, offline, stage: G.stage, kills: 0, gold: 0, xp: 0, items: 0, lvlUps: 0, souls: 0 };
   if (sec < 0.5) return res;
@@ -278,8 +285,13 @@ export function gateCost(k: string, l: number) {
   const g = l / GATE_STEP;
   return { shards: 60 * g * g, mat: g >= 2 ? Math.min(3, g - 2) : -1, matN: g >= 2 ? 5 * g : 0, cat: g >= 3 ? g - 2 : 0 };
 }
+// матеріал для прориву: потрібного тиру або будь-якого вищого
+export const matsFrom = (G: State, t: number) => G.mats.slice(t).reduce((a, b) => a + (b || 0), 0);
 function gateOk(G: State, c: NonNullable<ReturnType<typeof gateCost>>) {
-  return G.shards >= c.shards && (c.mat < 0 || (G.mats[c.mat] || 0) >= c.matN) && G.cat >= c.cat;
+  return G.shards >= c.shards && (c.mat < 0 || matsFrom(G, c.mat) >= c.matN) && G.cat >= c.cat;
+}
+function takeMats(G: State, t: number, n: number) {
+  for (let i = t; i < G.mats.length && n > 0; i++) { const k = Math.min(n, G.mats[i] || 0); G.mats[i] -= k; n -= k; }
 }
 // n: 1, 10 або 0 = «на всі гроші». Масове тренування зупиняється перед проривом;
 // прорив проходиться лише окремою дією (n = 1).
@@ -297,7 +309,7 @@ export function actUpgrade(G: State, k: string, n = 1) {
     if (G.gold < c) { if (!done) fail("no_gold"); break; }
     if (gc) {
       if (!gateOk(G, gc)) fail("gate_res");
-      G.shards -= gc.shards; if (gc.mat >= 0) G.mats[gc.mat] -= gc.matN; G.cat -= gc.cat; gate = gc;
+      G.shards -= gc.shards; if (gc.mat >= 0) takeMats(G, gc.mat, gc.matN); G.cat -= gc.cat; gate = gc;
     }
     G.gold -= c; G.up[key]++; spent += c; done++;
     if (gc) break;
@@ -436,6 +448,8 @@ export function actMythic(G: State, ids: number[]) {
 // ---------- данжі ----------
 export const DNG_TIERS = 10, DNG_ROOMS = 5, DNG_TIME = 75;
 export const DNG_UNLOCK_STAGE = 5;
+export const DNG_DAILY = 5; // безкоштовні заходи на день; далі — лише за ключі
+export function dngLeft(G: State, now: number) { return G.dngDay.day === dayStr(now) ? Math.max(0, DNG_DAILY - G.dngDay.used) : DNG_DAILY; }
 export const dngStage = (t: number) => 5 + 7 * (t - 1);           // сила ворогів як на етапі
 export const keyPrice = (t: number) => Math.round(mobGold(dngStage(t)) * 60);
 export const dngLoc = (t: number) => (t - 1) % REGIONS;           // фон/локація
@@ -488,13 +502,16 @@ export function dngEstimate(G: State, t: number, n = 24) {
   for (let i = 0; i < n; i++) { const r = simDungeon(G, t); if (r.length === DNG_ROOMS + 1 && r[DNG_ROOMS].win) w++; }
   return Math.round(w / n * 100);
 }
-export function actDungeon(G: State, t: number) {
+export function actDungeon(G: State, t: number, now = Date.now()) {
   t = Math.floor(Number(t));
   if (!dngOpen(G, t)) fail("dng_locked");
   const key = String(t);
-  let paid = 0, usedKey = false;
-  if ((G.keys[key] || 0) > 0) { G.keys[key]--; usedKey = true; }
-  else { paid = keyPrice(t); if (G.gold < paid) fail("no_gold"); G.gold -= paid; }
+  const paid = 0; let usedKey = false;
+  if (dngLeft(G, now) > 0) {
+    const d = dayStr(now); if (G.dngDay.day !== d) G.dngDay = { day: d, used: 0 };
+    G.dngDay.used++;
+  } else if ((G.keys[key] || 0) > 0) { G.keys[key]--; usedKey = true; }
+  else fail("dng_limit");
   const rooms = simDungeon(G, t);
   const cleared = rooms.filter((r) => r.win && !r.boss).length;
   const full = rooms.length === DNG_ROOMS + 1 && rooms[DNG_ROOMS].win;
@@ -591,3 +608,13 @@ export function actArenaShop(G: State, item: string) {
   if (item === "gem") G.cat += 1;
   return { item };
 }
+
+// ---------- переплавка: уламки → скриня рівня макс. етапу ----------
+export const SMELT = 400;
+export function actSmelt(G: State, n = 1) {
+  n = Math.max(1, Math.min(20, Math.floor(Number(n) || 1)));
+  n = Math.min(n, Math.floor(G.shards / SMELT)); if (!n) fail("no_shards");
+  G.shards -= SMELT * n; const il = String(G.maxStage); G.chests[il] = (G.chests[il] || 0) + n;
+  return { n };
+}
+export const PAYOUT = { lvl: 30, days: 14 }; // допуск до виводу: рівень і стаж (дні активності)

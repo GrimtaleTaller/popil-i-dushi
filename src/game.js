@@ -54,8 +54,8 @@ const UPG=[
  {k:'crit',n:'Холодний розрахунок',ic:'🎯',d:'+0,5% шанс криту (макс. 25%)',val:l=>0.5*Math.min(l,50),cost:l=>40*Math.pow(1.22,l),max:50}
 ];
 const WAVES=10,BOSS_TIME=30,INV_MAX=40;
-const mobHp=s=>25*Math.pow(1.25,s-1),mobAtk=s=>4*Math.pow(1.19,s-1),mobGold=s=>4*Math.pow(1.17,s-1),mobXp=s=>6*Math.pow(1.14,s-1);
-const xpNeed=l=>Math.floor(25*Math.pow(1.2,l-1));
+const mobHp=s=>25*Math.pow(1.25,s-1),mobAtk=s=>4*Math.pow(1.19,s-1),mobGold=s=>4*Math.pow(1.17,s-1),mobXp=s=>V&&V.xp?V.xp.mob:6*Math.pow(1.07,s-1);
+const xpNeed=l=>V&&V.xp?V.xp.need:Math.floor(25*Math.pow(1.27,l-1)); // точні значення дає сервер
 function region(s){const i=Math.floor((s-1)/10);return{r:REGIONS[i%REGIONS.length],tier:Math.floor(i/REGIONS.length)}}
 const itemName=it=>SLOT[it.slot].names[Math.min(it.nm,SLOT[it.slot].names.length-1)];
 const sellPrice=it=>Math.max(1,Math.round(mobGold(it.il)*2*Math.pow(RAR[it.r].m,1.5)));
@@ -212,7 +212,8 @@ function renderHero(){
   <div><span>${STATN.def}</span><b>${fmt(H.def)}</b></div><div><span>${T('crit_chance')}</span><b>${H.crit.toFixed(1)}%</b></div>
   <div><span>${T('max_stage')}</span><b>${G.maxStage}</b></div><div><span>${T('kills')}</span><b>${fmt(G.tot.kills)}</b></div>
   <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
-  <div><span>${T('ench')}</span><b>+${Math.round((G.ench||0)*V.forge.enchStep*100)}%</b></div><div><span>${T('souls_h')}</span><b>${fmt(V.forge.soulsPerHour)}</b></div></div>
+  <div><span>${T('ench')}</span><b>+${Math.round((G.ench||0)*V.forge.enchStep*100)}%</b></div><div><span>${T('souls_h')}</span><b>${fmt(V.forge.soulsPerHour)}</b></div>
+  <div><span>${T('act_days')}</span><b>${V.payout?V.payout.myDays:'—'}</b></div></div>
   <p class="hint">${T('hero_hint')}</p>
   <div class="card"><h4>🌐 ${T('lang')}</h4><div class="chips">${LANGS.map(l=>`<button data-lang="${l}" class="${l===LANG?'act':''}">${{uk:'Українська',en:'English',ru:'Русский'}[l]}</button>`).join('')}</div></div>`;
  $('p-hero').innerHTML=h;$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best')));
@@ -263,6 +264,7 @@ function renderForge(){
  if(fsub==='res')h+=`<div class="card"><h4>${T('dis_title')}</h4>
   <div class="chips"><button data-dm="shards" class="${G.dismode!=='xp'?'act':''}">${T('to_shards')}</button><button data-dm="xp" class="${G.dismode==='xp'?'act':''}">${T('to_xp')}</button></div>
   <div class="row"><button class="btn pri" id="disJunk" ${F.junk?'':'disabled'}>${T('dis_junk',{n:F.junk})}</button></div>
+  <div class="row"><button class="btn" id="smelt" ${G.shards>=(V.smelt||400)?'':'disabled'}>${T('smelt_btn',{s:V.smelt||400})}</button><button class="btn" id="smeltAll" ${G.shards>=(V.smelt||400)*2?'':'disabled'}>${T('smelt_all',{n:Math.min(20,Math.floor(G.shards/(V.smelt||400)))})}</button></div>
   <p class="hint">${T('dis_hint')}</p></div>`;
  if(fsub==='ench')h+=`<div class="card"><h4>${T('ench_title',{l:G.ench,m:F.enchMax})}</h4>
   <p class="hint">${T('ench_hint',{p:Math.round(F.enchStep*100),c:Math.round(G.ench*F.enchStep*100)})}</p>
@@ -280,6 +282,7 @@ function renderForge(){
   ${myths.length?myths.map(it=>{const so=Math.round(400+it.il*12),ok=G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=so;return `<div class="item" style="border-left-color:${RAR[5].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[5].c}">${itemName(it)}</div><div class="sub">${T('lvl',{n:it.il})} · 🔥${fmt(so)}${SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id)?' · '+T('equipped'):''}</div></div><div class="acts"><button class="btn pri" data-ast="${it.id}" ${ok?'':'disabled'}>✦ ${F.astChance}%</button></div></div>`}).join(''):`<p class="hint">${T('first_myth')}</p>`}</div>`;
  $('p-forge').innerHTML=h;
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
+ if($('smelt')){$('smelt').onclick=()=>act('smelt',{n:1},r=>toast(T('smelted',{n:r.out.n})));$('smeltAll').onclick=()=>act('smelt',{n:20},r=>toast(T('smelted',{n:r.out.n})))}
  if($('disJunk'))$('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
  const eb=$('ench');if(eb)eb.onclick=()=>act('enchant',{},r=>{toast(T('ench_done',{n:r.out.ench}));haptic('heavy')});
  $('p-forge').querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mSlot=b.dataset.ms;mN=need;renderForge()});
@@ -292,7 +295,8 @@ const DNG=[{n:'Нора щурів',bg:1},{n:'Вовче лігво',bg:1},{n:'�
 const MATN=['I','II','III','IV'];
 function renderDng(){
  const D=V.dng,tr=T;
- let h=`<p class="hint" style="margin-top:0">${T('dng_hint',{r:D.rooms})}</p>`;
+ const left=D.left!=null?D.left:5,daily=D.daily||5;
+ let h=`<p class="hint" style="margin-top:0">${T('dng_hint',{r:D.rooms,d:daily})}</p><div class="chestbar" style="background:var(--panel);border-color:var(--line)">🏰<span>${T('dng_left',{n:left,m:daily})}</span></div>`;
  if(G.maxStage<D.unlockStage)h+=`<div class="empty">${T('dng_unlock',{n:D.unlockStage})}</div>`;
  for(const T of D.tiers){const d=DNG[T.t-1],rw=T.rw,e=T.est;
   const ec=e==null?'':e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e';
@@ -300,7 +304,7 @@ function renderDng(){
    <div class="nm">${d.n} <span class="sub">· ${tr('tier',{n:T.t})}</span></div>
    <div class="rw">🎁×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
    ${T.open?`<div class="sub">${tr('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span></div>
-   <button class="btn pri" data-dng="${T.t}" ${busy||(!T.keys&&G.gold<T.price)?'disabled':''}>${T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.price)})}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
+   <button class="btn pri" data-dng="${T.t}" ${busy||(!left&&!T.keys)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('no_entries')}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
   </div></div>`}
  $('p-dng').innerHTML=h;
  $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dng},r=>dngResult(r.out)));
