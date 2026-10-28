@@ -19,7 +19,9 @@ export const RAR = [
   { m: 2.2, w: 9.5 },
   { m: 3.2, w: 3 },
   { m: 5, w: 0.5 },
+  { m: 7.5, w: 0 }, // міфічний — лише крафт
 ];
+export const DROP_RAR = 5; // скільки рідкостей може випасти
 export const UPG: Record<string, { val: (l: number) => number; cost: (l: number) => number; max?: number }> = {
   atk: { val: (l) => 3 * l * Math.pow(1.06, l), cost: (l) => 15 * Math.pow(1.15, l) },
   hp: { val: (l) => 15 * l * Math.pow(1.06, l), cost: (l) => 15 * Math.pow(1.15, l) },
@@ -34,6 +36,19 @@ export const OFFLINE_RATE = 0.5; // офлайн герой фармить уд�
 export const INV_MAX = 40;
 export const DROP = 0.12;
 export const REGIONS = 8;
+export const ENCH_STEP = 0.08, ENCH_MAX = 25;
+export const MYTH = { base: 30, extra: 10, fail: 5, cap: 80, need: 3 };
+// Душі: лише за рівень і час гри, донат на них не впливає
+export const soulsPerHour = (G: State) => (10 + 2 * G.lvl) * (1 + 0.06 * mythicCount(G));
+export const mythicCount = (G: State) => SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 5).length;
+export const catChance = (s: number) => (s % 10 === 0 ? 1 : 0.2); // каталізатор з боса; регіональний бос — завжди
+export const disXp = (it: Item) => Math.round(mobXp(it.il) * 3 * RAR[it.r].m);
+export const disShards = (it: Item) => Math.round((it.r + 1) * (it.r + 1) * (1 + it.il / 10));
+export const enchCost = (G: State) => ({ shards: 40 * (G.ench + 1), gold: Math.round(mobGold(G.maxStage) * 40 * (G.ench + 1)), legendary: 1 });
+export const mythSouls = (il: number) => Math.round(150 + il * 5);
+export function mythChance(G: State, n: number) {
+  return Math.min(MYTH.cap, MYTH.base + MYTH.extra * Math.max(0, n - MYTH.need) + MYTH.fail * (G.mythFails || 0));
+}
 
 export const mobHp = (s: number) => 25 * Math.pow(1.25, s - 1);
 export const mobAtk = (s: number) => 4 * Math.pow(1.19, s - 1);
@@ -55,6 +70,10 @@ export type State = {
   daily: { date: string; streak: number };
   tot: { kills: number; bosses: number; deaths: number };
   log: LogE[];
+  // валюти й ресурси
+  souls: number; ash: number; shards: number; cat: number;
+  soulFrac: number;
+  ench: number; mythFails: number; dismode: "xp" | "shards";
 };
 
 export function fresh(now: number): State {
@@ -63,7 +82,15 @@ export function fresh(now: number): State {
     autoBoss: false, autoSell: false, up: { atk: 0, hp: 0, def: 0, crit: 0 },
     eq: {}, inv: [], nid: 1, tick: now, daily: { date: "", streak: 0 },
     tot: { kills: 0, bosses: 0, deaths: 0 }, log: [{ t: now, k: "start" }],
+    souls: 0, ash: 0, shards: 0, cat: 0, soulFrac: 0, ench: 0, mythFails: 0, dismode: "shards",
   };
+}
+// дописує нові поля до старих збережень
+export function migrate(G: State): State {
+  const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
+  const g = G as unknown as Record<string, unknown>;
+  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode"]) if (g[k] === undefined) g[k] = d[k];
+  return G;
 }
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -75,9 +102,10 @@ export function hero(G: State) {
   let h = 60 + UPG.hp.val(G.up.hp) + 10 * (G.lvl - 1);
   let d = UPG.def.val(G.up.def);
   let c = 5 + UPG.crit.val(G.up.crit);
+  const em = 1 + ENCH_STEP * (G.ench || 0);
   for (const s of SLOTS) {
     const it = G.eq[s];
-    if (it) { a += it.st.atk || 0; h += it.st.hp || 0; d += it.st.def || 0; c += it.st.crit || 0; }
+    if (it) { a += (it.st.atk || 0) * em; h += (it.st.hp || 0) * em; d += (it.st.def || 0) * em; c += it.st.crit || 0; }
   }
   return { atk: a, hp: h, def: d, crit: Math.min(60, c) };
 }
@@ -94,10 +122,13 @@ function log(G: State, k: string, a?: (string | number)[]) {
 
 export function makeItem(G: State, ilvl: number, minR: number): Item {
   let r = minR;
-  const tot = RAR.reduce((s, x, i) => s + (i >= minR ? x.w : 0), 0);
+  const tot = RAR.reduce((s, x, i) => s + (i >= minR && i < DROP_RAR ? x.w : 0), 0);
   let roll = Math.random() * tot;
-  for (let i = minR; i < RAR.length; i++) { roll -= RAR[i].w; r = i; if (roll <= 0) break; }
-  const slot = pick(SLOTS), def = SLOT[slot], sc = gearScale(ilvl) * RAR[r].m * rnd(0.9, 1.1), st: Stats = {};
+  for (let i = minR; i < DROP_RAR; i++) { roll -= RAR[i].w; r = i; if (roll <= 0) break; }
+  return buildItem(G, ilvl, r, pick(SLOTS));
+}
+export function buildItem(G: State, ilvl: number, r: number, slot: Slot): Item {
+  const def = SLOT[slot], sc = gearScale(ilvl) * RAR[r].m * rnd(0.9, 1.1), st: Stats = {};
   for (const k in def.st) {
     const key = k as keyof Stats, base = def.st[key]!;
     st[key] = key === "crit" ? Math.round(base * RAR[r].m * 10) / 10 : Math.max(1, Math.round(base * sc));
@@ -140,16 +171,18 @@ export function killTime(G: State, s: number) {
   return Math.ceil(mobHp(s) / (H.atk * (1 + H.crit / 100))) + 0.45;
 }
 
-export type Progress = { sec: number; offline: boolean; stage: number; kills: number; gold: number; xp: number; items: number; lvlUps: number; boss?: BossResult };
+export type Progress = { sec: number; offline: boolean; stage: number; kills: number; gold: number; xp: number; items: number; lvlUps: number; souls?: number; boss?: BossResult };
 
 // Нараховує прогрес за час, що минув з G.tick.
 export function progress(G: State, now: number): Progress {
   const sec = Math.max(0, Math.min(OFFLINE_MAX, (now - G.tick) / 1000));
   G.tick = now;
   const offline = sec > ONLINE_WINDOW;
-  const res: Progress = { sec, offline, stage: G.stage, kills: 0, gold: 0, xp: 0, items: 0, lvlUps: 0 };
+  const res: Progress = { sec, offline, stage: G.stage, kills: 0, gold: 0, xp: 0, items: 0, lvlUps: 0, souls: 0 };
   if (sec < 0.5) return res;
   const eff = Math.min(sec, ONLINE_WINDOW) + Math.max(0, sec - ONLINE_WINDOW) * OFFLINE_RATE;
+  const sf = eff / 3600 * soulsPerHour(G) + (G.soulFrac || 0);
+  const souls = Math.floor(sf); G.soulFrac = sf - souls; G.souls += souls; res.souls = souls;
   // офлайн герой сам відступає на етап, який тягне
   if (offline) { while (G.stage > 1 && !canFarm(G, G.stage)) G.stage--; res.stage = G.stage; }
   if (!canFarm(G, G.stage)) { G.frac = 0; return res; }
@@ -169,14 +202,14 @@ export function progress(G: State, now: number): Progress {
   drops = Math.floor(exp) + (Math.random() < exp - Math.floor(exp) ? 1 : 0);
   if (offline) drops = Math.min(15, drops);
   for (let i = 0; i < drops; i++) { res.gold += addItem(G, makeItem(G, s, 0), false); res.items++; }
-  if (offline && sec >= 60) log(G, "offline", [Math.round(sec), Math.round(res.gold), res.items]);
+  if (offline && sec >= 60) log(G, "offline", [Math.round(sec), Math.round(res.gold), res.items, res.souls || 0]);
   // авто-бос
   if (G.autoBoss && G.kills >= WAVES && G.stage === G.maxStage) res.boss = fightBoss(G);
   return res;
 }
 
 export type BossEv = [number, 0 | 1, number, 0 | 1]; // [час, хто б'є: 0 герой / 1 бос, шкода, крит]
-export type BossResult = { win: boolean; ev: BossEv[]; hp: number; bossHp: number; gold: number; xp: number; item?: Item; stage: number; timeout?: boolean };
+export type BossResult = { win: boolean; ev: BossEv[]; hp: number; bossHp: number; gold: number; xp: number; item?: Item; stage: number; timeout?: boolean; souls?: number; cat?: number; ash?: number };
 
 export function fightBoss(G: State): BossResult {
   const s = G.stage, H = hero(G);
@@ -209,6 +242,10 @@ export function fightBoss(G: State): BossResult {
     res.gold = mobGold(s) * 8; res.xp = mobXp(s) * 6;
     G.gold += res.gold; gainXp(G, res.xp); G.tot.kills++; G.tot.bosses++;
     const it = makeItem(G, s, 1); res.item = it; res.gold += addItem(G, it, true);
+    const first = s === G.maxStage;
+    if (first) { res.souls = 5 + s; G.souls += res.souls; }
+    if (Math.random() < catChance(s)) { res.cat = 1; G.cat += 1; }
+    if (first && s % 10 === 0) { res.ash = 10; G.ash += 10; } // перший прохід регіонального боса
     log(G, "boss", [s, Math.round(res.gold)]);
     G.stage++; if (G.stage > G.maxStage) G.maxStage = G.stage;
     G.kills = 0; G.frac = 0;
@@ -285,4 +322,76 @@ export function actDaily(G: State, now: number) {
   if (d!.epic) { item = makeItem(G, G.maxStage, 3); addItem(G, item, true); }
   log(G, "daily", [d!.streak]);
   return { ...d!, item };
+}
+
+// ---------- кузня ----------
+function takeItems(G: State, ids: number[]) {
+  const set = new Set(ids.map(Number));
+  const got = G.inv.filter((i) => set.has(i.id));
+  if (got.length !== set.size) fail("no_item");
+  G.inv = G.inv.filter((i) => !set.has(i.id));
+  return got;
+}
+function disOne(G: State, it: Item, mode: "xp" | "shards") {
+  if (mode === "xp") { const x = disXp(it); gainXp(G, x); return { xp: x, shards: 0 }; }
+  const sh = disShards(it); G.shards += sh; return { xp: 0, shards: sh };
+}
+export function actDismantle(G: State, ids: number[], mode: string) {
+  if (!Array.isArray(ids) || !ids.length || ids.length > INV_MAX) fail("bad_ids");
+  const m = mode === "xp" ? "xp" : "shards"; G.dismode = m;
+  let xp = 0, shards = 0;
+  for (const it of takeItems(G, ids)) { const r = disOne(G, it, m); xp += r.xp; shards += r.shards; }
+  if (shards || xp) log(G, "dis", [ids.length, m === "xp" ? xp : shards, m]);
+  return { n: ids.length, xp, shards };
+}
+// предмети, які гра вважає непотрібними: гірші за надіте, не легендарні й не міфічні
+export function junkIds(G: State) {
+  return G.inv.filter((i) => i.r < 4 && G.eq[i.slot] && itemScore(G, i) <= itemScore(G, G.eq[i.slot]!)).map((i) => i.id);
+}
+export function actDismantleJunk(G: State, mode: string) {
+  const ids = junkIds(G); if (!ids.length) fail("no_junk");
+  return actDismantle(G, ids, mode);
+}
+export function actEnchant(G: State, id?: number) {
+  if (G.ench >= ENCH_MAX) fail("max");
+  const c = enchCost(G);
+  if (G.shards < c.shards) fail("no_shards");
+  if (G.gold < c.gold) fail("no_gold");
+  // легендарка: вказана або найслабша в сумці
+  let leg = id ? G.inv.find((i) => i.id === Number(id) && i.r === 4) : undefined;
+  if (!leg) leg = G.inv.filter((i) => i.r === 4).sort((a, b) => itemScore(G, a) - itemScore(G, b))[0];
+  if (!leg) fail("no_legendary");
+  takeItems(G, [leg!.id]);
+  G.shards -= c.shards; G.gold -= c.gold; G.ench++;
+  log(G, "ench", [G.ench]);
+  return { ench: G.ench, cost: c };
+}
+export function actMythic(G: State, ids: number[]) {
+  if (!Array.isArray(ids) || ids.length < MYTH.need || ids.length > 12) fail("bad_ids");
+  const set = new Set(ids.map(Number));
+  const items = G.inv.filter((i) => set.has(i.id));
+  if (items.length !== set.size) fail("no_item");
+  if (items.some((i) => i.r !== 4)) fail("not_legendary");
+  const slot = items[0].slot;
+  if (items.some((i) => i.slot !== slot)) fail("mixed_slots");
+  const il = Math.max(...items.map((i) => i.il));
+  const souls = mythSouls(il);
+  if (G.cat < 1) fail("no_catalyst");
+  if (G.souls < souls) fail("no_souls");
+  const chance = mythChance(G, items.length);
+  G.cat -= 1; G.souls -= souls;
+  const win = Math.random() * 100 < chance;
+  // основні три (найкращі) лишаються при невдачі, згорають лише додаткові
+  const sorted = [...items].sort((a, b) => itemScore(G, b) - itemScore(G, a));
+  const burn = win ? items : sorted.slice(MYTH.need);
+  takeItems(G, burn.map((i) => i.id));
+  let item: Item | undefined;
+  if (win) {
+    item = buildItem(G, il, 5, slot); G.inv.unshift(item); G.mythFails = 0;
+    log(G, "myth", [1, slot, il]);
+  } else {
+    G.mythFails++;
+    log(G, "myth", [0, slot, chance]);
+  }
+  return { win, chance, item, burned: burn.length, souls };
 }

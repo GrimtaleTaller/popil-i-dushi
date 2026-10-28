@@ -45,7 +45,7 @@ async function loadOrCreate(u: TgUser, start: string | undefined, now: number) {
   const prof = { username: u.username ?? null, first_name: u.first_name ?? null, lang: u.language_code ?? null, is_premium: !!u.is_premium, last_seen: new Date(now).toISOString() };
   if (row) {
     await SB.from("players").update(prof).eq("tg_id", u.id);
-    return { version: row.version as number, state: row.state as L.State, isNew: false };
+    return { version: row.version as number, state: L.migrate(row.state as L.State), isNew: false };
   }
   // новий гравець; реферал з start_param виду ref_<tg_id>
   let ref: number | null = null;
@@ -65,7 +65,10 @@ async function loadOrCreate(u: TgUser, start: string | undefined, now: number) {
 
 function view(G: L.State, now: number) {
   const H = L.hero(G);
-  return { s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now };
+  return {
+    s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
+    forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length },
+  };
 }
 
 async function handle(user: TgUser, start: string | undefined, action: string, args: Record<string, unknown>) {
@@ -75,7 +78,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     const G = state;
     const prog = L.progress(G, now);
     let out: unknown = null;
-    const goldBefore = G.gold;
+    const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat };
     switch (action) {
       case "sync": break;
       case "upgrade": out = L.actUpgrade(G, String(args.k)); break;
@@ -87,6 +90,10 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "settings": out = L.actSettings(G, args as { autoBoss?: boolean; autoSell?: boolean }); break;
       case "seen": out = L.actSeen(G); break;
       case "daily": out = L.actDaily(G, now); break;
+      case "dismantle": out = L.actDismantle(G, args.ids as number[], String(args.mode)); break;
+      case "dismantleJunk": out = L.actDismantleJunk(G, String(args.mode)); break;
+      case "enchant": out = L.actEnchant(G, args.id as number | undefined); break;
+      case "mythic": out = L.actMythic(G, args.ids as number[]); break;
       default: throw new L.GameError("bad_action");
     }
     const { data, error } = await SB.from("game_state")
@@ -99,7 +106,12 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     if (notable) {
       await SB.from("ledger").insert({
         player_id: user.id, reason: isNew ? "new_player" : action,
-        delta: { gold: Math.round(G.gold - goldBefore + prog.gold), prog: { sec: Math.round(prog.sec), kills: prog.kills, items: prog.items, boss: prog.boss?.win }, stage: G.stage },
+        delta: {
+          gold: Math.round(G.gold - before.gold + prog.gold), souls: G.souls - before.souls + (prog.souls || 0), ash: G.ash - before.ash,
+          shards: G.shards - before.shards, cat: G.cat - before.cat,
+          prog: { sec: Math.round(prog.sec), kills: prog.kills, items: prog.items, boss: prog.boss?.win }, stage: G.stage,
+          ...(action === "mythic" || action === "enchant" ? { out } : {}),
+        },
       });
     }
     return { ok: true, isNew, prog, out, view: view(G, now) };

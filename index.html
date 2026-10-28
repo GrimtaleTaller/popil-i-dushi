@@ -17,7 +17,15 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 .xpl{font-size:11px;color:var(--mut);display:flex;justify-content:space-between}
 .bar{height:7px;background:#2a2430;border-radius:4px;overflow:hidden;margin-top:3px}
 .bar>i{display:block;height:100%;width:0;transition:width .15s}
-.gold{font-weight:800;color:var(--gold);font-size:16px;white-space:nowrap}
+.gold{font-weight:800;color:var(--gold);font-size:15px;white-space:nowrap}
+.cur{text-align:right;line-height:1.15}.souls{font-weight:700;color:#b79cf0;font-size:12px;white-space:nowrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
+.card h4{margin:0 0 6px;font-size:14px}.card .hint{margin:4px 0}
+.resg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.resg div{background:var(--panel2);border-radius:8px;padding:6px 8px;font-size:12px;display:flex;justify-content:space-between}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.chips button{padding:6px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:12px}
+.chips button.act{border-color:#e8455a;color:#fff}.chips button:disabled{opacity:.35}
+.step{display:flex;align-items:center;gap:8px;margin:6px 0}.step .btn{padding:4px 12px}
+.tabs button{padding:11px 2px;font-size:13px}
 .arena{position:relative;height:300px;overflow:hidden;border-bottom:1px solid var(--line);background-size:cover;background-position:center 75%}
 .arena::after{content:'';position:absolute;inset:0;background:linear-gradient(#000a,#0003 30%,#0003 70%,#0008);pointer-events:none}
 .ahead{position:absolute;top:8px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:10px;z-index:2}
@@ -124,7 +132,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
     <div class="xpl"><span id="pw">Сила 0</span><span id="xpt">0/0</span></div>
     <div class="bar"><i id="xpb" style="background:linear-gradient(90deg,#7b4fd0,#b07cf0)"></i></div>
   </div>
-  <div class="gold">💰 <span id="gold">0</span></div>
+  <div class="cur"><div class="gold">💰 <span id="gold">0</span></div><div class="souls">🔮 <span id="souls">0</span></div></div>
 </div>
 
 <div class="arena" id="arena">
@@ -148,18 +156,20 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 <div class="tabs">
   <button data-t="hero" class="act">Герой</button>
   <button data-t="bag">Сумка<span class="badge" id="newb" style="display:none">0</span></button>
+  <button data-t="forge">Кузня</button>
   <button data-t="train">Тренування</button>
   <button data-t="log">Журнал</button>
 </div>
 
 <div class="pane act" id="p-hero"></div>
 <div class="pane" id="p-bag"></div>
+<div class="pane" id="p-forge"></div>
 <div class="pane" id="p-train"></div>
 <div class="pane" id="p-log"></div>
 
 <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="src/game.js?v=1"></script>
+<script src="src/game.js?v=3"></script>
 </body>
 </html>
