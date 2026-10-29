@@ -84,7 +84,7 @@ export type State = {
   ench: number; mythFails: number; dismode: "xp" | "shards";
   // данжі
   mats: number[]; ess: number; astFails: number;
-  chests: Record<string, number>; // рівень предметів -> кількість скринь
+  chests: Record<string, number>; // "рівень" або "рівень:вид" -> кількість скринь; вид 1 звичайна, 2 рідкісна, 3 епічна
   keys: Record<string, number>;   // тир -> ключі (кланові, з нагород)
   dng: { max: number; runs: number };
   arena: ArenaState;
@@ -477,7 +477,11 @@ export const DNG_DIFF = 3, DIFF_STEP = 3, DIFF_MUL = [1, 1.3, 1.6];
 export const dngStage = (t: number, d = 1) => 5 + 7 * (t - 1) + DIFF_STEP * (d - 1); // сила ворогів як на етапі
 export const dngDiffMax = (G: State, t: number) => (G.dngd?.[String(t)] || 0); // найвища пройдена складність тиру
 export const keyPrice = (t: number) => Math.round(mobGold(dngStage(t)) * 60);
-export const dngLoc = (t: number) => (t - 1) % REGIONS;           // фон/локація
+export const dngLoc = (t: number) => (t - 1) % REGIONS; // фон/локація
+// скрині трьох видів: вид = мінімальна рідкість речі (1 незвичайна, 2 рідкісна, 3 епічна). Ключ "рівень" — звичайна (старі збереження)
+export const chestKey = (il: number, g = 1) => (g > 1 ? `${il}:${g}` : String(il));
+export const chestParse = (k: string) => { const [a, b] = k.split(":"); return { il: Number(a), g: Math.max(1, Math.min(3, Number(b) || 1)) }; };
+export function addChests(G: State, il: number, n: number, g = 1) { const k = chestKey(il, g); G.chests[k] = (G.chests[k] || 0) + n; }
 export function dngOpen(G: State, t: number, d = 1) {
   if (t < 1 || t > DNG_TIERS || d < 1 || d > DNG_DIFF) return false;
   if (G.maxStage < DNG_UNLOCK_STAGE) return false;
@@ -487,7 +491,7 @@ export function dngOpen(G: State, t: number, d = 1) {
 export function dngRewards(t: number, d = 1) {
   const m = DIFF_MUL[d - 1] || 1;
   return {
-    chests: Math.round((1 + t) * m), chestIl: dngStage(t, d), mat: Math.min(3, Math.floor((t - 1) / 2.5)), matN: Math.round((3 + t) * m),
+    chests: Math.round((1 + t) * m), chestIl: dngStage(t, d), chestG: d, mat: Math.min(3, Math.floor((t - 1) / 2.5)), matN: Math.round((3 + t) * m),
     souls: 2 * t * d, catChance: Math.min(1, (t >= 8 ? 1 : t >= 4 ? 0.5 : 0) + 0.15 * (d - 1)), essChance: t >= 8 ? 0.15 + 0.1 * (d - 1) : t >= 6 && d === 3 ? 0.05 : 0,
   };
 }
@@ -578,8 +582,8 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
   // скрині й матеріали — пропорційно пройденим кімнатам; бос дає решту
   const chests = full ? R.chests : Math.floor(R.chests * cleared / (DNG_ROOMS + 1));
   const matN = full ? R.matN : Math.floor(R.matN * cleared / (DNG_ROOMS + 1));
-  const gain = { chests, chestIl: R.chestIl, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0 };
-  if (chests) G.chests[String(R.chestIl)] = (G.chests[String(R.chestIl)] || 0) + chests;
+  const gain = { chests, chestIl: R.chestIl, chestG: R.chestG, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0 };
+  if (chests) addChests(G, R.chestIl, chests, R.chestG);
   if (matN) G.mats[R.mat] += matN;
   if (full) {
     gain.souls = R.souls; G.souls += R.souls;
@@ -596,25 +600,28 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
 export function actDungeonBatch(G: State, t: number, now: number, d = 1, n = 10) {
   n = Math.max(1, Math.min(10, Math.floor(Number(n) || 1)));
   const sum = { chests: 0, matN: 0, souls: 0, cat: 0, ess: 0 };
-  let runs = 0, wins = 0, keys = 0, mat = 0, chestIl = 0;
+  let runs = 0, wins = 0, keys = 0, mat = 0, chestIl = 0, chestG = 1;
   for (let i = 0; i < n; i++) {
     const day = dayStr(now); if (G.dngDay.day !== day) G.dngDay = { day, used: 0, paid: 0 };
     if (G.dngDay.used >= DNG_DAILY && !((G.keys[String(t)] || 0) > 0)) break;
     const r = actDungeon(G, t, now, d);
     runs++; if (r.full) wins++; if (r.usedKey) keys++;
     sum.chests += r.gain.chests; sum.matN += r.gain.matN; sum.souls += r.gain.souls; sum.cat += r.gain.cat; sum.ess += r.gain.ess;
-    mat = r.gain.mat; chestIl = r.gain.chestIl;
+    mat = r.gain.mat; chestIl = r.gain.chestIl; chestG = r.gain.chestG;
   }
   if (!runs) fail("no_keys");
-  return { t, d, batch: true, runs, wins, keys, gain: { ...sum, mat, chestIl } };
+  return { t, d, batch: true, runs, wins, keys, gain: { ...sum, mat, chestIl, chestG } };
 }
 export function actOpenChests(G: State, max = 100) {
   const free = Math.max(0, invMax(G) - G.inv.length);
   if (!free) fail("bag_full");
   let n = 0; const got: Item[] = [];
-  for (const il of Object.keys(G.chests).sort((a, b) => Number(b) - Number(a))) {
+  // спершу кращі скрині: вищий вид, потім вищий рівень
+  const ks = Object.keys(G.chests).sort((a, b) => { const x = chestParse(a), y = chestParse(b); return y.g - x.g || y.il - x.il; });
+  for (const il of ks) {
+    const c = chestParse(il);
     while (G.chests[il] > 0 && n < free && n < max) {
-      G.chests[il]--; const it = makeItem(G, Number(il), 1); G.inv.unshift(it); got.push(it); n++;
+      G.chests[il]--; const it = makeItem(G, c.il, c.g); G.inv.unshift(it); got.push(it); n++;
       if (it.r >= 3) log(G, "loot", [it.r, it.slot, it.nm, it.il]);
     }
     if (!G.chests[il]) delete G.chests[il];
@@ -680,7 +687,7 @@ export function actArenaShop(G: State, item: string) {
   const it = ARENA_SHOP[item]; if (!it) fail("bad_item");
   if (G.arena.pts < it.pts) fail("no_pts");
   G.arena.pts -= it.pts;
-  if (item === "chest") { const il = String(G.maxStage); G.chests[il] = (G.chests[il] || 0) + 1; }
+  if (item === "chest") addChests(G, G.maxStage, 1);
   if (item === "gem") G.cat += 1;
   return { item };
 }
@@ -690,7 +697,7 @@ export const SMELT = 400;
 export function actSmelt(G: State, n = 1) {
   n = Math.max(1, Math.min(20, Math.floor(Number(n) || 1)));
   n = Math.min(n, Math.floor(G.shards / SMELT)); if (!n) fail("no_shards");
-  G.shards -= SMELT * n; const il = String(G.maxStage); G.chests[il] = (G.chests[il] || 0) + n;
+  G.shards -= SMELT * n; addChests(G, G.maxStage, n);
   return { n };
 }
 export const PAYOUT = { lvl: 30, days: 14 }; // допуск до виводу: рівень і стаж (дні активності)

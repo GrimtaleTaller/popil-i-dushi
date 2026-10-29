@@ -37,14 +37,15 @@ const REGIONS=[
 const IMG=k=>'assets/'+k+'.webp';
 const ROMAN=['','II','III','IV','V','VI','VII','VIII','IX','X'];
 const SLOTS=['weapon','helmet','armor','boots','ring','amulet'];
+const SVG_SWORD='<svg class="svi" viewBox="0 0 32 32"><g transform="rotate(45 16 16) translate(16 16) scale(1.22) translate(-16 -16)"><path d="M13.6 19V5.5L16 1.8l2.4 3.7V19z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.2" stroke-linejoin="round"/><path d="M16 2.5V19h-2.4V5.5z" fill="#c9d0d8"/><rect x="9" y="19" width="14" height="3.2" rx="1.3" fill="#b98a3e" stroke="#2b2f36" stroke-width="1.1"/><rect x="14.6" y="22.2" width="2.8" height="5.3" fill="#6b4a2a" stroke="#2b2f36" stroke-width="1"/><circle cx="16" cy="29" r="1.9" fill="#b98a3e" stroke="#2b2f36" stroke-width="1"/></g></svg>',SVG_BOOTS='<svg class="svi" viewBox="0 0 32 32"><path d="M9 3.5h10V18l7.5 3.6c1.6.8 2.5 2.2 2.5 3.9V28.5H5.5V22L9 19z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M9.6 4.2H14V27.8H6.2V22.3l3.4-2.9z" fill="#c9d0d8"/><path d="M9 9h10M9 14h10M5.5 25h23.5" stroke="#2b2f36" stroke-width="1.2" opacity=".6" fill="none"/></svg>',SVG_RING='<svg class="svi" viewBox="0 0 32 32"><circle cx="16" cy="19" r="9" fill="none" stroke="#2b2f36" stroke-width="6"/><circle cx="16" cy="19" r="9" fill="none" stroke="#b98a3e" stroke-width="3.6"/><path d="M11.5 18.5a5 5 0 0 1 3-4" fill="none" stroke="#f0d08a" stroke-width="1.4" stroke-linecap="round"/><path d="M16 2.5l4.5 4.5L16 11.5 11.5 7z" fill="#d4475a" stroke="#2b2f36" stroke-width="1.3" stroke-linejoin="round"/><path d="M16 3.5v7L12.5 7z" fill="#f08a98"/></svg>',SVG_AMULET='<svg class="svi" viewBox="0 0 32 32"><path d="M6 3.5c0 7 4 12 10 13.5C22 15.5 26 10.5 26 3.5" fill="none" stroke="#2b2f36" stroke-width="3.4" stroke-linecap="round"/><path d="M6 3.5c0 7 4 12 10 13.5C22 15.5 26 10.5 26 3.5" fill="none" stroke="#b98a3e" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2 1.6"/><circle cx="16" cy="22.5" r="7" fill="#b98a3e" stroke="#2b2f36" stroke-width="1.4"/><circle cx="16" cy="22.5" r="4" fill="#3f8f8a" stroke="#2b2f36" stroke-width="1.1"/><circle cx="14.6" cy="21.1" r="1.3" fill="#a8e0d8"/></svg>';
 const SVG_HELM='<svg class="svi" viewBox="0 0 32 32"><path d="M16 2.5c-6.8 0-11 5-11 11.5V27c0 1.3 1 2.3 2.3 2.3h17.4c1.3 0 2.3-1 2.3-2.3V14C27 7.5 22.8 2.5 16 2.5z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.4"/><path d="M16 3.2C10 3.2 6.3 7.6 6.3 13.5V27c0 .7.6 1.2 1.2 1.2H16z" fill="#c9d0d8"/><path d="M16 3v26" stroke="#2b2f36" stroke-width="1.2" opacity=".55"/><rect x="7.5" y="13" width="17" height="3" rx="1" fill="#16181d"/><path d="M14.6 16v8.5h2.8V16" fill="#16181d"/><g fill="#16181d"><circle cx="10.5" cy="21" r=".9"/><circle cx="10.5" cy="24" r=".9"/><circle cx="21.5" cy="21" r=".9"/><circle cx="21.5" cy="24" r=".9"/></g></svg>',SVG_ARM='<svg class="svi" viewBox="0 0 32 32"><path d="M9.5 3 4 5.5 2.5 12l3.5 1.5V27c0 1.3 1 2.3 2.3 2.3h15.4c1.3 0 2.3-1 2.3-2.3V13.5l3.5-1.5L28 5.5 22.5 3c-1 2.6-3.6 4.2-6.5 4.2S10.5 5.6 9.5 3z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 7.6c-2.7 0-5.1-1.3-6.3-3.6L5 6.1 3.9 11.4l3.4 1.4V27c0 .7.5 1.2 1.2 1.2H16z" fill="#c9d0d8"/><path d="M16 7.5V29M7 15c3 1.6 6 2.3 9 2.3s6-.7 9-2.3M7 21.5c3 1.4 6 2 9 2s6-.6 9-2" fill="none" stroke="#2b2f36" stroke-width="1.2" opacity=".6"/></svg>';
 const SLOT={
- weapon:{n:'Зброя',ic:'🗡️',names:['Іржавий меч','Кістяна сокира','Чорний клинок','Булава ката','Серп жнеця']},
+ weapon:{n:'Зброя',ic:SVG_SWORD,names:['Іржавий меч','Кістяна сокира','Чорний клинок','Булава ката','Серп жнеця']},
  helmet:{n:'Шолом',ic:SVG_HELM,names:['Шолом вартового','Залізний капюшон','Рогатий шолом','Корона з кісток']},
  armor:{n:'Обладунок',ic:SVG_ARM,names:['Шкіряна куртка','Кольчуга','Латний нагрудник','Мантія попелу']},
- boots:{n:'Чоботи',ic:'👢',names:['Стоптані чоботи','Поножі мисливця','Сталеві чоботи','Чоботи тіні']},
- ring:{n:'Перстень',ic:'💍',names:['Мідний перстень','Перстень крові','Перстень вовка','Печатка мертвих']},
- amulet:{n:'Амулет',ic:'📿',names:['Амулет з ікла','Оберіг відьми','Око безодні','Серце попелу']}
+ boots:{n:'Чоботи',ic:SVG_BOOTS,names:['Стоптані чоботи','Поножі мисливця','Сталеві чоботи','Чоботи тіні']},
+ ring:{n:'Перстень',ic:SVG_RING,names:['Мідний перстень','Перстень крові','Перстень вовка','Печатка мертвих']},
+ amulet:{n:'Амулет',ic:SVG_AMULET,names:['Амулет з ікла','Оберіг відьми','Око безодні','Серце попелу']}
 };
 const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:7.5},{n:'Астральний',c:'#3fd0d4',m:11}];
 const STATN={atk:'Атака',hp:'Здоров’я',def:'Захист',crit:'Крит'};
@@ -221,12 +222,14 @@ function renderHero(){
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
 }
 let bagFilter='all';
+function chestIc(g){const c=RAR[g||1].c;return `<svg class="svi" viewBox="0 0 32 32"><path d="M4 13.5C4 8 8 5 16 5s12 3 12 8.5z" fill="#8a5a2b" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><rect x="4" y="13.5" width="24" height="14" rx="1.5" fill="#6e4521" stroke="#2b2f36" stroke-width="1.4"/><path d="M4 13.5h24M9 5.9v21.6M23 5.9v21.6" stroke="${c}" stroke-width="2.4" fill="none"/><rect x="13.5" y="11.5" width="5" height="6" rx="1" fill="${c}" stroke="#2b2f36" stroke-width="1.1"/></svg>`}
+function chestGroups(){const r={1:0,2:0,3:0};for(const[k,n]of Object.entries(G.chests||{})){const g=Math.max(1,Math.min(3,Number(k.split(':')[1])||1));r[g]+=n}return r}
 function chestCount(){return Object.values(G.chests||{}).reduce((a,b)=>a+b,0)}
 function renderBag(){
  const cc=chestCount(),vlt=(G.vault||[]).length,ov=G.ovf||{v:0,d:0,sh:0};
  let h=(ov.v||ov.d?`<div class="card ovf"><b>⚠️ ${T('bag_full_title')}</b><p class="hint">${T('ovf_txt',{v:ov.v,d:ov.d,s:fmt(ov.sh),p:Math.round((V.inv&&V.inv.rate||0.5)*100)})}</p><div class="row"><button class="btn" id="ovfOk">${T('ok')}</button></div></div>`:'')
  +(vlt?`<div class="chestbar vault">📦<span>${T('vault',{n:vlt,m:V.inv&&V.inv.vaultMax||100})}</span><button class="btn pri" id="vTake">${T('take')}</button></div>`:'')
- +(cc?`<div class="chestbar">🧰<span>${T('chests',{n:cc})}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
+ +(cc?`<div class="chestbar"><span>${(()=>{const cg=chestGroups();return [3,2,1].filter(g=>cg[g]).map(g=>`<span class="chg" style="color:${RAR[g].c}">${chestIc(g)} ${T('chest_'+g)} ×${cg[g]}</span>`).join('')})()}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
  <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="sellC">${T('sell_common')}</button><button class="btn" id="sellW">${T('sell_worse')}</button><button class="btn ${G.autoSell?'pri':''}" id="autoS">${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button></div>
  <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · 🔥${fmt(V.inv.cost)}</button>`:''}</div>`;
  const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
@@ -332,7 +335,7 @@ const dngD={}; // вибрана складність для кожного ти
 function renderDng(){
  const D=V.dng,tr=T;
  const left=D.left!=null?D.left:5,daily=D.daily||5;
- let h=`<p class="hint" style="margin-top:0">${T('dng_hint',{r:D.rooms,d:daily})}</p><div class="chestbar" style="background:var(--panel);border-color:var(--line)">🏰<span>${T('dng_left',{n:left,m:daily})}</span></div>`;
+ let h=`<p class="hint" style="margin-top:0">${T('dng_hint',{r:D.rooms,d:daily})}</p><p class="hint">${T('chest_hint')}</p><div class="chestbar" style="background:var(--panel);border-color:var(--line)">🏰<span>${T('dng_left',{n:left,m:daily})}</span></div>`;
  if(G.maxStage<D.unlockStage)h+=`<div class="empty">${T('dng_unlock',{n:D.unlockStage})}</div>`;
  for(const T of D.tiers){const d=DNG[T.t-1],DF=T.diffs||[{d:1,open:T.open,rw:T.rw,est:T.est}];
   if(!dngD[T.t]||!DF[dngD[T.t]-1]||!DF[dngD[T.t]-1].open)dngD[T.t]=Math.max(1,...DF.filter(x=>x.open).map(x=>x.d));
@@ -340,7 +343,7 @@ function renderDng(){
   const ec=e==null?'':e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e';
   h+=`<div class="dcard ${T.open?'':'lock'}"><div class="th" style="background-image:url(${IMG('bg'+d.bg)})"><b>${ROMAN[T.t-1]||'I'}</b></div><div class="info">
    <div class="nm">${d.n} <span class="sub">· ${tr('tier',{n:T.t})}</span></div>
-   <div class="rw">🧰×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
+   <div class="rw">${chestIc(rw.chestG)}×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
    ${cd.need?(()=>{const my=V.hero.power,ok=my>=cd.need;return `<div class="sub need ${ok?'ok':'bad'}">💪 ${tr('need_power',{n:fmt(cd.need),m:fmt(my)})}${ok?' ✓':' · '+tr('need_short',{n:fmt(cd.need-my)})}</div>`})():''}
    ${T.open&&DF.length>1?`<div class="chips diffs">${DF.map(x=>`<button data-dt="${T.t}" data-dd="${x.d}" class="${x.d===cd.d?'act':''} ${x.open?'':'lockd'}">${x.open?'':'🔒'}${tr('diff_'+x.d)}</button>`).join('')}</div>`:''}
    ${T.open?`<div class="sub">${tr('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span></div>
@@ -391,14 +394,14 @@ function dngPlay(o){
 // підсумок серії заходів
 function dngBatch(o){
  const d=DNG[o.t-1],g=o.gain;
- const rw=[g.chests?`${T('r_chests')} <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
  modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
  haptic('heavy');
 }
 function dngResult(o){
  const d=DNG[o.t-1],g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?T('boss'):T('room',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
- const rw=[g.chests?`${T('r_chests')} <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
  modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
  haptic(o.full?'heavy':'medium');
