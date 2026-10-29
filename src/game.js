@@ -153,7 +153,7 @@ function replayTick(dt){
  if(R.i>=R.res.ev.length&&R.t>=(R.res.ev.length?R.res.ev[R.res.ev.length-1][0]:0)+0.4){
   const res=R.res;B.rep=null;B.boss=false;
   if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:''));B.m=null;B.resp=0.8}
-  else{B.dead=2.5;$('dead').style.display='grid';toast(T(res.timeout?'boss_timeout':'boss_lose'));B.m=null}
+  else{B.dead=2.5;$('dead').style.display='grid';toast(T(res.timeout?'boss_timeout':'boss_lose')+(res.auto?' '+T('auto_off'):''));B.m=null}
   R.after&&R.after();renderBoss();paintArena();
  }
 }
@@ -558,6 +558,7 @@ function afterSync(r){
  const p=r.prog;
  if(p&&p.offline&&p.sec>=60&&p.kills>0){const h=Math.floor(p.sec/3600),m=Math.floor(p.sec%3600/60);
   modal(`<div class="big">🌙</div><h3>${T('away')}</h3><p>${T('away_line',{t:(h?T('hours',{n:h})+' ':'')+T('mins',{n:m}),s:p.stage})}</p><p>${T('p_killed')} <b>${fmt(p.kills)}</b></p><p>${T('p_gold')} <b>+${fmt(p.gold)}</b></p><p>${T('p_xp')} <b>+${fmt(p.xp)}</b></p>${p.souls?`<p>${T('p_souls')} <b>+${fmt(p.souls)}</b></p>`:''}${p.items?`<p>${T('p_items')} <b>${p.items}</b></p>`:''}`,T('claim'))}
+ if(p&&p.boss&&!p.boss.win){p.boss.auto=1;if(p.offline)modal(`<div class="big">⚔️</div><h3>${T('auto_off_t')}</h3><p>${T('auto_off_txt',{n:p.boss.stage})}</p>`,T('ok'))}
  if(p&&p.boss&&!B.rep)startReplay(p.boss);
  const d=V.daily;
  if(d&&dailyShown!==String(G.daily.date)+d.streak){dailyShown=String(G.daily.date)+d.streak;

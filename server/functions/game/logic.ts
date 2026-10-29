@@ -284,7 +284,7 @@ export function fightBoss(G: State): BossResult {
     G.stage++; if (G.stage > G.maxStage) G.maxStage = G.stage;
     G.kills = 0; G.frac = 0;
   } else {
-    G.tot.deaths++; G.kills = 0; // авто-бос лишається ввімкненим: наступна спроба після ще 10 ворогів
+    G.tot.deaths++; G.kills = 0; G.autoBoss = false; // після поразки авто-бос вимикається (рішення 29.10); клієнт показує чому
     log(G, timeout ? "bossTimeout" : "bossDeath", [s]);
   }
   return res;
