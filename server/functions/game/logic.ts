@@ -84,7 +84,8 @@ export type State = {
   dng: { max: number; runs: number };
   arena: ArenaState;
   act: { last: string; days: number };       // дні активності (допуск до виводу)
-  dngDay: { day: string; used: number };     // безкоштовні заходи в підземелля сьогодні
+  dngDay: { day: string; used: number; paid?: number }; // заходи в підземелля сьогодні: безкоштовні й платні
+  ckey: { day: string; n: number };          // кланові ключі, взяті сьогодні
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
 export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
@@ -98,14 +99,14 @@ export function fresh(now: number): State {
     souls: 0, ash: 0, shards: 0, cat: 0, soulFrac: 0, ench: 0, mythFails: 0, dismode: "shards",
     mats: [0, 0, 0, 0], ess: 0, astFails: 0, chests: {}, keys: {}, dng: { max: 0, runs: 0 },
     arena: { day: "", used: 0, pts: 0, rating: 1000, w: 0, l: 0, opps: [] },
-    act: { last: "", days: 0 }, dngDay: { day: "", used: 0 },
+    act: { last: "", days: 0 }, dngDay: { day: "", used: 0, paid: 0 }, ckey: { day: "", n: 0 },
   };
 }
 // дописує нові поля до старих збережень
 export function migrate(G: State): State {
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
-  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay"]) if (g[k] === undefined) g[k] = d[k];
+  for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay", "ckey"]) if (g[k] === undefined) g[k] = d[k];
   return G;
 }
 
@@ -450,6 +451,8 @@ export const DNG_TIERS = 10, DNG_ROOMS = 5, DNG_TIME = 75;
 export const DNG_UNLOCK_STAGE = 5;
 export const DNG_DAILY = 5; // безкоштовні заходи на день; далі — лише за ключі
 export function dngLeft(G: State, now: number) { return G.dngDay.day === dayStr(now) ? Math.max(0, DNG_DAILY - G.dngDay.used) : DNG_DAILY; }
+// платний вхід після безкоштовних: ціна ключа × 2^(платних заходів сьогодні)
+export function dngPrice(G: State, t: number, now: number) { const n = G.dngDay.day === dayStr(now) ? (G.dngDay.paid || 0) : 0; return Math.round(keyPrice(t) * Math.pow(2, n)); }
 export const dngStage = (t: number) => 5 + 7 * (t - 1);           // сила ворогів як на етапі
 export const keyPrice = (t: number) => Math.round(mobGold(dngStage(t)) * 60);
 export const dngLoc = (t: number) => (t - 1) % REGIONS;           // фон/локація
@@ -506,12 +509,11 @@ export function actDungeon(G: State, t: number, now = Date.now()) {
   t = Math.floor(Number(t));
   if (!dngOpen(G, t)) fail("dng_locked");
   const key = String(t);
-  const paid = 0; let usedKey = false;
-  if (dngLeft(G, now) > 0) {
-    const d = dayStr(now); if (G.dngDay.day !== d) G.dngDay = { day: d, used: 0 };
-    G.dngDay.used++;
-  } else if ((G.keys[key] || 0) > 0) { G.keys[key]--; usedKey = true; }
-  else fail("dng_limit");
+  let paid = 0, usedKey = false;
+  const d = dayStr(now); if (G.dngDay.day !== d) G.dngDay = { day: d, used: 0, paid: 0 };
+  if (G.dngDay.used < DNG_DAILY) G.dngDay.used++;
+  else if ((G.keys[key] || 0) > 0) { G.keys[key]--; usedKey = true; }
+  else { paid = dngPrice(G, t, now); if (G.gold < paid) fail("no_gold"); G.gold -= paid; G.dngDay.paid = (G.dngDay.paid || 0) + 1; }
   const rooms = simDungeon(G, t);
   const cleared = rooms.filter((r) => r.win && !r.boss).length;
   const full = rooms.length === DNG_ROOMS + 1 && rooms[DNG_ROOMS].win;
@@ -618,3 +620,11 @@ export function actSmelt(G: State, n = 1) {
   return { n };
 }
 export const PAYOUT = { lvl: 30, days: 14 }; // допуск до виводу: рівень і стаж (дні активності)
+
+// ---------- клани ----------
+export const CLAN = { max: 20, createStage: 10, joinStage: 5, take: 2 };
+export const clanCreateCost = (G: State) => Math.round(mobGold(Math.max(10, G.maxStage)) * 300);
+export const clanKeyCost = (t: number) => Math.round(keyPrice(t) * 0.5); // клан крафтить ключі вдвічі дешевше
+export function ckeyLeft(G: State, now: number) { return G.ckey.day === dayStr(now) ? Math.max(0, CLAN.take - G.ckey.n) : CLAN.take; }
+export function ckeyUse(G: State, now: number) { const d = dayStr(now); if (G.ckey.day !== d) G.ckey = { day: d, n: 0 }; G.ckey.n++; }
+export const clanNameOk = (n: string) => /^[\p{L}\p{N} _'-]{3,20}$/u.test(n) && n.trim().length >= 3;

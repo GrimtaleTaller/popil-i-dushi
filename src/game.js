@@ -159,7 +159,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1};
+const dirty={hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -304,7 +304,7 @@ function renderDng(){
    <div class="nm">${d.n} <span class="sub">· ${tr('tier',{n:T.t})}</span></div>
    <div class="rw">🎁×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
    ${T.open?`<div class="sub">${tr('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span></div>
-   <button class="btn pri" data-dng="${T.t}" ${busy||(!left&&!T.keys)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('no_entries')}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
+   <button class="btn pri" data-dng="${T.t}" ${busy||(!left&&!T.keys&&G.gold<T.pay)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.pay)})}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
   </div></div>`}
  $('p-dng').innerHTML=h;
  $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dng},r=>dngResult(r.out)));
@@ -352,7 +352,91 @@ const LOGT={
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):`<div class="empty">${T('log_empty')}</div>`)+'</div>'}
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,clan:renderClan})[tab]()}}
+
+// ---------- профіль ----------
+let profData=null,profBusy=false,adminData=null;
+const dt=s=>{if(!s)return '—';const d=new Date(s);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()};
+function copyText(t){try{navigator.clipboard.writeText(t);toast(T('copied'))}catch(e){toast(t)}}
+function renderProfile(){
+ const el=$('p-prof');
+ if(!profData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
+  if(!profBusy){profBusy=true;api('profile').then(r=>{profData=r.out}).catch(e=>toast(errT(e))).finally(()=>{profBusy=false;dirty.prof=1})}return}
+ const P=profData,R=P.refs,link=inviteLink();
+ let h=`<div class="card"><h4>👤 ${T('profile')}</h4><div class="resg">
+  <div><span>ID</span><b>${P.id} <a href="#" id="cpId">📋</a></b></div><div><span>${T('joined')}</span><b>${dt(P.joined)}</b></div>
+  <div><span>${T('act_days')}</span><b>${P.days}</b></div><div><span>${T('lvl_word')}</span><b>${G.lvl}</b></div>
+  <div><span>${T('clan')}</span><b>${P.clan?esc(P.clan):'—'}</b></div><div><span>🏆 ${T('top_rating')}</span><b>${P.arena.rating} (${P.arena.w}/${P.arena.l})</b></div></div></div>`;
+ h+=`<div class="card"><h4>👥 ${T('refs')}</h4><p class="hint">${T('refs_hint',{a:R.pct[0],b:R.pct[1],c:R.pct[2]})}</p>
+  <div class="arenah"><div><b>${R.n1}</b><span>${T('ref_lvl',{n:1})} · ${R.pct[0]}%</span></div><div><b>${R.n2}</b><span>${T('ref_lvl',{n:2})} · ${R.pct[1]}%</span></div><div><b>${R.n3}</b><span>${T('ref_lvl',{n:3})} · ${R.pct[2]}%</span></div></div>
+  <div class="reflink">${esc(link)}</div><div class="row"><button class="btn pri" id="pInv">${T('invite')}</button><button class="btn" id="pCopy">📋 ${T('copy')}</button></div>
+  ${R.list.length?'<div class="rank" style="margin-top:8px">'+R.list.map(x=>`<div><b>👤</b><span>${esc(x.name)}</span><i style="color:var(--mut);font-weight:600">${T('lvl',{n:x.lvl})} · ${T('stage',{n:x.stage})}</i></div>`).join('')+'</div>':`<p class="hint">${T('no_refs')}</p>`}</div>`;
+ h+=`<div class="card"><h4>📈 ${T('stats')}</h4><div class="resg">
+  <div><span>${T('max_stage')}</span><b>${G.maxStage}</b></div><div><span>${T('kills')}</span><b>${fmt(G.tot.kills)}</b></div>
+  <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
+  <div><span>${T('dng_runs')}</span><b>${(G.dng&&G.dng.runs)||0}</b></div><div><span>${T('power',{n:''}).trim()}</span><b>${fmt(H.power)}</b></div></div></div>`;
+ if(V.isAdmin)h+=adminHtml();
+ h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button></div>`;
+ el.innerHTML=h;
+ $('cpId').onclick=e=>{e.preventDefault();copyText(String(P.id))};
+ $('pInv').onclick=invite;$('pCopy').onclick=()=>copyText(link);
+ $('pRef').onclick=()=>{profData=null;adminData=null;renderProfile()};
+ if(V.isAdmin&&!adminData)api('admin').then(r=>{adminData=r.out;dirty.prof=1}).catch(e=>toast(errT(e)));
+}
+function adminHtml(){
+ const A=adminData;if(!A)return `<div class="card"><h4>🛠️ ${T('admin')}</h4><p class="hint">${T('loading')}</p></div>`;
+ const mx=Math.max(1,...A.days.map(d=>d.n));
+ return `<div class="card admin"><h4>🛠️ ${T('admin')}</h4><div class="arenah">
+  <div><b>${A.total}</b><span>${T('a_total')}</span></div><div><b>${A.new24}</b><span>${T('a_new24')}</span></div><div><b>${A.act24}</b><span>${T('a_act24')}</span></div>
+  <div><b>${A.act1h}</b><span>${T('a_act1h')}</span></div><div><b>${A.act7}</b><span>${T('a_act7')}</span></div><div><b>${A.byRef}</b><span>${T('a_ref')}</span></div></div>
+  <p class="hint">${T('a_more',{c:A.clans,f:A.fights})} · ${Object.entries(A.langs).map(([k,v])=>k+' '+v).join(', ')}</p>
+  <div class="bars">${A.days.map(d=>`<div title="${d.d}: ${d.n}"><i style="height:${Math.round(d.n/mx*100)}%"></i><b>${d.n||''}</b><span>${d.d.slice(0,2)}</span></div>`).join('')}</div>
+  <p class="hint" style="text-align:center;margin-top:2px">${T('a_days')}</p>
+  <div class="rank">${A.top.map((t,i)=>`<div><b>${i+1}</b><span>${esc(t.name)}</span><i>${T('stage',{n:t.stage})}</i></div>`).join('')}</div></div>`;
+}
+// ---------- клан ----------
+let clanData=null,clanBusy=false,craftT=1;
+const roleT=r=>T('role_'+r);
+function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
+function clanAct(a,args){act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null})}
+function renderClan(){
+ const el=$('p-clan');
+ if(G.maxStage<(V.clanStage||5)){el.innerHTML=`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
+ if(!clanData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
+  if(!clanBusy){clanBusy=true;api('clan').then(r=>{clanData=r.out}).catch(e=>toast(errT(e))).finally(()=>{clanBusy=false;dirty.clan=1})}return}
+ const C=clanData;let h='';
+ if(!C.clan){
+  h+=`<div class="card"><h4>🏰 ${T('clan_create')}</h4><p class="hint">${T('clan_create_hint',{n:C.createStage,m:C.max})}</p>
+   <div class="row" style="align-items:center"><input id="cName" maxlength="20" placeholder="${T('clan_name')}" class="inp"><button class="btn pri" id="cMake" ${G.maxStage>=C.createStage&&G.gold>=C.createCost?'':'disabled'}>💰 ${fmt(C.createCost)}</button></div></div>`;
+  h+=`<div class="card"><h4>🔎 ${T('clan_list')}</h4>`+(C.list.length?C.list.map(c=>`<div class="item" style="border-left-color:#7a5a26"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${C.max} · ${T('power',{n:fmt(c.power)})}</div></div><div class="acts"><button class="btn pri" data-cj="${c.id}" ${c.members<C.max?'':'disabled'}>${T('join')}</button></div></div>`).join(''):`<p class="hint">${T('clan_none_yet')}</p>`)+'</div>';
+  el.innerHTML=h;
+  $('cMake').onclick=()=>{const n=$('cName').value.trim();if(n.length<3){toast(ERR.clan_name_bad);return}clanAct('clanCreate',{name:n})};
+  el.querySelectorAll('[data-cj]').forEach(b=>b.onclick=()=>clanAct('clanJoin',{id:+b.dataset.cj}));
+  return}
+ const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
+ h+=`<div class="card arenah"><div><b>🏰 ${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
+ const tiers=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);
+ h+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint',{n:C.take,l:C.takeLeft})}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('tier',{n:t})}: <b>${K[t]}</b></span><button class="btn" data-ct="${t}" ${C.takeLeft>0?'':'disabled'}>${T('take')}</button></div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)+'</div>';
+ if(lead){const opts=C.craft.filter(x=>x.can);if(!opts.some(x=>x.t===craftT)&&opts.length)craftT=opts[opts.length-1].t;
+  const cur=C.craft.find(x=>x.t===craftT);
+  h+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${opts.map(x=>`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`).join('')}</div>
+   <div class="row"><button class="btn pri" data-cn="1" ${G.gold>=cur.gold?'':'disabled'}>×1 · 💰${fmt(cur.gold)}</button><button class="btn" data-cn="5" ${G.gold>=cur.gold*5?'':'disabled'}>×5 · 💰${fmt(cur.gold*5)}</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
+ h+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
+  const canKick=!m.me&&(C.role==='leader'&&m.role!=='leader'||C.role==='officer'&&m.role==='member'),canRole=!m.me&&C.role==='leader';
+  return `<div class="item" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})}</div></div>
+   <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
+ h+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
+ if(C.role==='leader')h+=`<p class="hint">${T('clan_leader_hint')}</p>`;
+ el.innerHTML=h;
+ el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.ct}));
+ el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
+ el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>clanAct('clanCraft',{t:craftT,n:+b.dataset.cn}));
+ el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>clanAct('clanKick',{pid:+b.dataset.ck}));
+ el.querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>clanAct('clanRole',{pid:+b.dataset.cr,role:b.dataset.r}));
+ $('cRef').onclick=()=>{clanData=null;renderClan()};
+ $('cLeave').onclick=()=>modal(`<div class="big">🚪</div><h3>${T('leave_q')}</h3><p class="hint">${T(C.role==='leader'?'leave_leader':'leave_hint')}</p><div class="row"><button class="btn" id="lvNo">${T('cancel')}</button></div>`,T('leave'),()=>clanAct('clanLeave',{}));
+ setTimeout(()=>{const n=$('lvNo');if(n)n.onclick=()=>{queue.shift();showModal()}},0);
+}
 
 // ---------- арена й рейтинги ----------
 let arenaInfo=null,arenaLoaded=false,topKind='stage',topBusy=false;const topData={};
@@ -459,11 +543,11 @@ async function start(){
 }
 // головні вкладки й підвкладки
 const lastSub={hero:'hero',arena:'arena'};
-const groupOf=t=>['hero','train','log'].includes(t)?'hero':t==='top'?'arena':t;
+const groupOf=t=>['hero','train','log','prof'].includes(t)?'hero':t==='top'?'arena':t;
 function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 function renderSub(){
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
+ const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:tab;e.style.display='flex';
  e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');
