@@ -480,7 +480,7 @@ function adminHtml(){
   <div class="rank">${A.top.map((t,i)=>`<div><b>${i+1}</b><span>${esc(t.name)}</span><i>${T('stage',{n:t.stage})}</i></div>`).join('')}</div></div>`;
 }
 // ---------- клан ----------
-let clanData=null,clanBusy=false,craftT=1,clanModeSel=null;
+let clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
 const roleT=r=>T('role_'+r);
 function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
 function clanAct(a,args){act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null})}
@@ -509,15 +509,19 @@ function renderClan(){
  h+=`<div class="card arenah"><div><b>🏰 ${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.clan.max||C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
  const bank=C.clan.bank||0;
  h+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
-  <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div></div>`;
+  <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div>
+  <h4 style="margin-top:12px">📦 ${T('clan_res')}</h4><div class="mats">${[0,1,2,3].map(i=>`<div><b>⛏️ ${MATN[i]}</b><span>${fmt((C.clan.res||{m:[]}).m[i]||0)}</span></div>`).join('')}<div><b>🔩</b><span>${fmt((C.clan.res||{}).sh||0)}</span></div></div>
+  <div class="chips" style="margin-top:8px">${['m0','m1','m2','m3','sh'].map(k=>`<button data-rk="${k}" class="${resK===k?'act':''}">${k==='sh'?'🔩 '+fmt(G.shards||0):'⛏️'+MATN[+k[1]]+' '+fmt((G.mats||[])[+k[1]]||0)}</button>`).join('')}</div>
+  <div class="row" style="align-items:center"><input id="cRes" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cResAll">${T('give_all')}</button><button class="btn pri" id="cResGo">${T('give')}</button></div></div>`;
  const tiers=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);
  h+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint')}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('tier',{n:t})}: <b>${K[t]}</b></span><button class="btn" data-ct="${t}">${T('take')}</button></div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)+'</div>';
  if(lead){const opts=C.craft.filter(x=>x.can);if(!opts.some(x=>x.t===craftT)&&opts.length)craftT=opts[opts.length-1].t;
   const cur=C.craft.find(x=>x.t===craftT);
   h+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${opts.map(x=>`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`).join('')}</div>
    <div class="row"><button class="btn pri" data-cn="1" ${bank>=cur.gold?'':'disabled'}>×1 · 🏦${fmt(cur.gold)}</button><button class="btn" data-cn="5" ${bank>=cur.gold5?'':'disabled'}>×5 · 🏦${fmt(cur.gold5)}</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
- const BL=C.builds||[];
- if(BL.length)h+=`<div class="card"><h4>🏗️ ${T('clan_builds')}</h4><p class="hint">${T('clan_builds_hint')}</p>`+BL.map(b=>`<div class="item" style="border-left-color:#c0563a"><div class="ic">${{citadel:'🏰',forge:'⚒️',vault:'💰',barracks:'⚔️'}[b.k]}</div><div class="info"><div class="nm">${T('bld_'+b.k)} · ${T('lvl',{n:b.lvl})}/${b.max}</div><div class="sub">${T('bld_'+b.k+'_d',{n:b.step,t:b.step*b.lvl})}</div></div><div class="acts">${b.cost==null?`<span class="sub">${T('max_reached')}</span>`:lead?`<button class="btn pri" data-bk="${b.k}" ${(C.clan.bank||0)>=b.cost?'':'disabled'}>🏦${fmt(b.cost)}</button>`:`<span class="sub">🏦${fmt(b.cost)}</span>`}</div></div>`).join('')+'</div>';
+ const BL=C.builds||[],RS=C.clan.res||{m:[0,0,0,0],sh:0};
+ const bldOk=c=>(C.clan.bank||0)>=c.gold&&(RS.m[c.mat]||0)>=c.matN&&(RS.sh||0)>=c.sh;
+ if(BL.length)h+=`<div class="card"><h4>🏗️ ${T('clan_builds')}</h4><p class="hint">${T('clan_builds_hint')}</p>`+BL.map(b=>`<div class="item" style="border-left-color:#c0563a"><div class="ic">${{citadel:'🏰',forge:'⚒️',vault:'💰',barracks:'⚔️',library:'📚'}[b.k]}</div><div class="info"><div class="nm">${T('bld_'+b.k)} · ${T('lvl',{n:b.lvl})}/${b.max}</div><div class="sub">${T('bld_'+b.k+'_d',{n:b.step,t:b.step*b.lvl})}</div>${b.cost?`<div class="st">${T('bld_cost')}: 🏦${fmt(b.cost.gold)} · ⛏️${MATN[b.cost.mat]}×${fmt(b.cost.matN)} · 🔩${fmt(b.cost.sh)}</div>`:''}</div><div class="acts">${b.cost==null?`<span class="sub">${T('max_reached')}</span>`:lead?`<button class="btn pri" data-bk="${b.k}" ${bldOk(b.cost)?'':'disabled'}>⬆️</button>`:''}</div></div>`).join('')+'</div>';
  const AP=C.apps||[];
  if(lead&&AP.length)h+=`<div class="card"><h4>📨 ${T('clan_apps')} (${AP.length})</h4>`+AP.map(a=>`<div class="item" style="border-left-color:#4f93f2"><div class="ic">👤</div><div class="info"><div class="nm">${esc(a.name)}</div><div class="sub">${T('lvl',{n:a.lvl})} · ${T('stage',{n:a.stage})} · ${T('power',{n:fmt(a.power)})}</div></div><div class="acts"><button class="btn pri" data-ay="${a.id}">✓</button><button class="btn" data-an="${a.id}">✖</button></div></div>`).join('')+'</div>';
  const CL=C.clan;
@@ -532,7 +536,7 @@ function renderClan(){
   return `<div class="item" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · 💰 ${T('given',{n:fmt(m.given||0)})}</div></div>
    <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
  const LG=C.log||[];
- h+=`<div class="card"><h4>📜 ${T('clan_log')}</h4>`+(LG.length?LG.map(x=>{const d=x.data||{};return `<div class="logl"><span>${logTime(x.at)}</span> ${esc(T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),t:d.t||'',c:d.n||1,k:d.k?T('bld_'+d.k):'',l:d.l||''}))}</div>`}).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
+ h+=`<div class="card"><h4>📜 ${T('clan_log')}</h4>`+(LG.length?LG.map(x=>{const d=x.data||{};return `<div class="logl"><span>${logTime(x.at)}</span> ${esc(T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),t:d.t||'',c:d.n||1,k:d.k?(d.k==='sh'?'🔩':/^m\d$/.test(d.k)?'⛏️'+MATN[+d.k[1]]:T('bld_'+d.k)):'',l:d.l||'',x:fmt(d.n||0)}))}</div>`}).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
  h+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
  if(C.role==='leader')h+=`<p class="hint">${T('clan_leader_hint')}</p>`;
  el.innerHTML=h;
@@ -543,6 +547,10 @@ function renderClan(){
  el.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{clanModeSel=b.dataset.cm;renderClan()});
  if($('cSet'))$('cSet').onclick=()=>{const m=clanModeSel||C.clan.mode;clanModeSel=null;clanAct('clanSettings',{mode:m,minStage:+$('cMs').value||0,minPower:+$('cMp').value||0});toast(T('saved'))};
  $('cGiveAll').onclick=()=>{$('cGive').value=Math.floor(G.gold)};
+ const haveRes=k=>k==='sh'?Math.floor(G.shards||0):Math.floor((G.mats||[])[+k[1]]||0);
+ el.querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{resK=b.dataset.rk;renderClan()});
+ $('cResAll').onclick=()=>{$('cRes').value=haveRes(resK)};
+ $('cResGo').onclick=()=>{const n=Math.floor(+$('cRes').value||0);if(n<1)return;if(n>haveRes(resK)){toast(ERR.no_mats);return}clanAct('clanGiveRes',{k:resK,n},()=>toast(T('res_given')))};
  $('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
  el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>clanAct('clanCraft',{t:craftT,n:+b.dataset.cn}));

@@ -95,7 +95,7 @@ export type State = {
   ovf?: { v: number; d: number; sh: number }; // що сталося з речами при повній сумці (для повідомлення)
   ckey: { day: string; n: number };          // застаріле: ключі, скрафчені гравцем за день (тепер лічильник у клані)
   dngd?: Record<string, number>;             // тир -> найвища пройдена складність
-  cb?: { atk: number; gold: number };        // бонуси будівель клану, % (ставить сервер з даних клану)
+  cb?: { atk: number; gold: number; xp?: number };        // бонуси будівель клану, % (ставить сервер з даних клану)
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
 export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
@@ -227,7 +227,7 @@ export function progress(G: State, now: number): Progress {
   const kills = Math.floor(k);
   G.frac = k - kills;
   if (!kills) return res;
-  const gold = kills * mobGold(s) * (1 + (G.cb?.gold || 0) / 100), xp = kills * mobXp(s); // Скарбниця клану
+  const gold = kills * mobGold(s) * (1 + (G.cb?.gold || 0) / 100), xp = kills * mobXp(s) * (1 + (G.cb?.xp || 0) / 100); // Скарбниця й Бібліотека клану
   G.gold += gold; res.gold = gold; res.xp = xp;
   res.lvlUps = gainXp(G, xp);
   G.tot.kills += kills; res.kills = kills;
@@ -275,7 +275,7 @@ export function fightBoss(G: State): BossResult {
   }
   const res: BossResult = { win, ev, hp: H.hp, bossHp: Math.round(max), gold: 0, xp: 0, stage: s, timeout };
   if (win) {
-    res.gold = mobGold(s) * 8; res.xp = mobXp(s) * 6;
+    res.gold = mobGold(s) * 8; res.xp = mobXp(s) * 6 * (1 + (G.cb?.xp || 0) / 100);
     G.gold += res.gold; gainXp(G, res.xp); G.tot.kills++; G.tot.bosses++;
     const it = makeItem(G, s, 1); res.item = it; res.gold += addItem(G, it, true);
     const first = s === G.maxStage;
@@ -698,29 +698,42 @@ export const PAYOUT = { lvl: 30, days: 14 }; // допуск до виводу: 
 // ---------- клани ----------
 export const CLAN = { max: 20, createStage: 10, joinStage: 5 };
 export const clanCreateCost = (_G?: State) => 50000; // фіксована ціна: інакше росте разом з етапом і «тікає» від гравця
-// клан крафтить ключі з казни; ціна фіксована на день, без ліміту (рішення 29.10: «великий вечірній похід» без стелі):
-// max(пів ціни ключа, золото з ~150 ворогів макс. етапу крафтера) — ключ завжди коштує кілька хвилин фарму,
-// тож кількість походів обмежена заробленим золотом, а не таймером. Зростає ×1,25 лише платний вхід за Золото.
-export const CKEY_GOLD = 150;
+// клан крафтить ключі з казни без ліміту й без зростання ціни (рішення 29.10).
+// Ціна = 4 звичайні ключі свого тиру — як ~7-й платний соло-вхід за день, але не дорожчає; Ковальня знижує.
+// Симуляція 29.10 (45 днів): ~1,8–3 тис. заходів, без прискорення рівнів.
+export const CKEY_MUL = 4;
 export const ckeyCrafted = (G: State, now: number) => (G.ckey.day === dayStr(now) ? G.ckey.n : 0);
-// тир: ключ найвищого пройденого тиру коштує повну «ціну фарму», кожен нижчий — на 20% дешевше (але не менше пів ціни ключа)
-export function clanKeyCost(t: number, maxStage: number, n = 1, forge = 0, tMax = t) {
+export function clanKeyCost(t: number, n = 1, forge = 0) {
   const k = 1 - BUILD.forge.step / 100 * Math.min(BUILD.forge.max, forge || 0); // Ковальня клану
-  const farm = mobGold(maxStage) * CKEY_GOLD * Math.pow(0.8, Math.max(0, tMax - t));
-  return Math.round(Math.max(keyPrice(t) * 0.5, farm) * k) * n;
+  return Math.round(keyPrice(t) * CKEY_MUL * k) * n;
 }
-// будівлі клану: прокачка з казни, бонуси всім учасникам. step — бонус за рівень
-export type BldKey = "citadel" | "forge" | "vault" | "barracks";
+// будівлі клану: прокачка з казни (золото + матеріал + уламки), бонуси всім учасникам. step — бонус за рівень
+export type BldKey = "citadel" | "forge" | "vault" | "barracks" | "library";
 export const BUILD: Record<BldKey, { max: number; base: number; mul: number; step: number }> = {
   citadel: { max: 5, base: 200000, mul: 3, step: 2 },    // +2 місця в клані
   forge: { max: 5, base: 100000, mul: 2.5, step: 5 },    // −5% ціни ключів з казни
   vault: { max: 5, base: 150000, mul: 2.5, step: 3 },    // +3% золота з ворогів
   barracks: { max: 5, base: 150000, mul: 2.5, step: 2 }, // +2% атаки й здоров'я
+  library: { max: 5, base: 150000, mul: 2.5, step: 3 },  // +3% досвіду
 };
-export const bldCost = (k: BldKey, lvl: number) => (lvl >= BUILD[k].max ? null : Math.round(BUILD[k].base * Math.pow(BUILD[k].mul, lvl)));
+// ресурси на рівень: матеріал (тир за рівнем будівлі) і уламки
+const BLD_MAT = [0, 0, 1, 2, 2], BLD_MATN = [30, 80, 150, 250, 400];
+export function bldCost(k: BldKey, lvl: number) {
+  if (lvl >= BUILD[k].max) return null;
+  return { gold: Math.round(BUILD[k].base * Math.pow(BUILD[k].mul, lvl)), mat: BLD_MAT[lvl], matN: BLD_MATN[lvl], sh: 200 * (lvl + 1) * (lvl + 1) };
+}
 export const clanMax = (bld?: Record<string, number> | null) => CLAN.max + BUILD.citadel.step * Math.min(BUILD.citadel.max, Number(bld?.citadel || 0));
-export const clanBonus = (bld?: Record<string, number> | null) => ({ atk: BUILD.barracks.step * Number(bld?.barracks || 0), gold: BUILD.vault.step * Number(bld?.vault || 0) });
+export const clanBonus = (bld?: Record<string, number> | null) => ({ atk: BUILD.barracks.step * Number(bld?.barracks || 0), gold: BUILD.vault.step * Number(bld?.vault || 0), xp: BUILD.library.step * Number(bld?.library || 0) });
 export function ckeyAdd(G: State, now: number, n: number) { const d = dayStr(now); if (G.ckey.day !== d) G.ckey = { day: d, n: 0 }; G.ckey.n += n; }
+// внесок ресурсу в казну клану: k = m0..m3 (матеріали I–IV) або sh (уламки)
+export function clanResTake(G: State, k: string, n: number) {
+  n = Math.floor(Number(n));
+  if (!(n >= 1)) fail("bad_ids");
+  if (k === "sh") { if (G.shards < n) fail("no_shards"); G.shards -= n; return { k, n }; }
+  const m = /^m([0-3])$/.exec(k); if (!m) fail("bad_ids");
+  const i = Number(m![1]); if ((G.mats[i] || 0) < n) fail("no_mats");
+  G.mats[i] -= n; return { k, n };
+}
 export const clanNameOk = (n: string) => /^[\p{L}\p{N} _'-]{3,20}$/u.test(n) && n.trim().length >= 3;
 
 // розширення сумки за Іскри
