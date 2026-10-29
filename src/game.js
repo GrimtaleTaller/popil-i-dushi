@@ -225,7 +225,7 @@ function renderBag(){
  const cc=chestCount(),vlt=(G.vault||[]).length,ov=G.ovf||{v:0,d:0,sh:0};
  let h=(ov.v||ov.d?`<div class="card ovf"><b>⚠️ ${T('bag_full_title')}</b><p class="hint">${T('ovf_txt',{v:ov.v,d:ov.d,s:fmt(ov.sh),p:Math.round((V.inv&&V.inv.rate||0.5)*100)})}</p><div class="row"><button class="btn" id="ovfOk">${T('ok')}</button></div></div>`:'')
  +(vlt?`<div class="chestbar vault">📦<span>${T('vault',{n:vlt,m:V.inv&&V.inv.vaultMax||100})}</span><button class="btn pri" id="vTake">${T('take')}</button></div>`:'')
- +(cc?`<div class="chestbar">🎁<span>${T('chests',{n:cc})}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
+ +(cc?`<div class="chestbar">🧰<span>${T('chests',{n:cc})}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
  <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="sellC">${T('sell_common')}</button><button class="btn" id="sellW">${T('sell_worse')}</button><button class="btn ${G.autoSell?'pri':''}" id="autoS">${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button></div>
  <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · 🔥${fmt(V.inv.cost)}</button>`:''}</div>`;
  const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
@@ -339,7 +339,7 @@ function renderDng(){
   const ec=e==null?'':e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e';
   h+=`<div class="dcard ${T.open?'':'lock'}"><div class="th" style="background-image:url(${IMG('bg'+d.bg)})"><b>${ROMAN[T.t-1]||'I'}</b></div><div class="info">
    <div class="nm">${d.n} <span class="sub">· ${tr('tier',{n:T.t})}</span></div>
-   <div class="rw">🎁×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
+   <div class="rw">🧰×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
    ${cd.need?(()=>{const my=V.hero.power,ok=my>=cd.need;return `<div class="sub need ${ok?'ok':'bad'}">💪 ${tr('need_power',{n:fmt(cd.need),m:fmt(my)})}${ok?' ✓':' · '+tr('need_short',{n:fmt(cd.need-my)})}</div>`})():''}
    ${T.open&&DF.length>1?`<div class="chips diffs">${DF.map(x=>`<button data-dt="${T.t}" data-dd="${x.d}" class="${x.d===cd.d?'act':''} ${x.open?'':'lockd'}">${x.open?'':'🔒'}${tr('diff_'+x.d)}</button>`).join('')}</div>`:''}
    ${T.open?`<div class="sub">${tr('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span></div>
@@ -621,7 +621,7 @@ function afterSync(r){
  if(p&&p.boss&&!B.rep)startReplay(p.boss);
  const d=V.daily;
  if(d&&dailyShown!==String(G.daily.date)+d.streak){dailyShown=String(G.daily.date)+d.streak;
-  let days='';for(let i=1;i<=7;i++)days+=`<div class="${i<d.streak?'got':i===d.streak?'now':''}">${T('day',{n:i})}<br>${i===7?'🎁':'💰'}</div>`;
+  let days='';for(let i=1;i<=7;i++)days+=`<div class="${i<d.streak?'got':i===d.streak?'now':''}">${T('day',{n:i})}<br>${i===7?'🧰':'💰'}</div>`;
   modal(`<div class="big">🎁</div><h3>${T('daily_title')}</h3><div class="days">${days}</div><p>${T('today')} <b>💰 ${fmt(d.gold)}</b>${d.epic?' + <b style="color:'+RAR[3].c+'">'+T('epic_item')+'</b>':''}</p><p class="hint">${T('daily_hint')}</p>`,T('claim'),()=>act('daily',{},r=>toast('+💰'+fmt(r.out.gold))))}
 }
 
