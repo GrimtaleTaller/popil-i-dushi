@@ -149,11 +149,12 @@ function log(G: State, k: string, a?: (string | number)[]) {
   if (G.log.length > 40) G.log.length = 40;
 }
 
-export function makeItem(G: State, ilvl: number, minR: number): Item {
+export function makeItem(G: State, ilvl: number, minR: number, lw = 1): Item {
   let r = minR;
-  const tot = RAR.reduce((s, x, i) => s + (i >= minR && i < DROP_RAR ? x.w : 0), 0);
+  const w = (i: number) => RAR[i].w * (i === 4 ? lw : 1); // lw — множник ваги легендарки (скрині вищого виду)
+  const tot = RAR.reduce((s, x, i) => s + (i >= minR && i < DROP_RAR ? w(i) : 0), 0);
   let roll = Math.random() * tot;
-  for (let i = minR; i < DROP_RAR; i++) { roll -= RAR[i].w; r = i; if (roll <= 0) break; }
+  for (let i = minR; i < DROP_RAR; i++) { roll -= w(i); r = i; if (roll <= 0) break; }
   return buildItem(G, ilvl, r, pick(SLOTS));
 }
 export function buildItem(G: State, ilvl: number, r: number, slot: Slot): Item {
@@ -281,7 +282,7 @@ export function fightBoss(G: State): BossResult {
     const first = s === G.maxStage;
     if (first) { res.souls = 5 + s; G.souls += res.souls; }
     if (Math.random() < catChance(s)) { res.cat = 1; G.cat += 1; }
-    if (first && s % 10 === 0) { res.ash = 10; G.ash += 10; } // перший прохід регіонального боса
+    if (first && s % 10 === 0) { res.ash = ASH.region * (s / 10); G.ash += res.ash; } // перший прохід регіонального боса: 50 × номер регіону
     log(G, "boss", [s, Math.round(res.gold)]);
     G.stage++; if (G.stage > G.maxStage) G.maxStage = G.stage;
     G.kills = 0; G.frac = 0;
@@ -380,11 +381,11 @@ export function dailyInfo(G: State, now: number) {
   const t = dayStr(now), y = dayStr(now - 864e5);
   if (G.daily.date === t) return null;
   const streak = G.daily.date === y ? (G.daily.streak % 7) + 1 : 1;
-  return { streak, gold: Math.round(mobGold(G.maxStage) * 15 * streak), epic: streak === 7 };
+  return { streak, gold: Math.round(mobGold(G.maxStage) * 15 * streak), ash: ASH.daily[streak - 1], epic: streak === 7 };
 }
 export function actDaily(G: State, now: number) {
   const d = dailyInfo(G, now); if (!d) fail("daily_taken");
-  G.gold += d!.gold; G.daily = { date: dayStr(now), streak: d!.streak };
+  G.gold += d!.gold; G.ash += d!.ash; G.daily = { date: dayStr(now), streak: d!.streak };
   let item: Item | undefined;
   if (d!.epic) { item = makeItem(G, G.maxStage, 3); addItem(G, item, true); }
   log(G, "daily", [d!.streak]);
@@ -470,15 +471,21 @@ export const DNG_DAILY = 5; // безкоштовні заходи на день
 export function dngLeft(G: State, now: number) { return G.dngDay.day === dayStr(now) ? Math.max(0, DNG_DAILY - G.dngDay.used) : DNG_DAILY; }
 // платний вхід після безкоштовних: ціна ключа × 1,25^(платних заходів сьогодні)
 export const DNG_PAY_MUL = 1.25;
-export function dngPrice(G: State, t: number, now: number) { const n = G.dngDay.day === dayStr(now) ? (G.dngDay.paid || 0) : 0; return Math.round(keyPrice(t) * Math.pow(DNG_PAY_MUL, n)); }
+export function dngPrice(G: State, t: number, now: number) { const n = G.dngDay.day === dayStr(now) ? (G.dngDay.paid || 0) : 0; return Math.round(keyPrice(t) * Math.pow(DNG_PAY_MUL, n)); } // у Попелі
 // складність кожного підземелля: 1 Звичайна, 2 Героїчна, 3 Кошмар. Вороги сильніші на 3 етапи за крок,
 // нагорода: скрині вищого рівня і більше скринь та матеріалів. Наступна складність — після повного проходження попередньої.
 export const DNG_DIFF = 3, DIFF_STEP = 3, DIFF_MUL = [1, 1.3, 1.6];
 export const dngStage = (t: number, d = 1) => 5 + 7 * (t - 1) + DIFF_STEP * (d - 1); // сила ворогів як на етапі
 export const dngDiffMax = (G: State, t: number) => (G.dngd?.[String(t)] || 0); // найвища пройдена складність тиру
-export const keyPrice = (t: number) => Math.round(mobGold(dngStage(t)) * 60);
+// Економіка Попелу (рішення 29.10): ключі й платний вхід — за Попіл. Попіл видається безкоштовно (щоденна нагорода,
+// перший прохід підземель і регіональних босів, рейтинги), продається за гроші і зникає через комісію ринку та ключі.
+// Симуляція 29.10 (45 днів): соло ~300 походів, клан ~450, клан+VIP ~600; рівні й етапи не прискорюються.
+export const ASH = { key: [10, 10, 15, 15, 20, 25, 30, 35, 40, 50], daily: [10, 10, 15, 15, 20, 20, 50], first: 15, region: 50, clanMul: 0.7 };
+export const keyPrice = (t: number) => ASH.key[Math.max(0, Math.min(ASH.key.length - 1, t - 1))]; // базова ціна входу/ключа тиру, Попіл
 export const dngLoc = (t: number) => (t - 1) % REGIONS; // фон/локація
 // скрині трьох видів: вид = мінімальна рідкість речі (1 незвичайна, 2 рідкісна, 3 епічна). Ключ "рівень" — звичайна (старі збереження)
+// шанс легендарки: звичайна ~1,3%, рідкісна 2%, епічна ~5,7% (рішення 29.10, було 3,8% і 14%)
+export const CHEST_LW: Record<number, number> = { 1: 1, 2: 0.5, 3: 0.36 };
 export const chestKey = (il: number, g = 1) => (g > 1 ? `${il}:${g}` : String(il));
 export const chestParse = (k: string) => { const [a, b] = k.split(":"); return { il: Number(a), g: Math.max(1, Math.min(3, Number(b) || 1)) }; };
 export function addChests(G: State, il: number, n: number, g = 1) { const k = chestKey(il, g); G.chests[k] = (G.chests[k] || 0) + n; }
@@ -574,7 +581,7 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
   const day = dayStr(now); if (G.dngDay.day !== day) G.dngDay = { day, used: 0, paid: 0 };
   if (G.dngDay.used < DNG_DAILY) G.dngDay.used++;
   else if ((G.keys[key] || 0) > 0) { G.keys[key]--; usedKey = true; }
-  else { paid = dngPrice(G, t, now); if (G.gold < paid) fail("no_gold"); G.gold -= paid; G.dngDay.paid = (G.dngDay.paid || 0) + 1; }
+  else { paid = dngPrice(G, t, now); if (G.ash < paid) fail("no_ash"); G.ash -= paid; G.dngDay.paid = (G.dngDay.paid || 0) + 1; }
   const rooms = simDungeon(G, t, true, d);
   const cleared = rooms.filter((r) => r.win && !r.boss).length;
   const full = rooms.length === DNG_ROOMS + 1 && rooms[DNG_ROOMS].win;
@@ -582,7 +589,7 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
   // скрині й матеріали — пропорційно пройденим кімнатам; бос дає решту
   const chests = full ? R.chests : Math.floor(R.chests * cleared / (DNG_ROOMS + 1));
   const matN = full ? R.matN : Math.floor(R.matN * cleared / (DNG_ROOMS + 1));
-  const gain = { chests, chestIl: R.chestIl, chestG: R.chestG, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0 };
+  const gain = { chests, chestIl: R.chestIl, chestG: R.chestG, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0, ash: 0 };
   if (chests) addChests(G, R.chestIl, chests, R.chestG);
   if (matN) G.mats[R.mat] += matN;
   if (full) {
@@ -590,7 +597,7 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
     if (Math.random() < R.catChance) { gain.cat = 1; G.cat++; }
     if (Math.random() < R.essChance) { gain.ess = 1; G.ess++; }
     if (t > G.dng.max) G.dng.max = t;
-    G.dngd = G.dngd || {}; if (d > dngDiffMax(G, t)) G.dngd[String(t)] = d;
+    G.dngd = G.dngd || {}; if (d > dngDiffMax(G, t)) { G.dngd[String(t)] = d; gain.ash = ASH.first * t * d; G.ash += gain.ash; } // перший прохід складності
   }
   G.dng.runs++;
   log(G, "dng", [t, full ? 1 : 0, chests, d]);
@@ -599,14 +606,14 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
 // серія заходів (до 10) без показу бою: лише безкоштовні заходи й ключі, за Золото не платить
 export function actDungeonBatch(G: State, t: number, now: number, d = 1, n = 10) {
   n = Math.max(1, Math.min(10, Math.floor(Number(n) || 1)));
-  const sum = { chests: 0, matN: 0, souls: 0, cat: 0, ess: 0 };
+  const sum = { chests: 0, matN: 0, souls: 0, cat: 0, ess: 0, ash: 0 };
   let runs = 0, wins = 0, keys = 0, mat = 0, chestIl = 0, chestG = 1;
   for (let i = 0; i < n; i++) {
     const day = dayStr(now); if (G.dngDay.day !== day) G.dngDay = { day, used: 0, paid: 0 };
     if (G.dngDay.used >= DNG_DAILY && !((G.keys[String(t)] || 0) > 0)) break;
     const r = actDungeon(G, t, now, d);
     runs++; if (r.full) wins++; if (r.usedKey) keys++;
-    sum.chests += r.gain.chests; sum.matN += r.gain.matN; sum.souls += r.gain.souls; sum.cat += r.gain.cat; sum.ess += r.gain.ess;
+    sum.chests += r.gain.chests; sum.matN += r.gain.matN; sum.souls += r.gain.souls; sum.cat += r.gain.cat; sum.ess += r.gain.ess; sum.ash += r.gain.ash;
     mat = r.gain.mat; chestIl = r.gain.chestIl; chestG = r.gain.chestG;
   }
   if (!runs) fail("no_keys");
@@ -621,7 +628,7 @@ export function actOpenChests(G: State, max = 100) {
   for (const il of ks) {
     const c = chestParse(il);
     while (G.chests[il] > 0 && n < free && n < max) {
-      G.chests[il]--; const it = makeItem(G, c.il, c.g); G.inv.unshift(it); got.push(it); n++;
+      G.chests[il]--; const it = makeItem(G, c.il, c.g, CHEST_LW[c.g] ?? 1); G.inv.unshift(it); got.push(it); n++;
       if (it.r >= 3) log(G, "loot", [it.r, it.slot, it.nm, it.il]);
     }
     if (!G.chests[il]) delete G.chests[il];
@@ -705,14 +712,11 @@ export const PAYOUT = { lvl: 30, days: 14 }; // допуск до виводу: 
 // ---------- клани ----------
 export const CLAN = { max: 20, createStage: 10, joinStage: 5 };
 export const clanCreateCost = (_G?: State) => 50000; // фіксована ціна: інакше росте разом з етапом і «тікає» від гравця
-// клан крафтить ключі з казни без ліміту й без зростання ціни (рішення 29.10).
-// Ціна = 4 звичайні ключі свого тиру — як ~7-й платний соло-вхід за день, але не дорожчає; Ковальня знижує.
-// Симуляція 29.10 (45 днів): ~1,8–3 тис. заходів, без прискорення рівнів.
-export const CKEY_MUL = 4;
+// клан крафтить ключі з казни Попелу без ліміту й без зростання ціни (рішення 29.10, див. ASH).
 export const ckeyCrafted = (G: State, now: number) => (G.ckey.day === dayStr(now) ? G.ckey.n : 0);
-export function clanKeyCost(t: number, n = 1, forge = 0) {
-  const k = 1 - BUILD.forge.step / 100 * Math.min(BUILD.forge.max, forge || 0); // Ковальня клану
-  return Math.round(keyPrice(t) * CKEY_MUL * k) * n;
+export function clanKeyCost(t: number, n = 1, forge = 0) { // у Попелі з казни клану: 70% ціни соло-входу, не дорожчає, Ковальня −5%/рів.
+  const k = 1 - BUILD.forge.step / 100 * Math.min(BUILD.forge.max, forge || 0);
+  return Math.max(1, Math.round(keyPrice(t) * ASH.clanMul * k)) * n;
 }
 // будівлі клану: прокачка з казни (золото + матеріал + уламки), бонуси всім учасникам. step — бонус за рівень
 export type BldKey = "citadel" | "forge" | "vault" | "barracks" | "library";
@@ -762,16 +766,29 @@ export function actVault(G: State) {
 }
 export function actOvfSeen(G: State) { G.ovf = { v: 0, d: 0, sh: 0 }; return {}; }
 
-// ---------- ринок між гравцями за Попіл ----------
-// виставляються речі від рідкісних (r >= 2); продавець отримує ціну мінус комісія гри 10%
-export const MARKET = { fee: 0.1, maxLots: 10, minR: 2, maxPrice: 1000000 };
-export function marketTake(G: State, id: number, price: number) {
-  price = Math.floor(Number(price));
-  if (!(price >= 1 && price <= MARKET.maxPrice)) fail("bad_price");
+// ---------- ринок між гравцями: за Попіл або за Золото (рішення 29.10) ----------
+// речі від рідкісних (r >= 2), легендарні й кращі — лише за Попіл; матеріали I–IV — будь-яка валюта.
+// Продавець отримує ціну мінус комісія гри 10% (головний «злив» Попелу).
+export type MCur = "ash" | "gold";
+export const MARKET = { fee: 0.1, maxLots: 10, minR: 2, ashOnlyR: 4, maxPrice: { ash: 1000000, gold: 1e13 } as Record<MCur, number> };
+export type MatLot = { kind: "mat"; m: number; n: number };
+function mcur(c: unknown): MCur { return c === "gold" ? "gold" : "ash"; }
+function mprice(p: unknown, cur: MCur) { const v = Math.floor(Number(p)); if (!(v >= 1 && v <= MARKET.maxPrice[cur])) fail("bad_price"); return v; }
+export function marketTake(G: State, id: number, price: number, cur?: unknown) {
+  const c = mcur(cur); price = mprice(price, c);
   const i = G.inv.findIndex((x) => x.id === Number(id)); if (i < 0) fail("no_item");
   const it = G.inv[i]; if (it.r < MARKET.minR) fail("market_rarity");
+  if (it.r >= MARKET.ashOnlyR && c !== "ash") fail("market_ash_only");
   G.inv.splice(i, 1); delete it.nw;
-  return { it, price };
+  return { it, price, cur: c };
+}
+export function marketTakeMat(G: State, m: number, n: number, price: number, cur?: unknown) {
+  const c = mcur(cur); price = mprice(price, c);
+  m = Math.floor(Number(m)); n = Math.floor(Number(n));
+  if (!(m >= 0 && m <= 3) || !(n >= 1)) fail("bad_ids");
+  if ((G.mats[m] || 0) < n) fail("no_mats");
+  G.mats[m] -= n;
+  return { mat: { kind: "mat", m, n } as MatLot, price, cur: c };
 }
 export const marketNet = (gross: number) => Math.floor(gross * (1 - MARKET.fee));
 // клан: умови вступу
