@@ -165,7 +165,7 @@ async function clanInfo(id: number, G: L.State, now: number) {
     return { id: m.player_id, name: String(x?.name || p?.first_name || "Hero").slice(0, 24), lvl: x?.lvl || 1, stage: x?.max_stage || 1, power: Number(x?.power || 0), role: m.role, given: Number(m.given || 0), seen: p?.last_seen || null, me: m.player_id === id };
   }).sort((a, b) => ro[a.role] - ro[b.role] || b.power - a.power);
   const kn = Number(c!.kn || 0), mc = c!.members as number;
-  const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, gold: L.clanKeyCost(i + 1, kn, mc, 1), gold5: L.clanKeyCost(i + 1, kn, mc, 5), can: (G.dng?.max || 0) >= i + 1 }));
+  const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, gold: L.clanKeyCost(i + 1, G.maxStage, 1), gold5: L.clanKeyCost(i + 1, G.maxStage, 5), can: (G.dng?.max || 0) >= i + 1 }));
   const { data: lg } = await SB.from("clan_log").select("name,kind,data,at").eq("clan_id", me.clan_id).order("id", { ascending: false }).limit(30);
   return { ...base, clan: { id: c!.id, name: c!.name, members: c!.members, power: Number(c!.power), keys: c!.keys || {}, bank: Number(c!.bank || 0), kn }, role: me.role, members, craft, log: lg || [] };
 }
@@ -269,7 +269,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       if (!(t >= 1 && t <= L.DNG_TIERS) || (G.dng?.max || 0) < t) fail("dng_locked");
       // ключі крафтяться за золото з казни клану, не з кишені крафтера
       const { data: cv } = await SB.from("clan_view").select("bank,kn,members").eq("id", me!.clan_id).single();
-      const cost = L.clanKeyCost(t, Number(cv!.kn || 0), cv!.members as number, n);
+      const cost = L.clanKeyCost(t, G.maxStage, n);
       if (Number(cv!.bank || 0) < cost) fail("clan_no_bank");
       const { data: left, error } = await SB.rpc("clan_craft", { p_clan: me!.clan_id, p_tier: t, p_n: n, p_cost: cost, p_kn: Number(cv!.kn || 0) }); if (error) throw error;
       if (left === null) fail("busy"); // хтось скрафтив одночасно — ціна змінилась
@@ -316,7 +316,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "dismantleJunk": out = L.actDismantleJunk(G, String(args.mode)); break;
       case "enchant": out = L.actEnchant(G, args.id as number | undefined); break;
       case "mythic": out = L.actMythic(G, args.ids as number[]); break;
-      case "dungeon": out = L.actDungeon(G, Number(args.t), now, Number(args.d) || 1); break;
+      case "dungeon": out = Number(args.n) > 1 ? L.actDungeonBatch(G, Number(args.t), now, Number(args.d) || 1, Number(args.n)) : L.actDungeon(G, Number(args.t), now, Number(args.d) || 1); break;
       case "smelt": out = L.actSmelt(G, Number(args.n ?? 1)); break;
       case "bag": out = L.actBag(G); break;
       case "vault": out = L.actVault(G); break;
@@ -389,7 +389,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
           shards: G.shards - before.shards, cat: G.cat - before.cat, ess: G.ess - before.ess,
           prog: { sec: Math.round(prog.sec), kills: prog.kills, items: prog.items, boss: prog.boss?.win }, stage: G.stage,
           ...(action === "mythic" || action === "enchant" || action === "astral" ? { out } : {}),
-          ...(action === "dungeon" ? { dng: { t: (out as { t: number }).t, d: (out as { d: number }).d, full: (out as { full: boolean }).full } } : {}),
+          ...(action === "dungeon" ? { dng: { t: (out as { t: number }).t, d: (out as { d: number }).d, full: (out as { full?: boolean }).full, runs: (out as { runs?: number }).runs, wins: (out as { wins?: number }).wins } } : {}),
         },
       });
     }

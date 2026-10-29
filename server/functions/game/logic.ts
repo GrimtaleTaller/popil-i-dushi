@@ -284,7 +284,7 @@ export function fightBoss(G: State): BossResult {
     G.stage++; if (G.stage > G.maxStage) G.maxStage = G.stage;
     G.kills = 0; G.frac = 0;
   } else {
-    G.tot.deaths++; G.kills = 0; G.autoBoss = false;
+    G.tot.deaths++; G.kills = 0; // авто-бос лишається ввімкненим: наступна спроба після ще 10 ворогів
     log(G, timeout ? "bossTimeout" : "bossDeath", [s]);
   }
   return res;
@@ -590,6 +590,22 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
   log(G, "dng", [t, full ? 1 : 0, chests, d]);
   return { t, d, rooms, full, paid, usedKey, gain, heroHp: Math.round(hero(G).hp), loc: dngLoc(t) };
 }
+// серія заходів (до 10) без показу бою: лише безкоштовні заходи й ключі, за Золото не платить
+export function actDungeonBatch(G: State, t: number, now: number, d = 1, n = 10) {
+  n = Math.max(1, Math.min(10, Math.floor(Number(n) || 1)));
+  const sum = { chests: 0, matN: 0, souls: 0, cat: 0, ess: 0 };
+  let runs = 0, wins = 0, keys = 0, mat = 0, chestIl = 0;
+  for (let i = 0; i < n; i++) {
+    const day = dayStr(now); if (G.dngDay.day !== day) G.dngDay = { day, used: 0, paid: 0 };
+    if (G.dngDay.used >= DNG_DAILY && !((G.keys[String(t)] || 0) > 0)) break;
+    const r = actDungeon(G, t, now, d);
+    runs++; if (r.full) wins++; if (r.usedKey) keys++;
+    sum.chests += r.gain.chests; sum.matN += r.gain.matN; sum.souls += r.gain.souls; sum.cat += r.gain.cat; sum.ess += r.gain.ess;
+    mat = r.gain.mat; chestIl = r.gain.chestIl;
+  }
+  if (!runs) fail("no_keys");
+  return { t, d, batch: true, runs, wins, keys, gain: { ...sum, mat, chestIl } };
+}
 export function actOpenChests(G: State, max = 100) {
   const free = Math.max(0, invMax(G) - G.inv.length);
   if (!free) fail("bag_full");
@@ -680,13 +696,13 @@ export const PAYOUT = { lvl: 30, days: 14 }; // допуск до виводу: 
 // ---------- клани ----------
 export const CLAN = { max: 20, createStage: 10, joinStage: 5 };
 export const clanCreateCost = (_G?: State) => 50000; // фіксована ціна: інакше росте разом з етапом і «тікає» від гравця
-// клан крафтить ключі з казни вдвічі дешевше; ціна росте ×1,25 за кожен ключ клану за день у перерахунку на учасника
-// (k-й ключ дня: ціна × 1,25^(k / учасників)) — великий клан не впирається в стелю швидше за малий
+// клан крафтить ключі з казни; ціна фіксована на день, без ліміту (рішення 29.10: «великий вечірній похід» без стелі):
+// max(пів ціни ключа, золото з ~150 ворогів макс. етапу крафтера) — ключ завжди коштує кілька хвилин фарму,
+// тож кількість походів обмежена заробленим золотом, а не таймером. Зростає ×1,25 лише платний вхід за Золото.
+export const CKEY_GOLD = 150;
 export const ckeyCrafted = (G: State, now: number) => (G.ckey.day === dayStr(now) ? G.ckey.n : 0);
-export function clanKeyCost(t: number, kn: number, members: number, n = 1) {
-  const m = Math.max(1, members); let sum = 0;
-  for (let i = 0; i < n; i++) sum += Math.round(keyPrice(t) * 0.5 * Math.pow(DNG_PAY_MUL, (kn + i) / m));
-  return sum;
+export function clanKeyCost(t: number, maxStage: number, n = 1) {
+  return Math.max(Math.round(keyPrice(t) * 0.5), Math.round(mobGold(maxStage) * CKEY_GOLD)) * n;
 }
 export function ckeyAdd(G: State, now: number, n: number) { const d = dayStr(now); if (G.ckey.day !== d) G.ckey = { day: d, n: 0 }; G.ckey.n += n; }
 export const clanNameOk = (n: string) => /^[\p{L}\p{N} _'-]{3,20}$/u.test(n) && n.trim().length >= 3;
