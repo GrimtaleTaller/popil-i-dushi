@@ -75,15 +75,16 @@ function view(G: L.State, now: number, uid = 0) {
       opps: G.arena.opps.map((o) => ({ name: o.name, lvl: o.lvl, power: o.power, rating: o.rating })),
     },
     xp: { need: L.xpNeed(G.lvl), mob: L.mobXp(G.stage) },
-    isAdmin: ADMINS.includes(uid), clanStage: L.CLAN.joinStage,
+    isAdmin: ADMINS.includes(uid), clanStage: L.CLAN.joinStage, clanCost: L.clanCreateCost(G),
     payout: { lvl: L.PAYOUT.lvl, days: L.PAYOUT.days, myDays: G.act.days, ok: G.lvl >= L.PAYOUT.lvl && G.act.days >= L.PAYOUT.days },
-    smelt: L.SMELT,
+    smelt: L.SMELT, inv: { max: L.invMax(G), cost: L.bagCost(G), step: L.BAG.step, vaultMax: L.VAULT_MAX, rate: L.OVF_RATE },
     train: { gateStep: L.GATE_STEP, gate: Object.fromEntries(Object.keys(L.UPG).map((k) => [k, L.gateCost(k, G.up[k as keyof L.State["up"]])])) },
     dng: {
       unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS, daily: L.DNG_DAILY, left: L.dngLeft(G, now),
       tiers: Array.from({ length: L.DNG_TIERS }, (_, i) => {
         const t = i + 1, open = L.dngOpen(G, t);
-        return { t, open, loc: L.dngLoc(t), stage: L.dngStage(t), price: L.keyPrice(t), keys: G.keys[String(t)] || 0, rw: L.dngRewards(t), pay: L.dngPrice(G, t, now), est: open ? L.dngEstimate(G, t) : null };
+        const diffs = Array.from({ length: L.DNG_DIFF }, (_, k) => { const d = k + 1, o = L.dngOpen(G, t, d); return { d, open: o, stage: L.dngStage(t, d), rw: L.dngRewards(t, d), est: o ? L.dngEstimate(G, t, 16, d) : null }; });
+        return { t, open, loc: L.dngLoc(t), stage: L.dngStage(t), price: L.keyPrice(t), keys: G.keys[String(t)] || 0, rw: L.dngRewards(t), pay: L.dngPrice(G, t, now), est: open ? L.dngEstimate(G, t) : null, best: L.dngDiffMax(G, t), diffs };
       }),
     },
   };
@@ -131,30 +132,42 @@ async function arenaDivision(rating: number) {
 // ---------- профіль, клани, адмін: дії з базою, що виконуються один раз до запису стану ----------
 type Pre = { out?: unknown; fx?: (G: L.State, now: number) => void };
 const PRE = new Set(["profile", "admin", "clan", "clanCreate", "clanJoin", "clanLeave", "clanKick", "clanRole", "clanCraft", "clanTake"]);
+const uname = (u: TgUser) => String(u.first_name || u.username || "Hero").slice(0, 24);
+// журнал клану: останні дії учасників
+async function clog(clan: number, u: TgUser | null, kind: string, data: Record<string, unknown> = {}) {
+  const { error } = await SB.from("clan_log").insert({ clan_id: clan, player_id: u?.id ?? null, name: u ? uname(u) : null, kind, data });
+  if (error) console.error(error);
+}
 const fail = (m: string): never => { throw new L.GameError(m); };
 async function clanOf(id: number) {
   const { data } = await SB.from("clan_members").select("clan_id,role").eq("player_id", id).maybeSingle();
   return data as { clan_id: number; role: string } | null;
 }
+async function nameOf(id: number) {
+  const { data } = await SB.from("stats").select("name").eq("player_id", id).maybeSingle();
+  return String(data?.name || "Hero");
+}
 async function clanInfo(id: number, G: L.State, now: number) {
   const me = await clanOf(id);
-  const base = { max: L.CLAN.max, createStage: L.CLAN.createStage, joinStage: L.CLAN.joinStage, createCost: L.clanCreateCost(G), take: L.CLAN.take, takeLeft: L.ckeyLeft(G, now) };
+  const base = { max: L.CLAN.max, createStage: L.CLAN.createStage, joinStage: L.CLAN.joinStage, createCost: L.clanCreateCost(G) };
   if (!me) {
     const { data } = await SB.from("clan_view").select("id,name,members,power").order("power", { ascending: false }).limit(30);
     return { ...base, clan: null, list: (data || []).map((c) => ({ ...c, power: Number(c.power) })) };
   }
-  const { data: c } = await SB.from("clan_view").select("id,name,members,power,keys").eq("id", me.clan_id).single();
-  const { data: ms } = await SB.from("clan_members").select("player_id,role,joined_at").eq("clan_id", me.clan_id);
+  const { data: c } = await SB.from("clan_view").select("id,name,members,power,keys,bank,kn").eq("id", me.clan_id).single();
+  const { data: ms } = await SB.from("clan_members").select("player_id,role,joined_at,given").eq("clan_id", me.clan_id);
   const ids = (ms || []).map((m) => m.player_id as number);
   const { data: st } = await SB.from("stats").select("player_id,name,lvl,max_stage,power").in("player_id", ids);
   const { data: pl } = await SB.from("players").select("tg_id,last_seen,first_name").in("tg_id", ids);
   const ro: Record<string, number> = { leader: 0, officer: 1, member: 2 };
   const members = (ms || []).map((m) => {
     const x = (st || []).find((y) => y.player_id === m.player_id), p = (pl || []).find((y) => y.tg_id === m.player_id);
-    return { id: m.player_id, name: String(x?.name || p?.first_name || "Hero").slice(0, 24), lvl: x?.lvl || 1, stage: x?.max_stage || 1, power: Number(x?.power || 0), role: m.role, seen: p?.last_seen || null, me: m.player_id === id };
+    return { id: m.player_id, name: String(x?.name || p?.first_name || "Hero").slice(0, 24), lvl: x?.lvl || 1, stage: x?.max_stage || 1, power: Number(x?.power || 0), role: m.role, given: Number(m.given || 0), seen: p?.last_seen || null, me: m.player_id === id };
   }).sort((a, b) => ro[a.role] - ro[b.role] || b.power - a.power);
-  const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, gold: L.clanKeyCost(i + 1), can: (G.dng?.max || 0) >= i + 1 }));
-  return { ...base, clan: { id: c!.id, name: c!.name, members: c!.members, power: Number(c!.power), keys: c!.keys || {} }, role: me.role, members, craft };
+  const kn = Number(c!.kn || 0), mc = c!.members as number;
+  const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, gold: L.clanKeyCost(i + 1, kn, mc, 1), gold5: L.clanKeyCost(i + 1, kn, mc, 5), can: (G.dng?.max || 0) >= i + 1 }));
+  const { data: lg } = await SB.from("clan_log").select("name,kind,data,at").eq("clan_id", me.clan_id).order("id", { ascending: false }).limit(30);
+  return { ...base, clan: { id: c!.id, name: c!.name, members: c!.members, power: Number(c!.power), keys: c!.keys || {}, bank: Number(c!.bank || 0), kn }, role: me.role, members, craft, log: lg || [] };
 }
 async function profile(user: TgUser, G: L.State) {
   const { data: p } = await SB.from("players").select("created_at").eq("tg_id", user.id).maybeSingle();
@@ -201,6 +214,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       if (error) { if (error.code === "23505") fail("clan_name_taken"); throw error; }
       const { error: e2 } = await SB.from("clan_members").insert({ player_id: user.id, clan_id: c.id, role: "leader" });
       if (e2) { await SB.from("clans").delete().eq("id", c.id); fail("clan_already"); }
+      await clog(c.id, user, "create");
       return { fx: (S) => { S.gold = Math.max(0, S.gold - cost); }, out: await clanInfo(user.id, G, now) };
     }
     case "clanJoin": {
@@ -211,6 +225,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       if (c!.members >= L.CLAN.max) fail("clan_full");
       const { error } = await SB.from("clan_members").insert({ player_id: user.id, clan_id: c!.id, role: "member" });
       if (error) fail("clan_already");
+      await clog(c!.id, user, "join");
       return { out: await clanInfo(user.id, G, now) };
     }
     case "clanLeave": {
@@ -223,6 +238,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
         await SB.from("clans").update({ leader: heir.player_id }).eq("id", me!.clan_id);
       }
       await SB.from("clan_members").delete().eq("player_id", user.id);
+      await clog(me!.clan_id, user, "leave");
       return { out: await clanInfo(user.id, G, now) };
     }
     case "clanKick": case "clanRole": {
@@ -233,6 +249,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       if (action === "clanKick") {
         if (t!.role === "leader" || (me!.role === "officer" && t!.role !== "member")) fail("clan_rights");
         await SB.from("clan_members").delete().eq("player_id", pid);
+        await clog(me!.clan_id, user, "kick", { who: await nameOf(pid) });
       } else {
         if (me!.role !== "leader") fail("clan_rights");
         const role = String(args.role);
@@ -242,6 +259,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
           await SB.from("clans").update({ leader: pid }).eq("id", me!.clan_id);
         } else if (role === "officer" || role === "member") await SB.from("clan_members").update({ role }).eq("player_id", pid);
         else fail("bad_role");
+        await clog(me!.clan_id, user, "role", { who: await nameOf(pid), role: String(args.role) });
       }
       return { out: await clanInfo(user.id, G, now) };
     }
@@ -249,19 +267,22 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       if (!me || !canLead(me.role)) fail("clan_rights");
       const t = Math.floor(Number(args.t)), n = Math.max(1, Math.min(10, Math.floor(Number(args.n) || 1)));
       if (!(t >= 1 && t <= L.DNG_TIERS) || (G.dng?.max || 0) < t) fail("dng_locked");
-      const cost = L.clanKeyCost(t) * n; if (G.gold < cost) fail("no_gold");
-      const { error } = await SB.rpc("clan_keys_add", { p_clan: me!.clan_id, p_tier: t, p_n: n }); if (error) throw error;
-      return { fx: (S) => { S.gold = Math.max(0, S.gold - cost); }, out: await clanInfo(user.id, G, now) };
+      // ключі крафтяться за золото з казни клану, не з кишені крафтера
+      const { data: cv } = await SB.from("clan_view").select("bank,kn,members").eq("id", me!.clan_id).single();
+      const cost = L.clanKeyCost(t, Number(cv!.kn || 0), cv!.members as number, n);
+      if (Number(cv!.bank || 0) < cost) fail("clan_no_bank");
+      const { data: left, error } = await SB.rpc("clan_craft", { p_clan: me!.clan_id, p_tier: t, p_n: n, p_cost: cost, p_kn: Number(cv!.kn || 0) }); if (error) throw error;
+      if (left === null) fail("busy"); // хтось скрафтив одночасно — ціна змінилась
+      await clog(me!.clan_id, user, "craft", { t, n, gold: cost });
+      return { out: await clanInfo(user.id, G, now) };
     }
     case "clanTake": {
       if (!me) fail("clan_none");
       const t = Math.floor(Number(args.t));
-      if (L.ckeyLeft(G, now) <= 0) fail("clan_take_limit");
       const { data: left, error } = await SB.rpc("clan_keys_add", { p_clan: me!.clan_id, p_tier: t, p_n: -1 }); if (error) throw error;
       if (left === null) fail("clan_no_keys");
-      const info = await clanInfo(user.id, G, now);
-      (info as { takeLeft: number }).takeLeft = Math.max(0, info.takeLeft - 1);
-      return { fx: (S, nw) => { S.keys[String(t)] = (S.keys[String(t)] || 0) + 1; L.ckeyUse(S, nw); }, out: info };
+      await clog(me!.clan_id, user, "take", { t });
+      return { fx: (S) => { S.keys[String(t)] = (S.keys[String(t)] || 0) + 1; }, out: await clanInfo(user.id, G, now) };
     }
   }
   return {};
@@ -269,6 +290,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
 
 async function handle(user: TgUser, start: string | undefined, action: string, args: Record<string, unknown>) {
   const pre: Pre | null = PRE.has(action) ? await preAction(user, start, action, args) : null;
+  const giveTo = action === "clanGive" ? await clanOf(user.id) : null;
   for (let attempt = 0; attempt < 4; attempt++) {
     const now = Date.now();
     const { version, state, isNew } = await loadOrCreate(user, start, now);
@@ -276,6 +298,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     const prog = L.progress(G, now);
     let out: unknown = null;
     let pvp: { def: number | null; oppRating: number; win: boolean } | null = null;
+    let give = 0;
     const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat, ess: G.ess };
     if (pre) { pre.fx?.(G, now); out = pre.out; }
     else switch (action) {
@@ -293,8 +316,11 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "dismantleJunk": out = L.actDismantleJunk(G, String(args.mode)); break;
       case "enchant": out = L.actEnchant(G, args.id as number | undefined); break;
       case "mythic": out = L.actMythic(G, args.ids as number[]); break;
-      case "dungeon": out = L.actDungeon(G, Number(args.t), now); break;
+      case "dungeon": out = L.actDungeon(G, Number(args.t), now, Number(args.d) || 1); break;
       case "smelt": out = L.actSmelt(G, Number(args.n ?? 1)); break;
+      case "bag": out = L.actBag(G); break;
+      case "vault": out = L.actVault(G); break;
+      case "ovfSeen": out = L.actOvfSeen(G); break;
       case "openChests": out = L.actOpenChests(G); break;
       case "astral": out = L.actAstral(G, Number(args.id)); break;
       case "arena": case "arenaRefresh": {
@@ -321,6 +347,14 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
         G.arena.opps = await pickOpps(G, user.id);
         break;
       }
+      case "clanGive": {
+        // внесок у казну: золото списується зі стану під оптимістичним блокуванням, у казну — лише після успішного запису
+        if (!giveTo) throw new L.GameError("clan_none");
+        const amt = Math.floor(Number(args.amt));
+        if (!(amt >= 1) || amt > G.gold) throw new L.GameError("no_gold");
+        G.gold -= amt; give = amt;
+        break;
+      }
       case "arenaShop": out = L.actArenaShop(G, String(args.item)); break;
       case "top": out = await topList(String(args.kind), user.id); break;
       default: throw new L.GameError("bad_action");
@@ -334,6 +368,11 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     if (pvp) {
       const { data: rr, error: re } = await SB.rpc("arena_result", { p_att: user.id, p_def: pvp.def, p_win: pvp.win, p_opp_rating: pvp.oppRating });
       if (re) console.error(re); else if (rr && rr[0]) { (out as Record<string, unknown>).delta = rr[0].delta; (out as Record<string, unknown>).rating = rr[0].new_rating; }
+    }
+    if (give && giveTo) {
+      const { error: ge } = await SB.rpc("clan_bank_give", { p_clan: giveTo.clan_id, p_player: user.id, p_amt: give }); if (ge) console.error(ge);
+      await clog(giveTo.clan_id, user, "give", { gold: give });
+      out = await clanInfo(user.id, G, now);
     }
     // публічні показники для рейтингів
     if (action !== "sync" || prog.lvlUps || prog.boss?.win || isNew) {
@@ -350,7 +389,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
           shards: G.shards - before.shards, cat: G.cat - before.cat, ess: G.ess - before.ess,
           prog: { sec: Math.round(prog.sec), kills: prog.kills, items: prog.items, boss: prog.boss?.win }, stage: G.stage,
           ...(action === "mythic" || action === "enchant" || action === "astral" ? { out } : {}),
-          ...(action === "dungeon" ? { dng: { t: (out as { t: number }).t, full: (out as { full: boolean }).full } } : {}),
+          ...(action === "dungeon" ? { dng: { t: (out as { t: number }).t, d: (out as { d: number }).d, full: (out as { full: boolean }).full } } : {}),
         },
       });
     }

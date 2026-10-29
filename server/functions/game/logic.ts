@@ -34,7 +34,12 @@ export const BOSS_TIME = 30;
 export const OFFLINE_MAX = 8 * 3600;
 export const ONLINE_WINDOW = 90; // секунд між синхронізаціями, що рахуються як «онлайн»
 export const OFFLINE_RATE = 0.5; // офлайн герой фармить удвічі повільніше
-export const INV_MAX = 40;
+export const INV_MAX = 200; // базова сумка; розширення за Іскри — BAG
+export const BAG = { step: 25, max: 4, base: 500 }; // +25 місць; ціна 500 × 2^k Іскор; до 300 місць
+// повна сумка: епічні й кращі — у сховище (до VAULT_MAX), решта автоматично розбирається на уламки з втратою 50%
+export const VAULT_MAX = 100, OVF_RATE = 0.5;
+export const invMax = (G: State) => INV_MAX + BAG.step * (G.bag || 0);
+export const bagCost = (G: State) => ((G.bag || 0) >= BAG.max ? null : BAG.base * Math.pow(2, G.bag || 0));
 export const DROP = 0.12;
 export const REGIONS = 8;
 export const ENCH_STEP = 0.08, ENCH_MAX = 25;
@@ -85,7 +90,11 @@ export type State = {
   arena: ArenaState;
   act: { last: string; days: number };       // дні активності (допуск до виводу)
   dngDay: { day: string; used: number; paid?: number }; // заходи в підземелля сьогодні: безкоштовні й платні
-  ckey: { day: string; n: number };          // кланові ключі, взяті сьогодні
+  bag?: number;                              // скільки разів розширено сумку
+  vault?: Item[];                            // сховище для речей, що не вмістились у сумку
+  ovf?: { v: number; d: number; sh: number }; // що сталося з речами при повній сумці (для повідомлення)
+  ckey: { day: string; n: number };          // застаріле: ключі, скрафчені гравцем за день (тепер лічильник у клані)
+  dngd?: Record<string, number>;             // тир -> найвища пройдена складність
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
 export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
@@ -106,6 +115,7 @@ export function fresh(now: number): State {
 export function migrate(G: State): State {
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
+  if (!G.dngd && G.dng) { G.dngd = {}; for (let t = 1; t <= (G.dng.max || 0); t++) G.dngd[String(t)] = 1; }
   for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay", "ckey"]) if (g[k] === undefined) g[k] = d[k];
   return G;
 }
@@ -162,7 +172,12 @@ export function buildItem(G: State, ilvl: number, r: number, slot: Slot): Item {
 // додає предмет; повертає золото, якщо предмет продано автоматично
 function addItem(G: State, it: Item, fromBoss: boolean): number {
   if (G.autoSell && it.r === 0 && !fromBoss) { const g = sellPrice(it); G.gold += g; return g; }
-  if (G.inv.length >= INV_MAX) { const g = sellPrice(it); G.gold += g; log(G, "bagfull"); return g; }
+  if (G.inv.length >= invMax(G)) {
+    G.ovf = G.ovf || { v: 0, d: 0, sh: 0 }; G.vault = G.vault || [];
+    if (it.r >= 3 && G.vault.length < VAULT_MAX) { G.vault.unshift(it); G.ovf.v++; }
+    else { const sh = Math.max(1, Math.round(disShards(it) * OVF_RATE)); G.shards += sh; G.ovf.d++; G.ovf.sh += sh; }
+    return 0;
+  }
   G.inv.unshift(it);
   if (it.r >= 2) log(G, "loot", [it.r, it.slot, it.nm, it.il]);
   return 0;
@@ -335,7 +350,7 @@ export function actEquipBest(G: State) {
   return { n };
 }
 export function actSell(G: State, ids: number[]) {
-  if (!Array.isArray(ids) || ids.length > INV_MAX) fail("bad_ids");
+  if (!Array.isArray(ids) || ids.length > invMax(G)) fail("bad_ids");
   const set = new Set(ids.map(Number)); let g = 0, n = 0;
   G.inv = G.inv.filter((i) => { if (set.has(i.id)) { g += sellPrice(i); n++; return false; } return true; });
   G.gold += g;
@@ -387,7 +402,7 @@ function disOne(G: State, it: Item, mode: "xp" | "shards") {
   const sh = disShards(it); G.shards += sh; return { xp: 0, shards: sh };
 }
 export function actDismantle(G: State, ids: number[], mode: string) {
-  if (!Array.isArray(ids) || !ids.length || ids.length > INV_MAX) fail("bad_ids");
+  if (!Array.isArray(ids) || !ids.length || ids.length > invMax(G)) fail("bad_ids");
   const m = mode === "xp" ? "xp" : "shards"; G.dismode = m;
   let xp = 0, shards = 0;
   for (const it of takeItems(G, ids)) { const r = disOne(G, it, m); xp += r.xp; shards += r.shards; }
@@ -451,27 +466,34 @@ export const DNG_TIERS = 10, DNG_ROOMS = 5, DNG_TIME = 75;
 export const DNG_UNLOCK_STAGE = 5;
 export const DNG_DAILY = 5; // безкоштовні заходи на день; далі — лише за ключі
 export function dngLeft(G: State, now: number) { return G.dngDay.day === dayStr(now) ? Math.max(0, DNG_DAILY - G.dngDay.used) : DNG_DAILY; }
-// платний вхід після безкоштовних: ціна ключа × 2^(платних заходів сьогодні)
-export function dngPrice(G: State, t: number, now: number) { const n = G.dngDay.day === dayStr(now) ? (G.dngDay.paid || 0) : 0; return Math.round(keyPrice(t) * Math.pow(2, n)); }
-export const dngStage = (t: number) => 5 + 7 * (t - 1);           // сила ворогів як на етапі
+// платний вхід після безкоштовних: ціна ключа × 1,25^(платних заходів сьогодні)
+export const DNG_PAY_MUL = 1.25;
+export function dngPrice(G: State, t: number, now: number) { const n = G.dngDay.day === dayStr(now) ? (G.dngDay.paid || 0) : 0; return Math.round(keyPrice(t) * Math.pow(DNG_PAY_MUL, n)); }
+// складність кожного підземелля: 1 Звичайна, 2 Героїчна, 3 Кошмар. Вороги сильніші на 3 етапи за крок,
+// нагорода: скрині вищого рівня і більше скринь та матеріалів. Наступна складність — після повного проходження попередньої.
+export const DNG_DIFF = 3, DIFF_STEP = 3, DIFF_MUL = [1, 1.3, 1.6];
+export const dngStage = (t: number, d = 1) => 5 + 7 * (t - 1) + DIFF_STEP * (d - 1); // сила ворогів як на етапі
+export const dngDiffMax = (G: State, t: number) => (G.dngd?.[String(t)] || 0); // найвища пройдена складність тиру
 export const keyPrice = (t: number) => Math.round(mobGold(dngStage(t)) * 60);
 export const dngLoc = (t: number) => (t - 1) % REGIONS;           // фон/локація
-export function dngOpen(G: State, t: number) {
-  if (t < 1 || t > DNG_TIERS) return false;
+export function dngOpen(G: State, t: number, d = 1) {
+  if (t < 1 || t > DNG_TIERS || d < 1 || d > DNG_DIFF) return false;
   if (G.maxStage < DNG_UNLOCK_STAGE) return false;
+  if (d > 1) return dngDiffMax(G, t) >= d - 1;
   return t <= (G.dng?.max || 0) + 1;
 }
-export function dngRewards(t: number) {
+export function dngRewards(t: number, d = 1) {
+  const m = DIFF_MUL[d - 1] || 1;
   return {
-    chests: 1 + t, chestIl: dngStage(t), mat: Math.min(3, Math.floor((t - 1) / 2.5)), matN: 3 + t,
-    souls: 2 * t, catChance: t >= 8 ? 1 : t >= 4 ? 0.5 : 0, essChance: t >= 8 ? 0.15 : 0,
+    chests: Math.round((1 + t) * m), chestIl: dngStage(t, d), mat: Math.min(3, Math.floor((t - 1) / 2.5)), matN: Math.round((3 + t) * m),
+    souls: 2 * t * d, catChance: Math.min(1, (t >= 8 ? 1 : t >= 4 ? 0.5 : 0) + 0.15 * (d - 1)), essChance: t >= 8 ? 0.15 + 0.1 * (d - 1) : t >= 6 && d === 3 ? 0.05 : 0,
   };
 }
 type Foe = { hp: number; atk: number; boss: boolean };
-export type DngRoom = { boss: boolean; win: boolean; hpLeft: number };
+export type DngRoom = { boss: boolean; win: boolean; hpLeft: number; ev?: BossEv[]; hp0?: number; foeHp?: number };
 // бій з кімнатами поспіль: здоров'я героя не відновлюється між кімнатами (лише +10%)
-export function simDungeon(G: State, t: number) {
-  const s = dngStage(t), H = hero(G);
+export function simDungeon(G: State, t: number, rec = false, d = 1) {
+  const s = dngStage(t, d), H = hero(G);
   const foes: Foe[] = [];
   for (let i = 0; i < DNG_ROOMS; i++) foes.push({ hp: mobHp(s) * 3, atk: mobAtk(s) * 1.2, boss: false });
   foes.push({ hp: mobHp(s) * 12, atk: mobAtk(s) * 1.5, boss: true });
@@ -479,45 +501,48 @@ export function simDungeon(G: State, t: number) {
   const rooms: DngRoom[] = [];
   for (const f of foes) {
     let fh = f.hp, ht = 0, mt = 0.6, t = 0, win = false;
+    const ev: BossEv[] = [], hp0 = hp; // події бою для показу в клієнті
     while (total + t < DNG_TIME) {
       const nh = ht + 1, nm = mt + 1.4;
       if (nh <= nm) {
         ht = nh; t = nh;
         const cr = Math.random() * 100 < H.crit;
-        fh -= H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1);
+        const dd = H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1);
+        fh -= dd; if (rec) ev.push([r2(t), 0, Math.round(dd), cr ? 1 : 0]);
         if (fh <= 0) { win = true; break; }
         hp = Math.min(H.hp, hp + H.hp * 0.02);
       } else {
         mt = nm; t = nm;
-        hp -= Math.max(f.atk * 0.2, f.atk - H.def) * rnd(0.9, 1.1);
+        const dd = Math.max(f.atk * 0.2, f.atk - H.def) * rnd(0.9, 1.1);
+        hp -= dd; if (rec) ev.push([r2(t), 1, Math.round(dd), 0]);
         if (hp <= 0) break;
       }
     }
     total += t;
-    rooms.push({ boss: f.boss, win, hpLeft: Math.max(0, Math.round(hp / H.hp * 100)) });
+    rooms.push({ boss: f.boss, win, hpLeft: Math.max(0, Math.round(hp / H.hp * 100)), ...(rec ? { ev, hp0: Math.round(hp0), foeHp: Math.round(f.hp) } : {}) });
     if (!win) break;
     hp = Math.min(H.hp, hp + H.hp * 0.1);
   }
   return rooms;
 }
-export function dngEstimate(G: State, t: number, n = 24) {
+export function dngEstimate(G: State, t: number, n = 24, d = 1) {
   let w = 0;
-  for (let i = 0; i < n; i++) { const r = simDungeon(G, t); if (r.length === DNG_ROOMS + 1 && r[DNG_ROOMS].win) w++; }
+  for (let i = 0; i < n; i++) { const r = simDungeon(G, t, false, d); if (r.length === DNG_ROOMS + 1 && r[DNG_ROOMS].win) w++; }
   return Math.round(w / n * 100);
 }
-export function actDungeon(G: State, t: number, now = Date.now()) {
-  t = Math.floor(Number(t));
-  if (!dngOpen(G, t)) fail("dng_locked");
+export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
+  t = Math.floor(Number(t)); d = Math.floor(Number(d)) || 1;
+  if (!dngOpen(G, t, d)) fail("dng_locked");
   const key = String(t);
   let paid = 0, usedKey = false;
-  const d = dayStr(now); if (G.dngDay.day !== d) G.dngDay = { day: d, used: 0, paid: 0 };
+  const day = dayStr(now); if (G.dngDay.day !== day) G.dngDay = { day, used: 0, paid: 0 };
   if (G.dngDay.used < DNG_DAILY) G.dngDay.used++;
   else if ((G.keys[key] || 0) > 0) { G.keys[key]--; usedKey = true; }
   else { paid = dngPrice(G, t, now); if (G.gold < paid) fail("no_gold"); G.gold -= paid; G.dngDay.paid = (G.dngDay.paid || 0) + 1; }
-  const rooms = simDungeon(G, t);
+  const rooms = simDungeon(G, t, true, d);
   const cleared = rooms.filter((r) => r.win && !r.boss).length;
   const full = rooms.length === DNG_ROOMS + 1 && rooms[DNG_ROOMS].win;
-  const R = dngRewards(t);
+  const R = dngRewards(t, d);
   // скрині й матеріали — пропорційно пройденим кімнатам; бос дає решту
   const chests = full ? R.chests : Math.floor(R.chests * cleared / (DNG_ROOMS + 1));
   const matN = full ? R.matN : Math.floor(R.matN * cleared / (DNG_ROOMS + 1));
@@ -529,13 +554,14 @@ export function actDungeon(G: State, t: number, now = Date.now()) {
     if (Math.random() < R.catChance) { gain.cat = 1; G.cat++; }
     if (Math.random() < R.essChance) { gain.ess = 1; G.ess++; }
     if (t > G.dng.max) G.dng.max = t;
+    G.dngd = G.dngd || {}; if (d > dngDiffMax(G, t)) G.dngd[String(t)] = d;
   }
   G.dng.runs++;
-  log(G, "dng", [t, full ? 1 : 0, chests]);
-  return { t, rooms, full, paid, usedKey, gain };
+  log(G, "dng", [t, full ? 1 : 0, chests, d]);
+  return { t, d, rooms, full, paid, usedKey, gain, heroHp: Math.round(hero(G).hp), loc: dngLoc(t) };
 }
-export function actOpenChests(G: State, max = INV_MAX) {
-  const free = Math.max(0, INV_MAX - G.inv.length);
+export function actOpenChests(G: State, max = 100) {
+  const free = Math.max(0, invMax(G) - G.inv.length);
   if (!free) fail("bag_full");
   let n = 0; const got: Item[] = [];
   for (const il of Object.keys(G.chests).sort((a, b) => Number(b) - Number(a))) {
@@ -622,9 +648,34 @@ export function actSmelt(G: State, n = 1) {
 export const PAYOUT = { lvl: 30, days: 14 }; // допуск до виводу: рівень і стаж (дні активності)
 
 // ---------- клани ----------
-export const CLAN = { max: 20, createStage: 10, joinStage: 5, take: 2 };
-export const clanCreateCost = (G: State) => Math.round(mobGold(Math.max(10, G.maxStage)) * 300);
-export const clanKeyCost = (t: number) => Math.round(keyPrice(t) * 0.5); // клан крафтить ключі вдвічі дешевше
-export function ckeyLeft(G: State, now: number) { return G.ckey.day === dayStr(now) ? Math.max(0, CLAN.take - G.ckey.n) : CLAN.take; }
-export function ckeyUse(G: State, now: number) { const d = dayStr(now); if (G.ckey.day !== d) G.ckey = { day: d, n: 0 }; G.ckey.n++; }
+export const CLAN = { max: 20, createStage: 10, joinStage: 5 };
+export const clanCreateCost = (_G?: State) => 50000; // фіксована ціна: інакше росте разом з етапом і «тікає» від гравця
+// клан крафтить ключі з казни вдвічі дешевше; ціна росте ×1,25 за кожен ключ клану за день у перерахунку на учасника
+// (k-й ключ дня: ціна × 1,25^(k / учасників)) — великий клан не впирається в стелю швидше за малий
+export const ckeyCrafted = (G: State, now: number) => (G.ckey.day === dayStr(now) ? G.ckey.n : 0);
+export function clanKeyCost(t: number, kn: number, members: number, n = 1) {
+  const m = Math.max(1, members); let sum = 0;
+  for (let i = 0; i < n; i++) sum += Math.round(keyPrice(t) * 0.5 * Math.pow(DNG_PAY_MUL, (kn + i) / m));
+  return sum;
+}
+export function ckeyAdd(G: State, now: number, n: number) { const d = dayStr(now); if (G.ckey.day !== d) G.ckey = { day: d, n: 0 }; G.ckey.n += n; }
 export const clanNameOk = (n: string) => /^[\p{L}\p{N} _'-]{3,20}$/u.test(n) && n.trim().length >= 3;
+
+// розширення сумки за Іскри
+export function actBag(G: State) {
+  const c = bagCost(G); if (c === null) fail("max");
+  if (G.souls < c!) fail("no_souls");
+  G.souls -= c!; G.bag = (G.bag || 0) + 1;
+  return { bag: G.bag, max: invMax(G) };
+}
+
+// сховище: забрати речі в сумку, скільки влізе; скинути повідомлення про переповнення
+export function actVault(G: State) {
+  G.vault = G.vault || [];
+  const free = Math.max(0, invMax(G) - G.inv.length);
+  if (!G.vault.length) { G.ovf = { v: 0, d: 0, sh: 0 }; return { n: 0 }; }
+  if (!free) fail("bag_full");
+  const take = G.vault.splice(0, free); G.inv.unshift(...take);
+  return { n: take.length, left: G.vault.length };
+}
+export function actOvfSeen(G: State) { G.ovf = { v: 0, d: 0, sh: 0 }; return {}; }

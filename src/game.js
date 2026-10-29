@@ -222,10 +222,12 @@ function renderHero(){
 let bagFilter='all';
 function chestCount(){return Object.values(G.chests||{}).reduce((a,b)=>a+b,0)}
 function renderBag(){
- const cc=chestCount();
- let h=(cc?`<div class="chestbar">🎁<span>${T('chests',{n:cc})}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
+ const cc=chestCount(),vlt=(G.vault||[]).length,ov=G.ovf||{v:0,d:0,sh:0};
+ let h=(ov.v||ov.d?`<div class="card ovf"><b>⚠️ ${T('bag_full_title')}</b><p class="hint">${T('ovf_txt',{v:ov.v,d:ov.d,s:fmt(ov.sh),p:Math.round((V.inv&&V.inv.rate||0.5)*100)})}</p><div class="row"><button class="btn" id="ovfOk">${T('ok')}</button></div></div>`:'')
+ +(vlt?`<div class="chestbar vault">📦<span>${T('vault',{n:vlt,m:V.inv&&V.inv.vaultMax||100})}</span><button class="btn pri" id="vTake">${T('take')}</button></div>`:'')
+ +(cc?`<div class="chestbar">🎁<span>${T('chests',{n:cc})}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
  <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="sellC">${T('sell_common')}</button><button class="btn" id="sellW">${T('sell_worse')}</button><button class="btn ${G.autoSell?'pri':''}" id="autoS">${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button></div>
- <div class="hint">${T('items_n',{n:G.inv.length,m:INV_MAX})}</div>`;
+ <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · 🔥${fmt(V.inv.cost)}</button>`:''}</div>`;
  const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
  for(const it of list){const eq=G.eq[it.slot],better=!eq||itemScore(it)>itemScore(eq);
@@ -234,6 +236,9 @@ function renderBag(){
    <div class="st">${statLine(it.st,eq?eq.st:{})}</div></div>
    <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button><button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>${it.r<4?`<button class="btn" data-dis="${it.id}">⚒️ ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
+ if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
+ if($('vTake'))$('vTake').onclick=()=>act('vault',{},r=>toast(T('vault_took',{n:r.out.n})));
+ if($('bagUp'))$('bagUp').onclick=()=>act('bag',{},r=>{toast(T('bag_up',{n:r.out.max}));haptic('light')});
  if(cc)$('openC').onclick=()=>act('openChests',{},r=>{toast(T('opened',{n:r.out.n})+(r.out.best>=3?' · '+RAR[r.out.best].n+'!':''));if(r.out.best>=3)haptic('heavy')});
  if(G.inv.some(i=>i.nw)){G.inv.forEach(i=>delete i.nw);api('seen').catch(()=>{})}
  $('p-bag').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{bagFilter=b.dataset.f;renderBag()});
@@ -259,7 +264,7 @@ function renderForge(){
  let h='';if(fsub==='res')h+=`<div class="card"><h4>${T('res')}</h4><div class="resg">
   <div><span>${T('souls')}</span><b>${fmt(G.souls)}</b></div><div><span>${T('ash')}</span><b>${fmt(G.ash)}</b></div>
   <div><span>${T('shards')}</span><b>${fmt(G.shards)}</b></div><div><span>${T('cats')}</span><b>${G.cat}</b></div>
-  <div><span>${T('ess')}</span><b>${G.ess||0}</b></div><div><span>${T('mats')}</span><b>${MATN.map((x,i)=>x+':'+fmt((G.mats||[])[i]||0)).join(' ')}</b></div></div>
+  <div><span>${T('ess')}</span><b>${G.ess||0}</b></div></div><h4 style="margin:10px 0 6px">${T('mats')}</h4><div class="mats">${MATN.map((x,i)=>`<div><i>⛏️</i><b>${fmt((G.mats||[])[i]||0)}</b><span>${T('mat_n',{n:x})}</span></div>`).join('')}</div><p class="hint">${T('mats_hint')}</p>
   <p class="hint">${T('forge_hint',{r:fmt(F.soulsPerHour)})}</p></div>`;
  if(fsub==='res')h+=`<div class="card"><h4>${T('dis_title')}</h4>
   <div class="chips"><button data-dm="shards" class="${G.dismode!=='xp'?'act':''}">${T('to_shards')}</button><button data-dm="xp" class="${G.dismode==='xp'?'act':''}">${T('to_xp')}</button></div>
@@ -293,22 +298,65 @@ function renderForge(){
 }
 const DNG=[{n:'Нора щурів',bg:1},{n:'Вовче лігво',bg:1},{n:'Склеп короля',bg:2},{n:'Болотне капище',bg:3},{n:'Вогняна кузня',bg:4},{n:'Крижана печера',bg:5},{n:'Затонулий храм',bg:6},{n:'Зала дзеркал',bg:7},{n:'Серце безодні',bg:8},{n:'Трон попелу',bg:8}];
 const MATN=['I','II','III','IV'];
+const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');return d.toDateString()===n.toDateString()?p(d.getHours())+':'+p(d.getMinutes()):p(d.getDate())+'.'+p(d.getMonth()+1)};
+const dngD={}; // вибрана складність для кожного тиру
 function renderDng(){
  const D=V.dng,tr=T;
  const left=D.left!=null?D.left:5,daily=D.daily||5;
  let h=`<p class="hint" style="margin-top:0">${T('dng_hint',{r:D.rooms,d:daily})}</p><div class="chestbar" style="background:var(--panel);border-color:var(--line)">🏰<span>${T('dng_left',{n:left,m:daily})}</span></div>`;
  if(G.maxStage<D.unlockStage)h+=`<div class="empty">${T('dng_unlock',{n:D.unlockStage})}</div>`;
- for(const T of D.tiers){const d=DNG[T.t-1],rw=T.rw,e=T.est;
+ for(const T of D.tiers){const d=DNG[T.t-1],DF=T.diffs||[{d:1,open:T.open,rw:T.rw,est:T.est}];
+  if(!dngD[T.t]||!DF[dngD[T.t]-1]||!DF[dngD[T.t]-1].open)dngD[T.t]=Math.max(1,...DF.filter(x=>x.open).map(x=>x.d));
+  const cd=DF[dngD[T.t]-1]||DF[0],rw=cd.rw,e=cd.est;
   const ec=e==null?'':e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e';
   h+=`<div class="dcard ${T.open?'':'lock'}"><div class="th" style="background-image:url(${IMG('bg'+d.bg)})"><b>${ROMAN[T.t-1]||'I'}</b></div><div class="info">
    <div class="nm">${d.n} <span class="sub">· ${tr('tier',{n:T.t})}</span></div>
    <div class="rw">🎁×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
+   ${T.open&&DF.length>1?`<div class="chips diffs">${DF.map(x=>`<button data-dt="${T.t}" data-dd="${x.d}" class="${x.d===cd.d?'act':''} ${x.open?'':'lockd'}">${x.open?'':'🔒'}${tr('diff_'+x.d)}</button>`).join('')}</div>`:''}
    ${T.open?`<div class="sub">${tr('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span></div>
-   <button class="btn pri" data-dng="${T.t}" ${busy||(!left&&!T.keys&&G.gold<T.pay)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.pay)})}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
+   <button class="btn pri" data-dng="${T.t}" data-d="${cd.d}" ${busy||(!left&&!T.keys&&G.gold<T.pay)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.pay)})}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
   </div></div>`}
  $('p-dng').innerHTML=h;
- $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dng},r=>dngResult(r.out)));
+ $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dng,d:+b.dataset.d},r=>dngPlay(r.out)));
+ $('p-dng').querySelectorAll('[data-dt]').forEach(b=>b.onclick=()=>{const t=+b.dataset.dt,k=+b.dataset.dd,x=(V.dng.tiers[t-1].diffs||[])[k-1];
+  if(!x||!x.open){toast(T('diff_lock',{n:T('diff_'+(k-1))}));return}dngD[t]=k;renderDng()});
 }
+// ---------- підземелля на весь екран: відтворення бою, порахованого сервером ----------
+function dngPlay(o){
+ if(!o.rooms||!o.rooms[0]||!o.rooms[0].ev){dngResult(o);return}
+ const d=DNG[o.t-1],R=REGIONS[(d.bg-1)%REGIONS.length],timers=[];let done=false;
+ const el=document.createElement('div');el.className='dngv';el.id='dngv';
+ el.innerHTML=`<div class="dv-bg" style="background-image:url(${IMG('bg'+d.bg)})"></div>
+  <div class="dv-top"><div><b>${esc(d.n)} · ${T('tier',{n:o.t})}${o.d>1?' · '+T('diff_'+o.d):''}</b><span id="dvRoom"></span></div><button class="btn" id="dvSkip">${T('skip')} ⏭</button></div>
+  <div class="dv-rooms">${o.rooms.map((x,i)=>`<i id="dvR${i}" class="${x.boss?'b':''}"></i>`).join('')}${o.rooms.length<6?Array.from({length:6-o.rooms.length},(_,k)=>`<i class="${o.rooms.length+k===5?'b':''}"></i>`).join(''):''}</div>
+  <div class="dv-f"><div class="f hero"><div class="sprite" id="dvH"><img alt="" src="${IMG('hero')}"></div><div class="fname">${esc(T('hero_name'))}</div><div class="hpb"><i id="dvHh"></i></div></div>
+  <div class="f mob"><div class="sprite" id="dvM"></div><div class="fname" id="dvMn"></div><div class="hpb"><i id="dvMh"></i></div></div></div>`;
+ document.body.appendChild(el);
+ const fin=()=>{if(done)return;done=true;timers.forEach(clearTimeout);el.remove();dngResult(o)};
+ $('dvSkip').onclick=fin;
+ const at=(ms,f)=>timers.push(setTimeout(()=>{if(!done)f()},ms));
+ const fl=(txt,cls,side)=>{const e=document.createElement('div');e.className='dmg '+cls;e.textContent=txt;e.style.left=(side==='m'?60+Math.random()*20:12+Math.random()*20)+'%';e.style.top=(42+Math.random()*8)+'%';el.appendChild(e);setTimeout(()=>e.remove(),800)};
+ const hit=(id,c)=>{const e=$(id);if(!e)return;e.classList.remove(c);void e.offsetWidth;e.classList.add(c);setTimeout(()=>e.classList.remove(c),c==='hit'?250:130)};
+ // темп: увесь забіг ~12–16 с, але не швидше 110 мс на удар
+ const totalEv=o.rooms.reduce((a,x)=>a+x.ev.length,0),step=Math.max(110,Math.min(450,13000/Math.max(1,totalEv)));
+ let t=300;
+ o.rooms.forEach((x,i)=>{
+  const mob=x.boss?R.boss:R.mobs[i%R.mobs.length],start=t;
+  at(start,()=>{$('dvRoom').textContent=x.boss?T('boss'):T('room',{n:i+1});const r=$('dvR'+i);if(r)r.classList.add('cur');
+   const m=$('dvM');m.className='sprite'+(x.boss?' big':'');m.innerHTML=`<img alt="" src="${IMG(mob[1])}">`;void m.offsetWidth;m.classList.add('appear');
+   $('dvMn').textContent=(x.boss?'👑 ':'')+mob[0];$('dvMh').style.width='100%';$('dvHh').style.width=Math.max(0,x.hp0/o.heroHp*100)+'%'});
+  let hp=x.hp0,fh=x.foeHp;
+  x.ev.forEach((e,k)=>{t+=step;const tt=t;at(tt,()=>{
+   if(e[1]===0){fh-=e[2];hit('dvH','lunge-r');hit('dvM','hit');fl(fmt(e[2])+(e[3]?'!':''),e[3]?'crit':'','m');$('dvMh').style.width=Math.max(0,fh/x.foeHp*100)+'%'}
+   else{hp-=e[2];hit('dvM','lunge-l');hit('dvH','hit');fl('-'+fmt(e[2]),'taken','h');$('dvHh').style.width=Math.max(0,hp/o.heroHp*100)+'%'}})});
+  t+=500;const te=t;
+  at(te,()=>{const r=$('dvR'+i);if(r){r.classList.remove('cur');r.classList.add(x.win?'ok':'bad')}
+   if(x.win){const m=$('dvM');m.classList.add('die');haptic('light')}else{const h=$('dvH');h.classList.add('die');haptic('medium')}});
+  t+=450;
+ });
+ at(t+400,fin);
+}
+
 function dngResult(o){
  const d=DNG[o.t-1],g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?T('boss'):T('room',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
@@ -407,7 +455,7 @@ function renderClan(){
  const C=clanData;let h='';
  if(!C.clan){
   h+=`<div class="card"><h4>🏰 ${T('clan_create')}</h4><p class="hint">${T('clan_create_hint',{n:C.createStage,m:C.max})}</p>
-   <div class="row" style="align-items:center"><input id="cName" maxlength="20" placeholder="${T('clan_name')}" class="inp"><button class="btn pri" id="cMake" ${G.maxStage>=C.createStage&&G.gold>=C.createCost?'':'disabled'}>💰 ${fmt(C.createCost)}</button></div></div>`;
+   <div class="row" style="align-items:center"><input id="cName" maxlength="20" placeholder="${T('clan_name')}" class="inp"><button class="btn pri" id="cMake" ${G.maxStage>=C.createStage&&G.gold>=(V.clanCost||C.createCost)?'':'disabled'}>💰 ${fmt(V.clanCost||C.createCost)}</button></div></div>`;
   h+=`<div class="card"><h4>🔎 ${T('clan_list')}</h4>`+(C.list.length?C.list.map(c=>`<div class="item" style="border-left-color:#7a5a26"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${C.max} · ${T('power',{n:fmt(c.power)})}</div></div><div class="acts"><button class="btn pri" data-cj="${c.id}" ${c.members<C.max?'':'disabled'}>${T('join')}</button></div></div>`).join(''):`<p class="hint">${T('clan_none_yet')}</p>`)+'</div>';
   el.innerHTML=h;
   $('cMake').onclick=()=>{const n=$('cName').value.trim();if(n.length<3){toast(ERR.clan_name_bad);return}clanAct('clanCreate',{name:n})};
@@ -415,20 +463,27 @@ function renderClan(){
   return}
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
  h+=`<div class="card arenah"><div><b>🏰 ${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
+ const bank=C.clan.bank||0;
+ h+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
+  <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div></div>`;
  const tiers=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);
- h+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint',{n:C.take,l:C.takeLeft})}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('tier',{n:t})}: <b>${K[t]}</b></span><button class="btn" data-ct="${t}" ${C.takeLeft>0?'':'disabled'}>${T('take')}</button></div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)+'</div>';
+ h+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint')}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('tier',{n:t})}: <b>${K[t]}</b></span><button class="btn" data-ct="${t}">${T('take')}</button></div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)+'</div>';
  if(lead){const opts=C.craft.filter(x=>x.can);if(!opts.some(x=>x.t===craftT)&&opts.length)craftT=opts[opts.length-1].t;
   const cur=C.craft.find(x=>x.t===craftT);
   h+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${opts.map(x=>`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`).join('')}</div>
-   <div class="row"><button class="btn pri" data-cn="1" ${G.gold>=cur.gold?'':'disabled'}>×1 · 💰${fmt(cur.gold)}</button><button class="btn" data-cn="5" ${G.gold>=cur.gold*5?'':'disabled'}>×5 · 💰${fmt(cur.gold*5)}</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
+   <div class="row"><button class="btn pri" data-cn="1" ${bank>=cur.gold?'':'disabled'}>×1 · 🏦${fmt(cur.gold)}</button><button class="btn" data-cn="5" ${bank>=cur.gold5?'':'disabled'}>×5 · 🏦${fmt(cur.gold5)}</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
  h+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
   const canKick=!m.me&&(C.role==='leader'&&m.role!=='leader'||C.role==='officer'&&m.role==='member'),canRole=!m.me&&C.role==='leader';
-  return `<div class="item" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})}</div></div>
+  return `<div class="item" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · 💰 ${T('given',{n:fmt(m.given||0)})}</div></div>
    <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
+ const LG=C.log||[];
+ h+=`<div class="card"><h4>📜 ${T('clan_log')}</h4>`+(LG.length?LG.map(x=>{const d=x.data||{};return `<div class="logl"><span>${logTime(x.at)}</span> ${esc(T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),t:d.t||'',c:d.n||1}))}</div>`}).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
  h+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
  if(C.role==='leader')h+=`<p class="hint">${T('clan_leader_hint')}</p>`;
  el.innerHTML=h;
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.ct}));
+ $('cGiveAll').onclick=()=>{$('cGive').value=Math.floor(G.gold)};
+ $('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
  el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>clanAct('clanCraft',{t:craftT,n:+b.dataset.cn}));
  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>clanAct('clanKick',{pid:+b.dataset.ck}));
@@ -544,8 +599,10 @@ async function start(){
 // головні вкладки й підвкладки
 const lastSub={hero:'hero',arena:'arena'};
 const groupOf=t=>['hero','train','log','prof'].includes(t)?'hero':t==='top'?'arena':t;
+function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';document.body.dataset.scene=sc;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 function renderSub(){
+ setScene();
  const g=groupOf(tab),e=$('subtabs');
  const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
  if(!items){e.style.display='none';return}
