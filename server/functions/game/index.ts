@@ -83,7 +83,7 @@ function view(G: L.State, now: number, uid = 0) {
       unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS, daily: L.DNG_DAILY, left: L.dngLeft(G, now),
       tiers: Array.from({ length: L.DNG_TIERS }, (_, i) => {
         const t = i + 1, open = L.dngOpen(G, t);
-        const diffs = Array.from({ length: L.DNG_DIFF }, (_, k) => { const d = k + 1, o = L.dngOpen(G, t, d); return { d, open: o, stage: L.dngStage(t, d), rw: L.dngRewards(t, d), est: o ? L.dngEstimate(G, t, 16, d) : null }; });
+        const diffs = Array.from({ length: L.DNG_DIFF }, (_, k) => { const d = k + 1, o = L.dngOpen(G, t, d); return { d, open: o, stage: L.dngStage(t, d), rw: L.dngRewards(t, d), est: o ? L.dngEstimate(G, t, 16, d) : null, need: L.dngNeedPower(G, t, d) }; });
         return { t, open, loc: L.dngLoc(t), stage: L.dngStage(t), price: L.keyPrice(t), keys: G.keys[String(t)] || 0, rw: L.dngRewards(t), pay: L.dngPrice(G, t, now), est: open ? L.dngEstimate(G, t) : null, best: L.dngDiffMax(G, t), diffs };
       }),
     },

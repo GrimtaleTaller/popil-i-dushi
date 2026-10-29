@@ -525,6 +525,36 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
   }
   return rooms;
 }
+// мінімальна сила для проходження: середній (без випадковості) бій з героєм гравця, масштабованим k разів;
+// шукаємо найменший k, за якого герой проходить усі кімнати й боса, і беремо +10% запасу
+type HStat = { atk: number; hp: number; def: number; crit: number };
+function dngWinAvg(H: HStat, t: number, d: number) {
+  const s = dngStage(t, d), dmg = H.atk * (1 + H.crit / 100);
+  let hp = H.hp, total = 0;
+  for (let i = 0; i <= DNG_ROOMS; i++) {
+    const boss = i === DNG_ROOMS, fhp = mobHp(s) * (boss ? 12 : 3), fat = mobAtk(s) * (boss ? 1.5 : 1.2);
+    let fh = fhp, ht = 0, mt = 0.6, tt = 0, win = false;
+    const hit = Math.max(fat * 0.2, fat - H.def);
+    while (total + tt < DNG_TIME) {
+      const nh = ht + 1, nm = mt + 1.4;
+      if (nh <= nm) { ht = nh; tt = nh; fh -= dmg; if (fh <= 0) { win = true; break; } hp = Math.min(H.hp, hp + H.hp * 0.02); }
+      else { mt = nm; tt = nm; hp -= hit; if (hp <= 0) break; }
+    }
+    total += tt;
+    if (!win) return false;
+    hp = Math.min(H.hp, hp + H.hp * 0.1);
+  }
+  return true;
+}
+export function dngNeedPower(G: State, t: number, d = 1) {
+  const H = hero(G);
+  const sc = (k: number): HStat => ({ atk: H.atk * k, hp: H.hp * k, def: H.def * k, crit: H.crit });
+  let lo = 0, hi = 1;
+  while (!dngWinAvg(sc(hi), t, d) && hi < 1e7) { lo = hi; hi *= 2; }
+  for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (dngWinAvg(sc(m), t, d)) hi = m; else lo = m; }
+  const p = power(sc(hi)) * 1.1, f = Math.pow(10, Math.max(0, Math.floor(Math.log10(p)) - 1));
+  return Math.ceil(p / f) * f; // округлення вгору до 2 значущих цифр
+}
 export function dngEstimate(G: State, t: number, n = 24, d = 1) {
   let w = 0;
   for (let i = 0; i < n; i++) { const r = simDungeon(G, t, false, d); if (r.length === DNG_ROOMS + 1 && r[DNG_ROOMS].win) w++; }

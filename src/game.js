@@ -312,6 +312,7 @@ function renderDng(){
   h+=`<div class="dcard ${T.open?'':'lock'}"><div class="th" style="background-image:url(${IMG('bg'+d.bg)})"><b>${ROMAN[T.t-1]||'I'}</b></div><div class="info">
    <div class="nm">${d.n} <span class="sub">· ${tr('tier',{n:T.t})}</span></div>
    <div class="rw">🎁×${rw.chests} (${tr('lvl',{n:rw.chestIl})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
+   ${cd.need?(()=>{const my=V.hero.power,ok=my>=cd.need;return `<div class="sub need ${ok?'ok':'bad'}">💪 ${tr('need_power',{n:fmt(cd.need),m:fmt(my)})}${ok?' ✓':' · '+tr('need_short',{n:fmt(cd.need-my)})}</div>`})():''}
    ${T.open&&DF.length>1?`<div class="chips diffs">${DF.map(x=>`<button data-dt="${T.t}" data-dd="${x.d}" class="${x.d===cd.d?'act':''} ${x.open?'':'lockd'}">${x.open?'':'🔒'}${tr('diff_'+x.d)}</button>`).join('')}</div>`:''}
    ${T.open?`<div class="sub">${tr('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span></div>
    <button class="btn pri" data-dng="${T.t}" data-d="${cd.d}" ${busy||(!left&&!T.keys&&G.gold<T.pay)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.pay)})}</button>`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
@@ -599,7 +600,7 @@ async function start(){
 // головні вкладки й підвкладки
 const lastSub={hero:'hero',arena:'arena'};
 const groupOf=t=>['hero','train','log','prof'].includes(t)?'hero':t==='top'?'arena':t;
-function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';document.body.dataset.scene=sc;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
+function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 function renderSub(){
  setScene();
