@@ -42,11 +42,11 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 .dngv .f{width:46%;display:flex;flex-direction:column;align-items:center;min-width:0}.dngv .sprite{max-width:100%;display:flex;justify-content:center}.dngv .sprite img{height:min(150px,21vh);max-width:100%;object-fit:contain}.dngv .mob .sprite.big img{height:min(190px,27vh)}.dngv .hpb{height:9px;width:100%}.dngv .fname{max-width:100%;text-align:center}
 .card.ovf{border-color:#8a5a20;background:#241a10}.chestbar.vault{background:linear-gradient(135deg,#1d2433,#121722);border-color:#3c5a8a}
 .mats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.mats div{background:var(--panel2);border-radius:8px;padding:8px 4px;text-align:center}.mats i{font-style:normal;font-size:18px;display:block}.mats b{display:block;font-size:16px}.mats span{font-size:11px;color:var(--mut)}
-.scene{display:none;align-items:center;gap:14px;padding:18px 16px;height:110px;border-bottom:1px solid var(--line);background-size:cover;background-position:center}
+.scene{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px 16px;height:min(170px,24vh);border-bottom:1px solid var(--line);background-size:cover;background-position:center}
 body[data-scene=forge] .arena,body[data-scene=clan] .arena{display:none}body[data-scene=forge] .scene,body[data-scene=clan] .scene{display:flex}
-body[data-scene=forge] .scene{background:radial-gradient(circle at 20% 80%,#ff8a3d55,transparent 45%),radial-gradient(circle at 85% 20%,#c0563a44,transparent 40%),linear-gradient(135deg,#2a1610,#120b09)}
-body[data-scene=clan] .scene{background:radial-gradient(circle at 80% 70%,#4f93f244,transparent 45%),radial-gradient(circle at 15% 20%,#f2a33a33,transparent 40%),linear-gradient(135deg,#141a2a,#0c0e16)}
-.scene .sc-ic{font-size:52px;filter:drop-shadow(0 6px 8px #000a)}.scene b{display:block;font-size:20px}.scene span{font-size:12px;color:#cfc4d8}
+body[data-scene=forge] .scene{background-image:radial-gradient(ellipse at center,#000a 0%,#0005 45%,transparent 75%),linear-gradient(0deg,#0b0a0fcc,transparent 40%),url(assets/forge.webp)}
+body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,#000a 0%,#0005 45%,transparent 75%),linear-gradient(0deg,#0b0a0fcc,transparent 40%),url(assets/clan.webp)}
+.scene .sc-ic{display:none}.scene b{display:block;font-size:22px;text-shadow:0 2px 6px #000,0 0 14px #000}.scene span{font-size:12px;color:#e6dcef;text-shadow:0 1px 4px #000;max-width:280px}
 .resg div.wide{grid-column:1/-1}
 .pvp{display:grid;gap:8px;margin:10px 0;text-align:left}.pvp span{font-size:12px;color:#d4ccdb}
 .dcard{display:flex;gap:10px;align-items:stretch;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;margin-bottom:8px}
@@ -223,6 +223,6 @@ body[data-scene=clan] .scene{background:radial-gradient(circle at 80% 70%,#4f93f
 <div class="toast" id="toast"></div>
 
 <script src="src/i18n.js?v=18"></script>
-<script src="src/game.js?v=23"></script>
+<script src="src/game.js?v=24"></script>
 </body>
 </html>
