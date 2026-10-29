@@ -159,7 +159,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1};
+const dirty={hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1,market:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -234,7 +234,7 @@ function renderBag(){
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})}${better?` · <span class="up">${T('better')}</span>`:''}</div>
    <div class="st">${statLine(it.st,eq?eq.st:{})}</div></div>
-   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button><button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>${it.r<4?`<button class="btn" data-dis="${it.id}">⚒️ ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}</div></div>`}
+   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button><button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>${it.r<4?`<button class="btn" data-dis="${it.id}">⚒️ ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('vTake'))$('vTake').onclick=()=>act('vault',{},r=>toast(T('vault_took',{n:r.out.n})));
@@ -245,9 +245,37 @@ function renderBag(){
  $('p-bag').querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>act('equip',{id:+b.dataset.eq},()=>haptic('light')));
  $('p-bag').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell([+b.dataset.sell]));
  $('p-bag').querySelectorAll('[data-dis]').forEach(b=>b.onclick=()=>dismantle([+b.dataset.dis]));
+ $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
  $('sellC').onclick=()=>sell(G.inv.filter(i=>i.r===0).map(i=>i.id));
  $('sellW').onclick=()=>sell(G.inv.filter(i=>G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id));
  $('autoS').onclick=()=>act('settings',{autoSell:!G.autoSell});
+}
+// ---------- ринок за Попіл ----------
+let mktData=null,mktBusy=false;const mktF={slot:'',r:0,sort:'price'};
+function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',{...mktF},r=>{mktData=r.out;const g=r.out.got;if(g&&g.n)modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,g:fmt(g.gross),x:fmt(g.net),p:Math.round(r.out.fee*100)})}</p>`,T('ok'));dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData)setTimeout(()=>{dirty.market=1;flush()},800)})}
+function mktAct(a,args,cb){act(a,{...mktF,...args},r=>{if(r.out)mktData=r.out;dirty.market=1;cb&&cb(r)})}
+function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;
+ modal(`<div class="big">⚱️</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="hint">${T('mkt_sell_hint',{p:10})}</p><input id="mPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}" style="width:100%"><div class="row"><button class="btn" id="mNo">${T('cancel')}</button></div>`,T('mkt_put'),()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{id,price:p},()=>toast(T('mkt_listed')))});
+ setTimeout(()=>{const n=$('mNo');if(n)n.onclick=()=>{queue.shift();showModal()};const i=$('mPrice');if(i)i.focus()},0)}
+function renderMarket(){
+ const el=$('p-market');
+ if(!mktData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;mktLoad();return}
+ const M=mktData,ash=G.ash||0;
+ let h=`<div class="chestbar" style="background:var(--panel);border-color:var(--line)">⚱️<span>${T('mkt_ash',{n:fmt(ash)})}</span><button class="btn" id="mRef">🔄</button></div><p class="hint">${T('mkt_hint',{p:Math.round(M.fee*100),r:RAR[M.minR].n})}</p>`;
+ if(M.mine.length)h+=`<div class="card"><h4>📦 ${T('mkt_mine',{n:M.mine.length,m:M.maxLots})}</h4>`+M.mine.map(l=>{const it=l.item;return `<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sub">${T('lvl',{n:it.il})} · ⚱️ ${fmt(l.price)}</div></div><div class="acts"><button class="btn" data-mc="${l.id}">${T('mkt_cancel')}</button></div></div>`}).join('')+'</div>';
+ h+=`<div class="filter">${['',...SLOTS].map(f=>`<button data-ms="${f}" class="${mktF.slot===f?'act':''}">${f?SLOT[f].ic+' '+SLOT[f].n:T('all')}</button>`).join('')}</div>
+ <div class="chips">${[0,2,3,4,5,6].map(r=>`<button data-mr="${r}" class="${mktF.r===r?'act':''}" ${r?`style="color:${RAR[r].c}"`:''}>${r?RAR[r].n:T('all')}</button>`).join('')}</div>
+ <div class="chips">${['price','lvl','new'].map(k=>`<button data-mo="${k}" class="${mktF.sort===k?'act':''}">${T('mkt_sort_'+k)}</button>`).join('')}</div>`;
+ if(!M.lots.length)h+=`<div class="empty">${T('mkt_empty')}</div>`;
+ for(const l of M.lots){const it=l.item;if(!it||!SLOT[it.slot])continue;const eq=G.eq[it.slot];
+  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${T('lvl',{n:it.il})} · ${esc(l.seller||'')}</div><div class="st">${statLine(it.st,eq?eq.st:{})}</div></div><div class="acts"><button class="btn pri" data-mb="${l.id}" ${ash>=l.price?'':'disabled'}>⚱️ ${fmt(l.price)}</button></div></div>`}
+ el.innerHTML=h;
+ $('mRef').onclick=()=>{mktData=null;renderMarket()};
+ el.querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mktF.slot=b.dataset.ms;mktData=null;renderMarket()});
+ el.querySelectorAll('[data-mr]').forEach(b=>b.onclick=()=>{mktF.r=+b.dataset.mr;mktData=null;renderMarket()});
+ el.querySelectorAll('[data-mo]').forEach(b=>b.onclick=()=>{mktF.sort=b.dataset.mo;mktData=null;renderMarket()});
+ el.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>mktAct('marketBuy',{lot:+b.dataset.mb},r=>{toast(T('mkt_bought'));haptic('medium')}));
+ el.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>mktAct('marketCancel',{lot:+b.dataset.mc},()=>toast(T('mkt_cancelled'))));
 }
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
 function dismantle(ids){act('dismantle',{ids,mode:G.dismode},r=>toast(disMsg(r.out)))}
@@ -409,7 +437,7 @@ const LOGT={
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):`<div class="empty">${T('log_empty')}</div>`)+'</div>'}
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,clan:renderClan})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,clan:renderClan,market:renderMarket})[tab]()}}
 
 // ---------- профіль ----------
 let profData=null,profBusy=false,adminData=null;
@@ -452,7 +480,7 @@ function adminHtml(){
   <div class="rank">${A.top.map((t,i)=>`<div><b>${i+1}</b><span>${esc(t.name)}</span><i>${T('stage',{n:t.stage})}</i></div>`).join('')}</div></div>`;
 }
 // ---------- клан ----------
-let clanData=null,clanBusy=false,craftT=1;
+let clanData=null,clanBusy=false,craftT=1,clanModeSel=null;
 const roleT=r=>T('role_'+r);
 function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
 function clanAct(a,args){act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null})}
@@ -465,13 +493,20 @@ function renderClan(){
  if(!C.clan){
   h+=`<div class="card"><h4>🏰 ${T('clan_create')}</h4><p class="hint">${T('clan_create_hint',{n:C.createStage,m:C.max})}</p>
    <div class="row" style="align-items:center"><input id="cName" maxlength="20" placeholder="${T('clan_name')}" class="inp"><button class="btn pri" id="cMake" ${G.maxStage>=C.createStage&&G.gold>=(V.clanCost||C.createCost)?'':'disabled'}>💰 ${fmt(V.clanCost||C.createCost)}</button></div></div>`;
-  h+=`<div class="card"><h4>🔎 ${T('clan_list')}</h4>`+(C.list.length?C.list.map(c=>`<div class="item" style="border-left-color:#7a5a26"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${C.max} · ${T('power',{n:fmt(c.power)})}</div></div><div class="acts"><button class="btn pri" data-cj="${c.id}" ${c.members<C.max?'':'disabled'}>${T('join')}</button></div></div>`).join(''):`<p class="hint">${T('clan_none_yet')}</p>`)+'</div>';
+  const apps=C.apps||[];
+  h+=`<div class="card"><h4>🔎 ${T('clan_list')}</h4><div class="row" style="align-items:center;margin-top:0"><input id="cQ" maxlength="20" class="inp" placeholder="${T('clan_search')}" value="${esc(C.q||'')}"><button class="btn" id="cQgo">🔎</button></div>`+(C.list.length?C.list.map(c=>{
+   const mine=apps.includes(c.id),full=c.members>=(c.max||C.max),reqs=(c.min_stage?`${T('stage',{n:c.min_stage})}`:'')+(c.min_power?`${c.min_stage?' · ':''}💪 ${fmt(c.min_power)}`:'');
+   const btn=mine?`<button class="btn" data-cu="${c.id}">${T('app_cancel')}</button>`:c.join_mode==='closed'?`<button class="btn" disabled>🔒 ${T('clan_mode_closed')}</button>`:`<button class="btn pri" data-cj="${c.id}" ${!full&&c.ok?'':'disabled'}>${c.join_mode==='apply'?T('apply'):T('join')}</button>`;
+   return `<div class="item" style="border-left-color:#7a5a26"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${c.max||C.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${reqs?`<div class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</div>`:''}${mine?`<div class="st up">${T('app_sent')}</div>`:''}</div><div class="acts">${btn}</div></div>`}).join(''):`<p class="hint">${T(C.q?'clan_nothing':'clan_none_yet')}</p>`)+'</div>';
   el.innerHTML=h;
+  const srch=()=>{clanBusy=true;api('clan',{q:$('cQ').value.trim()}).then(r=>{clanData=r.out}).catch(e=>toast(errT(e))).finally(()=>{clanBusy=false;dirty.clan=1})};
+  $('cQgo').onclick=srch;$('cQ').onkeydown=e=>{if(e.key==='Enter')srch()};
+  el.querySelectorAll('[data-cu]').forEach(b=>b.onclick=()=>clanAct('clanUnapply',{id:+b.dataset.cu}));
   $('cMake').onclick=()=>{const n=$('cName').value.trim();if(n.length<3){toast(ERR.clan_name_bad);return}clanAct('clanCreate',{name:n})};
-  el.querySelectorAll('[data-cj]').forEach(b=>b.onclick=()=>clanAct('clanJoin',{id:+b.dataset.cj}));
+  el.querySelectorAll('[data-cj]').forEach(b=>b.onclick=()=>act('clanJoin',{id:+b.dataset.cj},r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(r.out&&r.out.applied)toast(T('app_sent'))}));
   return}
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
- h+=`<div class="card arenah"><div><b>🏰 ${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
+ h+=`<div class="card arenah"><div><b>🏰 ${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.clan.max||C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
  const bank=C.clan.bank||0;
  h+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
   <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div></div>`;
@@ -481,16 +516,32 @@ function renderClan(){
   const cur=C.craft.find(x=>x.t===craftT);
   h+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${opts.map(x=>`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`).join('')}</div>
    <div class="row"><button class="btn pri" data-cn="1" ${bank>=cur.gold?'':'disabled'}>×1 · 🏦${fmt(cur.gold)}</button><button class="btn" data-cn="5" ${bank>=cur.gold5?'':'disabled'}>×5 · 🏦${fmt(cur.gold5)}</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
+ const BL=C.builds||[];
+ if(BL.length)h+=`<div class="card"><h4>🏗️ ${T('clan_builds')}</h4><p class="hint">${T('clan_builds_hint')}</p>`+BL.map(b=>`<div class="item" style="border-left-color:#c0563a"><div class="ic">${{citadel:'🏰',forge:'⚒️',vault:'💰',barracks:'⚔️'}[b.k]}</div><div class="info"><div class="nm">${T('bld_'+b.k)} · ${T('lvl',{n:b.lvl})}/${b.max}</div><div class="sub">${T('bld_'+b.k+'_d',{n:b.step,t:b.step*b.lvl})}</div></div><div class="acts">${b.cost==null?`<span class="sub">${T('max_reached')}</span>`:lead?`<button class="btn pri" data-bk="${b.k}" ${(C.clan.bank||0)>=b.cost?'':'disabled'}>🏦${fmt(b.cost)}</button>`:`<span class="sub">🏦${fmt(b.cost)}</span>`}</div></div>`).join('')+'</div>';
+ const AP=C.apps||[];
+ if(lead&&AP.length)h+=`<div class="card"><h4>📨 ${T('clan_apps')} (${AP.length})</h4>`+AP.map(a=>`<div class="item" style="border-left-color:#4f93f2"><div class="ic">👤</div><div class="info"><div class="nm">${esc(a.name)}</div><div class="sub">${T('lvl',{n:a.lvl})} · ${T('stage',{n:a.stage})} · ${T('power',{n:fmt(a.power)})}</div></div><div class="acts"><button class="btn pri" data-ay="${a.id}">✓</button><button class="btn" data-an="${a.id}">✖</button></div></div>`).join('')+'</div>';
+ const CL=C.clan;
+ if(C.role==='leader')h+=`<div class="card"><h4>⚙️ ${T('clan_set')}</h4><div class="chips" id="cMode">${['open','apply','closed'].map(m=>`<button data-cm="${m}" class="${(clanModeSel||CL.mode)===m?'act':''}">${T('clan_mode_'+m)}</button>`).join('')}</div>
+  <p class="hint">${T('clan_mode_hint_'+(clanModeSel||CL.mode))}</p>
+  <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_stage')}</span><input id="cMs" class="inp" type="number" min="0" max="80" inputmode="numeric" value="${CL.minStage||0}" style="flex:1"></div>
+  <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_power')}</span><input id="cMp" class="inp" type="number" min="0" inputmode="numeric" value="${CL.minPower||0}" style="flex:1"></div>
+  <div class="row"><button class="btn pri" id="cSet">${T('save')}</button></div></div>`;
+ else h+=`<p class="hint">${T('clan_mode_'+CL.mode)}${CL.minStage?' · '+T('stage',{n:CL.minStage}):''}${CL.minPower?' · 💪 '+fmt(CL.minPower):''}</p>`;
  h+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
   const canKick=!m.me&&(C.role==='leader'&&m.role!=='leader'||C.role==='officer'&&m.role==='member'),canRole=!m.me&&C.role==='leader';
   return `<div class="item" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · 💰 ${T('given',{n:fmt(m.given||0)})}</div></div>
    <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
  const LG=C.log||[];
- h+=`<div class="card"><h4>📜 ${T('clan_log')}</h4>`+(LG.length?LG.map(x=>{const d=x.data||{};return `<div class="logl"><span>${logTime(x.at)}</span> ${esc(T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),t:d.t||'',c:d.n||1}))}</div>`}).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
+ h+=`<div class="card"><h4>📜 ${T('clan_log')}</h4>`+(LG.length?LG.map(x=>{const d=x.data||{};return `<div class="logl"><span>${logTime(x.at)}</span> ${esc(T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),t:d.t||'',c:d.n||1,k:d.k?T('bld_'+d.k):'',l:d.l||''}))}</div>`}).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
  h+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
  if(C.role==='leader')h+=`<p class="hint">${T('clan_leader_hint')}</p>`;
  el.innerHTML=h;
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.ct}));
+ el.querySelectorAll('[data-bk]').forEach(b=>b.onclick=()=>clanAct('clanBuild',{k:b.dataset.bk},()=>{toast(T('bld_done'));haptic('medium')}));
+ el.querySelectorAll('[data-ay]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.ay,ok:true}));
+ el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.an,ok:false}));
+ el.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{clanModeSel=b.dataset.cm;renderClan()});
+ if($('cSet'))$('cSet').onclick=()=>{const m=clanModeSel||C.clan.mode;clanModeSel=null;clanAct('clanSettings',{mode:m,minStage:+$('cMs').value||0,minPower:+$('cMp').value||0});toast(T('saved'))};
  $('cGiveAll').onclick=()=>{$('cGive').value=Math.floor(G.gold)};
  $('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
@@ -607,14 +658,14 @@ async function start(){
  catch(e){boot(errT(e),true)}
 }
 // головні вкладки й підвкладки
-const lastSub={hero:'hero',arena:'arena'};
-const groupOf=t=>['hero','train','log','prof'].includes(t)?'hero':t==='top'?'arena':t;
+const lastSub={hero:'hero',arena:'arena',bag:'bag'};
+const groupOf=t=>['hero','train','log','prof'].includes(t)?'hero':t==='top'?'arena':t==='market'?'bag':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
+ const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:tab;e.style.display='flex';
  e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');

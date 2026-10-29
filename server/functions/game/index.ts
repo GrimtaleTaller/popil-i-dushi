@@ -75,7 +75,7 @@ function view(G: L.State, now: number, uid = 0) {
       opps: G.arena.opps.map((o) => ({ name: o.name, lvl: o.lvl, power: o.power, rating: o.rating })),
     },
     xp: { need: L.xpNeed(G.lvl), mob: L.mobXp(G.stage) },
-    isAdmin: ADMINS.includes(uid), clanStage: L.CLAN.joinStage, clanCost: L.clanCreateCost(G),
+    cb: G.cb || { atk: 0, gold: 0 }, isAdmin: ADMINS.includes(uid), clanStage: L.CLAN.joinStage, clanCost: L.clanCreateCost(G),
     payout: { lvl: L.PAYOUT.lvl, days: L.PAYOUT.days, myDays: G.act.days, ok: G.lvl >= L.PAYOUT.lvl && G.act.days >= L.PAYOUT.days },
     smelt: L.SMELT, inv: { max: L.invMax(G), cost: L.bagCost(G), step: L.BAG.step, vaultMax: L.VAULT_MAX, rate: L.OVF_RATE },
     train: { gateStep: L.GATE_STEP, gate: Object.fromEntries(Object.keys(L.UPG).map((k) => [k, L.gateCost(k, G.up[k as keyof L.State["up"]])])) },
@@ -131,7 +131,7 @@ async function arenaDivision(rating: number) {
 
 // ---------- профіль, клани, адмін: дії з базою, що виконуються один раз до запису стану ----------
 type Pre = { out?: unknown; fx?: (G: L.State, now: number) => void };
-const PRE = new Set(["profile", "admin", "clan", "clanCreate", "clanJoin", "clanLeave", "clanKick", "clanRole", "clanCraft", "clanTake"]);
+const PRE = new Set(["clanBuild", "profile", "admin", "clan", "clanCreate", "clanJoin", "clanLeave", "clanKick", "clanRole", "clanCraft", "clanTake", "clanApp", "clanSettings", "clanUnapply", "market", "marketBuy", "marketCancel"]);
 const uname = (u: TgUser) => String(u.first_name || u.username || "Hero").slice(0, 24);
 // журнал клану: останні дії учасників
 async function clog(clan: number, u: TgUser | null, kind: string, data: Record<string, unknown> = {}) {
@@ -143,18 +143,28 @@ async function clanOf(id: number) {
   const { data } = await SB.from("clan_members").select("clan_id,role").eq("player_id", id).maybeSingle();
   return data as { clan_id: number; role: string } | null;
 }
+async function clanBonusOf(id: number) {
+  const me = await clanOf(id); if (!me) return { atk: 0, gold: 0 };
+  const { data } = await SB.from("clans").select("bld").eq("id", me.clan_id).maybeSingle();
+  return L.clanBonus(data?.bld as Record<string, number>);
+}
 async function nameOf(id: number) {
   const { data } = await SB.from("stats").select("name").eq("player_id", id).maybeSingle();
   return String(data?.name || "Hero");
 }
-async function clanInfo(id: number, G: L.State, now: number) {
+async function clanInfo(id: number, G: L.State, now: number, q = "") {
   const me = await clanOf(id);
   const base = { max: L.CLAN.max, createStage: L.CLAN.createStage, joinStage: L.CLAN.joinStage, createCost: L.clanCreateCost(G) };
   if (!me) {
-    const { data } = await SB.from("clan_view").select("id,name,members,power").order("power", { ascending: false }).limit(30);
-    return { ...base, clan: null, list: (data || []).map((c) => ({ ...c, power: Number(c.power) })) };
+    let qb = SB.from("clan_view").select("id,name,members,power,join_mode,min_stage,min_power,bld").order("power", { ascending: false }).limit(30);
+    const qq = q.replace(/[%_,()]/g, "").trim().slice(0, 20);
+    if (qq) qb = qb.ilike("name", `%${qq}%`);
+    const { data } = await qb;
+    const { data: ap } = await SB.from("clan_apps").select("clan_id").eq("player_id", id);
+    const myPower = L.power(L.hero(G));
+    return { ...base, clan: null, q: qq, apps: (ap || []).map((a) => a.clan_id), list: (data || []).map((c) => ({ ...c, bld: undefined, max: L.clanMax(c.bld), power: Number(c.power), min_power: Number(c.min_power), ok: G.maxStage >= c.min_stage && myPower >= Number(c.min_power) })) };
   }
-  const { data: c } = await SB.from("clan_view").select("id,name,members,power,keys,bank,kn").eq("id", me.clan_id).single();
+  const { data: c } = await SB.from("clan_view").select("id,name,members,power,keys,bank,kn,join_mode,min_stage,min_power,bld").eq("id", me.clan_id).single();
   const { data: ms } = await SB.from("clan_members").select("player_id,role,joined_at,given").eq("clan_id", me.clan_id);
   const ids = (ms || []).map((m) => m.player_id as number);
   const { data: st } = await SB.from("stats").select("player_id,name,lvl,max_stage,power").in("player_id", ids);
@@ -164,10 +174,30 @@ async function clanInfo(id: number, G: L.State, now: number) {
     const x = (st || []).find((y) => y.player_id === m.player_id), p = (pl || []).find((y) => y.tg_id === m.player_id);
     return { id: m.player_id, name: String(x?.name || p?.first_name || "Hero").slice(0, 24), lvl: x?.lvl || 1, stage: x?.max_stage || 1, power: Number(x?.power || 0), role: m.role, given: Number(m.given || 0), seen: p?.last_seen || null, me: m.player_id === id };
   }).sort((a, b) => ro[a.role] - ro[b.role] || b.power - a.power);
-  const kn = Number(c!.kn || 0), mc = c!.members as number;
-  const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, gold: L.clanKeyCost(i + 1, G.maxStage, 1), gold5: L.clanKeyCost(i + 1, G.maxStage, 5), can: (G.dng?.max || 0) >= i + 1 }));
+  const kn = Number(c!.kn || 0), bld = (c!.bld || {}) as Record<string, number>;
+  const builds = (Object.keys(L.BUILD) as L.BldKey[]).map((k) => ({ k, lvl: Number(bld[k] || 0), max: L.BUILD[k].max, step: L.BUILD[k].step, cost: L.bldCost(k, Number(bld[k] || 0)) }));
+  const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, gold: L.clanKeyCost(i + 1, G.maxStage, 1, Number(bld.forge || 0), G.dng?.max || 1), gold5: L.clanKeyCost(i + 1, G.maxStage, 5, Number(bld.forge || 0), G.dng?.max || 1), can: (G.dng?.max || 0) >= i + 1 }));
   const { data: lg } = await SB.from("clan_log").select("name,kind,data,at").eq("clan_id", me.clan_id).order("id", { ascending: false }).limit(30);
-  return { ...base, clan: { id: c!.id, name: c!.name, members: c!.members, power: Number(c!.power), keys: c!.keys || {}, bank: Number(c!.bank || 0), kn }, role: me.role, members, craft, log: lg || [] };
+  let apps: unknown[] = [];
+  if (me.role === "leader" || me.role === "officer") {
+    const { data: aps } = await SB.from("clan_apps").select("id,player_id,created_at").eq("clan_id", me.clan_id).order("created_at", { ascending: true }).limit(30);
+    const aids = (aps || []).map((a) => a.player_id as number);
+    const { data: ast } = aids.length ? await SB.from("stats").select("player_id,name,lvl,max_stage,power").in("player_id", aids) : { data: [] as { player_id: number; name: string; lvl: number; max_stage: number; power: number }[] };
+    apps = (aps || []).map((a) => { const x = (ast || []).find((y) => y.player_id === a.player_id); return { id: a.id, name: String(x?.name || "Hero").slice(0, 24), lvl: x?.lvl || 1, stage: x?.max_stage || 1, power: Number(x?.power || 0), at: a.created_at }; });
+  }
+  return { ...base, clan: { id: c!.id, name: c!.name, members: c!.members, power: Number(c!.power), keys: c!.keys || {}, bank: Number(c!.bank || 0), kn, mode: c!.join_mode, minStage: c!.min_stage, minPower: Number(c!.min_power), max: L.clanMax(bld) }, role: me.role, members, craft, log: lg || [], apps, builds };
+}
+// ринок: лоти інших гравців (з фільтрами) і мої активні лоти
+async function marketInfo(id: number, args: Record<string, unknown>) {
+  let q = SB.from("market_lots").select("id,seller_name,item,slot,rarity,ilvl,price,created_at,seller").is("buyer", null).neq("seller", id);
+  const slot = String(args.slot || ""), r = Number(args.r);
+  if ((L.SLOTS as readonly string[]).includes(slot)) q = q.eq("slot", slot);
+  if (r >= 2 && r <= 6) q = q.eq("rarity", r);
+  const sort = String(args.sort || "price");
+  q = sort === "new" ? q.order("created_at", { ascending: false }) : sort === "lvl" ? q.order("ilvl", { ascending: false }) : q.order("price", { ascending: true });
+  const { data } = await q.limit(50);
+  const { data: mine } = await SB.from("market_lots").select("id,item,price,created_at").eq("seller", id).is("buyer", null).order("created_at", { ascending: false });
+  return { fee: L.MARKET.fee, maxLots: L.MARKET.maxLots, minR: L.MARKET.minR, lots: (data || []).map((x) => ({ id: x.id, seller: x.seller_name, item: x.item, price: x.price, at: x.created_at })), mine: mine || [] };
 }
 async function profile(user: TgUser, G: L.State) {
   const { data: p } = await SB.from("players").select("created_at").eq("tg_id", user.id).maybeSingle();
@@ -203,7 +233,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       const { data, error } = await SB.rpc("admin_stats"); if (error) throw error;
       return { out: data };
     }
-    case "clan": return { out: await clanInfo(user.id, G, now) };
+    case "clan": return { out: await clanInfo(user.id, G, now, String(args.q || "")) };
     case "clanCreate": {
       if (me) fail("clan_already");
       if (G.maxStage < L.CLAN.createStage) fail("clan_stage");
@@ -220,11 +250,22 @@ async function preAction(user: TgUser, start: string | undefined, action: string
     case "clanJoin": {
       if (me) fail("clan_already");
       if (G.maxStage < L.CLAN.joinStage) fail("clan_stage");
-      const { data: c } = await SB.from("clan_view").select("id,members").eq("id", Number(args.id)).maybeSingle();
+      const { data: c } = await SB.from("clan_view").select("id,members,join_mode,min_stage,min_power,bld").eq("id", Number(args.id)).maybeSingle();
       if (!c) fail("clan_none");
-      if (c!.members >= L.CLAN.max) fail("clan_full");
+      if (c!.join_mode === "closed") fail("clan_closed");
+      if (G.maxStage < c!.min_stage || L.power(L.hero(G)) < Number(c!.min_power)) fail("clan_reqs");
+      if (c!.members >= L.clanMax(c!.bld)) fail("clan_full");
+      if (c!.join_mode === "apply") {
+        const { count } = await SB.from("clan_apps").select("id", { count: "exact", head: true }).eq("player_id", user.id);
+        if ((count || 0) >= L.CLAN_APPS_MAX) fail("clan_apps_max");
+        const { error: ae } = await SB.from("clan_apps").insert({ clan_id: c!.id, player_id: user.id });
+        if (ae && ae.code !== "23505") throw ae;
+        await clog(c!.id, user, "apply");
+        return { out: { ...(await clanInfo(user.id, G, now)), applied: true } };
+      }
       const { error } = await SB.from("clan_members").insert({ player_id: user.id, clan_id: c!.id, role: "member" });
       if (error) fail("clan_already");
+      await SB.from("clan_apps").delete().eq("player_id", user.id);
       await clog(c!.id, user, "join");
       return { out: await clanInfo(user.id, G, now) };
     }
@@ -263,13 +304,80 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       }
       return { out: await clanInfo(user.id, G, now) };
     }
+    case "clanBuild": {
+      if (!me || !canLead(me.role)) fail("clan_rights");
+      const k = String(args.k) as L.BldKey; if (!L.BUILD[k]) fail("bad_role");
+      const { data: cv } = await SB.from("clan_view").select("bank,bld").eq("id", me!.clan_id).single();
+      const lvl = Number((cv!.bld || {})[k] || 0), cost = L.bldCost(k, lvl);
+      if (cost === null) fail("max");
+      if (Number(cv!.bank || 0) < cost!) fail("clan_no_bank");
+      const { data: left, error } = await SB.rpc("clan_build", { p_clan: me!.clan_id, p_key: k, p_cost: cost, p_lvl: lvl }); if (error) throw error;
+      if (left === null) fail("busy");
+      await clog(me!.clan_id, user, "build", { k, l: lvl + 1, gold: cost });
+      return { out: await clanInfo(user.id, G, now) };
+    }
+    case "clanUnapply": {
+      await SB.from("clan_apps").delete().eq("player_id", user.id).eq("clan_id", Number(args.id));
+      return { out: await clanInfo(user.id, G, now) };
+    }
+    case "clanApp": {
+      if (!me || !canLead(me.role)) fail("clan_rights");
+      const { data: ap } = await SB.from("clan_apps").select("id,player_id,clan_id").eq("id", Number(args.id)).maybeSingle();
+      if (!ap || ap.clan_id !== me!.clan_id) fail("clan_app_none");
+      const who = await nameOf(ap!.player_id as number);
+      if (args.ok) {
+        const { data: cv } = await SB.from("clan_view").select("members,bld").eq("id", me!.clan_id).single();
+        if (cv!.members >= L.clanMax(cv!.bld)) fail("clan_full");
+        const { error } = await SB.from("clan_members").insert({ player_id: ap!.player_id, clan_id: me!.clan_id, role: "member" });
+        await SB.from("clan_apps").delete().eq("player_id", ap!.player_id);
+        if (error) fail("clan_app_taken"); // гравець уже вступив в інший клан
+        await clog(me!.clan_id, user, "accept", { who });
+      } else {
+        await SB.from("clan_apps").delete().eq("id", ap!.id);
+        await clog(me!.clan_id, user, "reject", { who });
+      }
+      return { out: await clanInfo(user.id, G, now) };
+    }
+    case "clanSettings": {
+      if (!me || me.role !== "leader") fail("clan_rights");
+      const mode = String(args.mode);
+      if (!(L.CLAN_MODES as readonly string[]).includes(mode)) fail("bad_role");
+      const minStage = Math.max(0, Math.min(80, Math.floor(Number(args.minStage) || 0)));
+      const minPower = Math.max(0, Math.min(1e12, Math.floor(Number(args.minPower) || 0)));
+      await SB.from("clans").update({ join_mode: mode, min_stage: minStage, min_power: minPower }).eq("id", me!.clan_id);
+      await clog(me!.clan_id, user, "settings", { mode, minStage, minPower });
+      return { out: await clanInfo(user.id, G, now) };
+    }
+    case "market": {
+      const { data: col, error } = await SB.rpc("market_collect", { p_seller: user.id }); if (error) throw error;
+      const gross = Number(col?.[0]?.total || 0), n = Number(col?.[0]?.n || 0), net = L.marketNet(gross);
+      const out = await marketInfo(user.id, args);
+      return { out: { ...out, got: { n, gross, net } }, fx: net ? (S) => { S.ash += net; } : undefined };
+    }
+    case "marketBuy": {
+      const { data: lot } = await SB.from("market_lots").select("id,price,seller,buyer").eq("id", Number(args.lot)).maybeSingle();
+      if (!lot || lot.buyer) fail("market_gone");
+      if (lot!.seller === user.id) fail("market_own");
+      if (G.ash < lot!.price) fail("no_ash");
+      if (G.inv.length >= L.invMax(G)) fail("bag_full");
+      const { data: r, error } = await SB.rpc("market_claim", { p_lot: lot!.id, p_buyer: user.id }); if (error) throw error;
+      if (!r || !r.id) fail("market_gone");
+      const item = r.item as L.Item, price = r.price as number;
+      return { out: { ...(await marketInfo(user.id, args)), bought: item }, fx: (S) => { S.ash = Math.max(0, S.ash - price); item.id = S.nid++; item.nw = 1; S.inv.unshift(item); } };
+    }
+    case "marketCancel": {
+      const { data: r, error } = await SB.rpc("market_cancel", { p_lot: Number(args.lot), p_seller: user.id }); if (error) throw error;
+      if (!r || !r.id) fail("market_gone");
+      const item = r.item as L.Item;
+      return { out: await marketInfo(user.id, args), fx: (S) => { item.id = S.nid++; S.inv.unshift(item); } };
+    }
     case "clanCraft": {
       if (!me || !canLead(me.role)) fail("clan_rights");
       const t = Math.floor(Number(args.t)), n = Math.max(1, Math.min(10, Math.floor(Number(args.n) || 1)));
       if (!(t >= 1 && t <= L.DNG_TIERS) || (G.dng?.max || 0) < t) fail("dng_locked");
       // ключі крафтяться за золото з казни клану, не з кишені крафтера
-      const { data: cv } = await SB.from("clan_view").select("bank,kn,members").eq("id", me!.clan_id).single();
-      const cost = L.clanKeyCost(t, G.maxStage, n);
+      const { data: cv } = await SB.from("clan_view").select("bank,kn,members,bld").eq("id", me!.clan_id).single();
+      const cost = L.clanKeyCost(t, G.maxStage, n, Number((cv!.bld || {}).forge || 0), G.dng?.max || t);
       if (Number(cv!.bank || 0) < cost) fail("clan_no_bank");
       const { data: left, error } = await SB.rpc("clan_craft", { p_clan: me!.clan_id, p_tier: t, p_n: n, p_cost: cost, p_kn: Number(cv!.kn || 0) }); if (error) throw error;
       if (left === null) fail("busy"); // хтось скрафтив одночасно — ціна змінилась
@@ -291,14 +399,17 @@ async function preAction(user: TgUser, start: string | undefined, action: string
 async function handle(user: TgUser, start: string | undefined, action: string, args: Record<string, unknown>) {
   const pre: Pre | null = PRE.has(action) ? await preAction(user, start, action, args) : null;
   const giveTo = action === "clanGive" ? await clanOf(user.id) : null;
+  const cb = await clanBonusOf(user.id); // бонуси будівель клану (0, якщо гравець не в клані)
   for (let attempt = 0; attempt < 4; attempt++) {
     const now = Date.now();
     const { version, state, isNew } = await loadOrCreate(user, start, now);
     const G = state;
+    G.cb = cb;
     const prog = L.progress(G, now);
     let out: unknown = null;
     let pvp: { def: number | null; oppRating: number; win: boolean } | null = null;
     let give = 0;
+    let sellLot: { it: L.Item; price: number } | null = null;
     const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat, ess: G.ess };
     if (pre) { pre.fx?.(G, now); out = pre.out; }
     else switch (action) {
@@ -355,6 +466,12 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
         G.gold -= amt; give = amt;
         break;
       }
+      case "marketSell": {
+        const { count } = await SB.from("market_lots").select("id", { count: "exact", head: true }).eq("seller", user.id).is("buyer", null);
+        if ((count || 0) >= L.MARKET.maxLots) throw new L.GameError("market_max");
+        sellLot = L.marketTake(G, Number(args.id), Number(args.price));
+        break;
+      }
       case "arenaShop": out = L.actArenaShop(G, String(args.item)); break;
       case "top": out = await topList(String(args.kind), user.id); break;
       default: throw new L.GameError("bad_action");
@@ -373,6 +490,12 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       const { error: ge } = await SB.rpc("clan_bank_give", { p_clan: giveTo.clan_id, p_player: user.id, p_amt: give }); if (ge) console.error(ge);
       await clog(giveTo.clan_id, user, "give", { gold: give });
       out = await clanInfo(user.id, G, now);
+    }
+    if (sellLot) {
+      const it = sellLot.it;
+      const { error: me2 } = await SB.from("market_lots").insert({ seller: user.id, seller_name: uname(user), item: it, slot: it.slot, rarity: it.r, ilvl: it.il, price: sellLot.price });
+      if (me2) console.error("market insert", me2, JSON.stringify(it));
+      out = await marketInfo(user.id, args);
     }
     // публічні показники для рейтингів
     if (action !== "sync" || prog.lvlUps || prog.boss?.win || isNew) {

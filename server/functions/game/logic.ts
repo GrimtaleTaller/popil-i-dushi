@@ -95,6 +95,7 @@ export type State = {
   ovf?: { v: number; d: number; sh: number }; // що сталося з речами при повній сумці (для повідомлення)
   ckey: { day: string; n: number };          // застаріле: ключі, скрафчені гравцем за день (тепер лічильник у клані)
   dngd?: Record<string, number>;             // тир -> найвища пройдена складність
+  cb?: { atk: number; gold: number };        // бонуси будівель клану, % (ставить сервер з даних клану)
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
 export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
@@ -134,7 +135,8 @@ export function hero(G: State) {
     const it = G.eq[s];
     if (it) { a += (it.st.atk || 0) * em; h += (it.st.hp || 0) * em; d += (it.st.def || 0) * em; c += it.st.crit || 0; }
   }
-  return { atk: a, hp: h, def: d, crit: Math.min(60, c) };
+  const cm = 1 + (G.cb?.atk || 0) / 100; // Казарма клану
+  return { atk: a * cm, hp: h * cm, def: d, crit: Math.min(60, c) };
 }
 export const power = (h: ReturnType<typeof hero>) => Math.round(h.atk * (1 + h.crit / 100) * 2 + h.hp * 0.25 + h.def * 1.5);
 export function itemScore(G: State, it: Item) {
@@ -225,7 +227,7 @@ export function progress(G: State, now: number): Progress {
   const kills = Math.floor(k);
   G.frac = k - kills;
   if (!kills) return res;
-  const gold = kills * mobGold(s), xp = kills * mobXp(s);
+  const gold = kills * mobGold(s) * (1 + (G.cb?.gold || 0) / 100), xp = kills * mobXp(s); // Скарбниця клану
   G.gold += gold; res.gold = gold; res.xp = xp;
   res.lvlUps = gainXp(G, xp);
   G.tot.kills += kills; res.kills = kills;
@@ -701,9 +703,23 @@ export const clanCreateCost = (_G?: State) => 50000; // фіксована ці�
 // тож кількість походів обмежена заробленим золотом, а не таймером. Зростає ×1,25 лише платний вхід за Золото.
 export const CKEY_GOLD = 150;
 export const ckeyCrafted = (G: State, now: number) => (G.ckey.day === dayStr(now) ? G.ckey.n : 0);
-export function clanKeyCost(t: number, maxStage: number, n = 1) {
-  return Math.max(Math.round(keyPrice(t) * 0.5), Math.round(mobGold(maxStage) * CKEY_GOLD)) * n;
+// тир: ключ найвищого пройденого тиру коштує повну «ціну фарму», кожен нижчий — на 20% дешевше (але не менше пів ціни ключа)
+export function clanKeyCost(t: number, maxStage: number, n = 1, forge = 0, tMax = t) {
+  const k = 1 - BUILD.forge.step / 100 * Math.min(BUILD.forge.max, forge || 0); // Ковальня клану
+  const farm = mobGold(maxStage) * CKEY_GOLD * Math.pow(0.8, Math.max(0, tMax - t));
+  return Math.round(Math.max(keyPrice(t) * 0.5, farm) * k) * n;
 }
+// будівлі клану: прокачка з казни, бонуси всім учасникам. step — бонус за рівень
+export type BldKey = "citadel" | "forge" | "vault" | "barracks";
+export const BUILD: Record<BldKey, { max: number; base: number; mul: number; step: number }> = {
+  citadel: { max: 5, base: 200000, mul: 3, step: 2 },    // +2 місця в клані
+  forge: { max: 5, base: 100000, mul: 2.5, step: 5 },    // −5% ціни ключів з казни
+  vault: { max: 5, base: 150000, mul: 2.5, step: 3 },    // +3% золота з ворогів
+  barracks: { max: 5, base: 150000, mul: 2.5, step: 2 }, // +2% атаки й здоров'я
+};
+export const bldCost = (k: BldKey, lvl: number) => (lvl >= BUILD[k].max ? null : Math.round(BUILD[k].base * Math.pow(BUILD[k].mul, lvl)));
+export const clanMax = (bld?: Record<string, number> | null) => CLAN.max + BUILD.citadel.step * Math.min(BUILD.citadel.max, Number(bld?.citadel || 0));
+export const clanBonus = (bld?: Record<string, number> | null) => ({ atk: BUILD.barracks.step * Number(bld?.barracks || 0), gold: BUILD.vault.step * Number(bld?.vault || 0) });
 export function ckeyAdd(G: State, now: number, n: number) { const d = dayStr(now); if (G.ckey.day !== d) G.ckey = { day: d, n: 0 }; G.ckey.n += n; }
 export const clanNameOk = (n: string) => /^[\p{L}\p{N} _'-]{3,20}$/u.test(n) && n.trim().length >= 3;
 
@@ -725,3 +741,20 @@ export function actVault(G: State) {
   return { n: take.length, left: G.vault.length };
 }
 export function actOvfSeen(G: State) { G.ovf = { v: 0, d: 0, sh: 0 }; return {}; }
+
+// ---------- ринок між гравцями за Попіл ----------
+// виставляються речі від рідкісних (r >= 2); продавець отримує ціну мінус комісія гри 10%
+export const MARKET = { fee: 0.1, maxLots: 10, minR: 2, maxPrice: 1000000 };
+export function marketTake(G: State, id: number, price: number) {
+  price = Math.floor(Number(price));
+  if (!(price >= 1 && price <= MARKET.maxPrice)) fail("bad_price");
+  const i = G.inv.findIndex((x) => x.id === Number(id)); if (i < 0) fail("no_item");
+  const it = G.inv[i]; if (it.r < MARKET.minR) fail("market_rarity");
+  G.inv.splice(i, 1); delete it.nw;
+  return { it, price };
+}
+export const marketNet = (gross: number) => Math.floor(gross * (1 - MARKET.fee));
+// клан: умови вступу
+export const CLAN_MODES = ["open", "apply", "closed"] as const;
+export const CLAN_APPS_MAX = 5; // скільки заявок гравець може мати одночасно
+
