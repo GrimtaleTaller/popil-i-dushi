@@ -47,7 +47,7 @@ const SLOT={
  ring:{n:'Перстень',ic:SVG_RING,names:['Мідний перстень','Перстень крові','Перстень вовка','Печатка мертвих']},
  amulet:{n:'Амулет',ic:SVG_AMULET,names:['Амулет з ікла','Оберіг відьми','Око безодні','Серце попелу']}
 };
-const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:7.5},{n:'Астральний',c:'#3fd0d4',m:11}];
+const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:9},{n:'Астральний',c:'#3fd0d4',m:14}];
 const STATN={atk:'Атака',hp:'Здоров’я',def:'Захист',crit:'Крит'};
 const UPG=[
  {k:'atk',n:'Сила удару',ic:'⚔️',d:'+атака',val:l=>3*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l)},
@@ -310,7 +310,7 @@ function renderMarket(){
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
 function dismantle(ids){act('dismantle',{ids,mode:G.dismode},r=>toast(disMsg(r.out)))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
-let mSlot=null,mN=3,fsub='res',gemSel=null;
+let mSlot=null,mN=3,fsub='res',gemSel=null,aSlot=null,aSel=null;
 function gemPane(){const C=gemCfg(),GM=G.gems||{};
  const all=[...SLOTS.map(s=>G.eq[s]).filter(Boolean),...G.inv.filter(i=>sockN(i))].filter(i=>sockN(i));
  if(gemSel&&!all.some(i=>i.id===gemSel))gemSel=null;
@@ -354,16 +354,36 @@ function renderForge(){
   <p class="hint">${T('ench_hint',{p:Math.round(F.enchStep*100),c:Math.round(G.ench*F.enchStep*100)})}</p>
   ${eMax?`<p>${T('max_reached')}</p>`:`<p class="hint">${T('ench_cost',{n:legAll})} · 🔩 ${fmt(ec.shards)} · 💰 ${fmt(ec.gold)}</p>
   <div class="row"><button class="btn pri" id="ench" ${legAll&&G.shards>=ec.shards&&G.gold>=ec.gold?'':'disabled'}>${T('ench_btn',{n:G.ench+1})}</button></div>`}</div>`;
- if(fsub==='myth')h+=`<div class="card"><h4><span style="color:${RAR[5].c}">◆</span> ${T('myth_title')}</h4>
-  <div class="chips">${SLOTS.map(s=>`<button data-ms="${s}" class="${s===mSlot?'act':''}">${SLOT[s].ic} ${legs(s).length}</button>`).join('')}</div>
-  <p class="hint">${T('myth_have',{slot:SLOT[mSlot].n,n:LG.length,need,s:fmt(souls)})}</p>
-  <div class="step"><button class="btn" id="mMinus">−</button><b>${T('anvil',{a:Math.min(mN,LG.length),b:need})}</b><button class="btn" id="mPlus">+</button></div>
-  <p class="hint">${T('myth_chance',{c:chance,b:F.myth.base,e:F.myth.extra*extra,f:F.myth.fail*fails,m:F.myth.cap,need})}</p>
-  <div class="row"><button class="btn pri" id="myth" ${LG.length>=need&&G.cat>=1&&G.souls>=souls?'':'disabled'}>${T('forge_btn',{c:chance})}</button></div></div>`;
+ const ST=F.set||{a:0,e:0,n:6},SC=F.setCfg||{anc:{each:6,souls:40,pow:15},eter:{each:16,souls:60,pow:30}};
+ const setBan=(k,c,ic)=>{const x=SC[k],have=k==='anc'?ST.a+ST.e:ST.e,on=k==='anc'?ST.fullA&&!ST.fullE:ST.fullE;return `<div class="setban" style="border-color:${c}55"><span style="color:${c}">${ic}</span><div>${T(k==='anc'?'set_anc':'set_eter',{e:x.each,s:x.souls,p:x.pow})}<div class="sub">${T('set_have',{n:have,m:ST.n})}${on?' · <b style="color:var(--green)">'+T('set_on')+'</b>':''}</div></div></div>`};
+ const slotG=(cnt,sel,attr,need)=>`<div class="slotg">${SLOTS.map(s=>{const n=cnt(s);return `<button ${attr}="${s}" class="${s===sel?'act':''}"><i class="${n>=need?'ok':''}">${n}</i>${SLOT[s].ic}<span>${SLOT[s].n}</span></button>`}).join('')}</div>`;
+ const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${SLOT[it.slot].ic}<b>${fmt(itemScore(it))}</b></div>`;
+ const resC=(have,need,ic)=>`<span style="color:${have>=need?'inherit':'var(--red)'}">${ic}${fmt(have)}/${fmt(need)}</span>`;
+ const maxExtra=Math.max(0,Math.ceil((F.myth.cap-F.myth.base-F.myth.fail*fails)/F.myth.extra));
+ const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?Math.round(itemScore(onA[0])*1.8):0;
+ if(fsub==='myth')h+=`<div class="card">${setBan('anc',RAR[5].c,'◆')}
+  ${slotG(s=>legs(s).length,mSlot,'data-ms',need)}
+  <div class="anrow"><span>${T('anvil',{a:Math.min(mN,LG.length),b:need})}${extra?' <b style="color:var(--gold)">+'+extra+'</b>':''}</span><button class="btn" id="mMinB">${T('btn_min')}</button><button class="btn" id="mMaxB" ${maxN>need?'':'disabled'}>${T('btn_max')}</button></div>
+  <div class="anvil">${onA.map(tile).join('')}${Array.from({length:Math.max(0,need-onA.length)},()=>'<div class="atile empty">+</div>').join('')}</div>
+  <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${chance}%</b></div><div class="cbar"><i style="width:${chance}%"></i></div>
+   <p class="sub">${T('chance_parts',{b:F.myth.base,f:F.myth.fail*fails,e:F.myth.extra*extra,m:F.myth.cap})}</p>
+   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[5].c}">${RAR[5].n} · ${T('lvl',{n:ilA||'—'})}</b>${estM?`<span class="sub">≈ ${T('power',{n:fmt(estM)})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqM?T('power',{n:fmt(itemScore(eqM))}):'—'}</b></div></div>
+   <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.cat,1,'💎')} · ${resC(G.souls,soA,'🔥')}</span></div></div>
+  <p class="hint">${T('myth_keep',{need})}</p>
+  <div class="row"><button class="btn pri big" id="myth" ${LG.length>=need&&G.cat>=1&&G.souls>=soA?'':'disabled'}>${LG.length<need?T('put_more',{n:need-LG.length}):'◆ '+T('forge_btn',{c:chance})}</button></div></div>`;
  const myths=[...SLOTS.map(s=>G.eq[s]).filter(i=>i&&i.r===5),...G.inv.filter(i=>i.r===5)],A=F.ast;
- if(fsub==='ast')h+=`<div class="card"><h4><span style="color:${RAR[6].c}">✦</span> ${T('ast_title')}</h4>
-  <p class="hint">${T('ast_hint',{cat:A.cat,ess:A.ess,c:F.astChance,f:A.fail,m:A.cap})}</p>
-  ${myths.length?myths.map(it=>{const so=Math.round(400+it.il*12),ok=G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=so;return `<div class="item" style="border-left-color:${RAR[5].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[5].c}">${itemName(it)}</div><div class="sub">${T('lvl',{n:it.il})} · 🔥${fmt(so)}${SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id)?' · '+T('equipped'):''}</div></div><div class="acts"><button class="btn pri" data-ast="${it.id}" ${ok?'':'disabled'}>✦ ${F.astChance}%</button></div></div>`}).join(''):`<p class="hint">${T('first_myth')}</p>`}</div>`;
+ const mOf=s=>myths.filter(i=>i.slot===s);
+ if(!aSlot||!mOf(aSlot).length)aSlot=SLOTS.find(s=>mOf(s).length)||aSlot||'weapon';
+ const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aOk=aIt&&G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=aSo,eqA=G.eq[aSlot];
+ if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
+  ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
+  ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${SLOT[it.slot].ic}<b>${fmt(itemScore(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
+  <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
+   <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
+   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemScore(aIt)*14/9))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemScore(eqA))}):'—'}</b></div></div>
+   <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.souls,aSo,'🔥')} · ${resC(G.cat,A.cat,'💎')} · ${resC(G.ess||0,A.ess,'✦')}</span></div></div>
+  <p class="hint">${T('ast_keep')}</p>
+  <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
  if(fsub==='gem')h+=gemPane();
  $('p-forge').innerHTML=h;
  if(fsub==='gem')bindGem();
@@ -372,10 +392,12 @@ function renderForge(){
  if($('disJunk'))$('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
  const eb=$('ench');if(eb)eb.onclick=()=>act('enchant',{},r=>{toast(T('ench_done',{n:r.out.ench}));haptic('heavy')});
  $('p-forge').querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mSlot=b.dataset.ms;mN=need;renderForge()});
- if($('mMinus'))$('mMinus').onclick=()=>{mN=Math.max(need,mN-1);renderForge()};
- if($('mPlus'))$('mPlus').onclick=()=>{mN=Math.min(Math.max(need,maxN),mN+1);renderForge()};
- $('p-forge').querySelectorAll('[data-ast]').forEach(b=>b.onclick=()=>act('astral',{id:+b.dataset.ast},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else toast(T('ast_fail',{c:r.out.chance}))}));
- if($('myth'))$('myth').onclick=()=>{const ids=LG.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
+ if($('mMinB'))$('mMinB').onclick=()=>{mN=need;renderForge()};
+ if($('mMaxB'))$('mMaxB').onclick=()=>{mN=Math.min(Math.max(need,maxN),need+maxExtra);renderForge()};
+ $('p-forge').querySelectorAll('[data-as]').forEach(b=>b.onclick=()=>{aSlot=b.dataset.as;aSel=null;renderForge()});
+ $('p-forge').querySelectorAll('[data-asel]').forEach(b=>b.onclick=()=>{aSel=+b.dataset.asel;renderForge()});
+ if($('astGo'))$('astGo').onclick=()=>{if(aIt)act('astral',{id:aIt.id},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else toast(T('ast_fail',{c:r.out.chance}))})};
+ if($('myth'))$('myth').onclick=()=>{const ids=LGs.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
 }
 const DNG=[{n:'Нора щурів',bg:1},{n:'Вовче лігво',bg:1},{n:'Склеп короля',bg:2},{n:'Болотне капище',bg:3},{n:'Вогняна кузня',bg:4},{n:'Крижана печера',bg:5},{n:'Затонулий храм',bg:6},{n:'Зала дзеркал',bg:7},{n:'Серце безодні',bg:8},{n:'Трон попелу',bg:8}];
 const MATN=['I','II','III','IV'];

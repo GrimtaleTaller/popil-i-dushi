@@ -19,8 +19,8 @@ export const RAR = [
   { m: 2.2, w: 9.5 },
   { m: 3.2, w: 3 },
   { m: 5, w: 0.5 },
-  { m: 7.5, w: 0 }, // міфічний — лише крафт
-  { m: 11, w: 0 }, // астральний — лише крафт з міфічного
+  { m: 9, w: 0 }, // міфічний (прадавній) — лише крафт; було 7,5 (рішення Влада 30.10: прадавня завжди сильніша за свіжі легендарки)
+  { m: 14, w: 0 }, // астральний (вічний) — лише крафт з міфічного; було 11
 ];
 export const DROP_RAR = 5; // скільки рідкостей може випасти
 export const UPG: Record<string, { val: (l: number) => number; cost: (l: number) => number; max?: number }> = {
@@ -45,7 +45,16 @@ export const REGIONS = 8;
 export const ENCH_STEP = 0.08, ENCH_MAX = 25;
 export const MYTH = { base: 30, extra: 10, fail: 5, cap: 80, need: 3 };
 // Душі: лише за рівень і час гри, донат на них не впливає
-export const soulsPerHour = (G: State) => (10 + 2 * G.lvl) * (1 + 0.06 * mythicCount(G)) * (1 + petB(G, "souls") / 100);
+export const soulsPerHour = (G: State) => (10 + 2 * G.lvl) * (1 + setInfo(G).souls / 100) * (1 + petB(G, "souls") / 100);
+// сети (рішення Влада 30.10): кожна надіта прадавня +6% Іскор/год, вічна +16%; усі 6 слотів прадавні або кращі — ще +40% Іскор і +15% сили,
+// усі 6 вічні — замість цього +60% Іскор і +30% сили (атака, здоров'я, захист)
+export const SET = { anc: { each: 6, souls: 40, pow: 15 }, eter: { each: 16, souls: 60, pow: 30 } };
+export function setInfo(G: State) {
+  const a = SLOTS.filter((s) => G.eq[s]?.r === 5).length, e = SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 6).length;
+  const fullE = e === SLOTS.length, fullA = a + e === SLOTS.length;
+  const full = fullE ? SET.eter : fullA ? SET.anc : null;
+  return { a, e, n: SLOTS.length, fullA, fullE, souls: SET.anc.each * a + SET.eter.each * e + (full ? full.souls : 0), pow: full ? full.pow : 0 };
+}
 export const mythicCount = (G: State) => SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 5).length + SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 6).length;
 export const catChance = (s: number) => (s % 10 === 0 ? 1 : 0.2); // каталізатор з боса; регіональний бос — завжди
 export const disXp = (it: Item) => Math.round(mobXp(it.il) * 3 * RAR[it.r].m);
@@ -98,6 +107,7 @@ export type State = {
   cb?: { atk: number; gold: number; xp?: number };        // бонуси будівель клану, % (ставить сервер з даних клану)
   gems?: Record<string, number>;                          // камені в сумці: "a1" -> кількість (тип a/h/d/c, рівень 1–5)
   pet?: PetState;                                         // пітомці: колекція, активний, яйця, інкубатор, знахідки
+  rv?: number;                                            // версія множників рідкості (1 — прадавні ×9, вічні ×14; старі речі перераховано)
   tut?: string[];                                         // навчання: ключі пройдених кроків ("old" — гравець до навчання, "off" — вимкнув)
   nws?: number;                                           // остання побачена новина (id з таблиці news)
 };
@@ -122,6 +132,11 @@ export function migrate(G: State): State {
   const g = G as unknown as Record<string, unknown>;
   if (!G.dngd && G.dng) { G.dngd = {}; for (let t = 1; t <= (G.dng.max || 0); t++) G.dngd[String(t)] = 1; }
   if (!G.tut) G.tut = G.maxStage > 5 ? ["old"] : [];
+  if ((G.rv || 0) < 1) { // 30.10: прадавні ×7,5→×9, вічні ×11→×14 — перераховуємо вже скуті речі
+    const k: Record<number, number> = { 5: 9 / 7.5, 6: 14 / 11 };
+    for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it && k[it.r]) for (const s of ["atk", "hp", "def"] as const) if (it.st[s]) it.st[s] = Math.round(it.st[s]! * k[it.r]);
+    G.rv = 1;
+  }
   if (!G.pet && G.maxStage > 10) { const n = Math.floor((G.maxStage - 1) / 10), r = Math.floor((G.maxStage - 1) / 40); G.pet = { list: {}, act: null, eggs: { c: n - r, r }, inc: null, ft: 0, fn: 0 }; } // яйця за вже пройдених регіональних босів (30.10)
   for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay", "ckey"]) if (g[k] === undefined) g[k] = d[k];
   return G;
@@ -142,8 +157,9 @@ export function hero(G: State) {
     if (it) { a += (it.st.atk || 0) * em; h += (it.st.hp || 0) * em; d += (it.st.def || 0) * em; c += it.st.crit || 0; const g = gemStats(it); a += g.atk; h += g.hp; d += g.def; c += g.crit; }
   }
   const cm = 1 + (G.cb?.atk || 0) / 100; // Казарма клану
+  const sp = 1 + setInfo(G).pow / 100; // повний сет прадавніх / вічних
   a *= 1 + petB(G, "atk") / 100; d *= 1 + petB(G, "def") / 100; // Вовк і Голем
-  return { atk: a * cm, hp: h * cm, def: d, crit: Math.min(60, c) };
+  return { atk: a * cm * sp, hp: h * cm * sp, def: d * sp, crit: Math.min(60, c) };
 }
 export const power = (h: ReturnType<typeof hero>) => Math.round(h.atk * (1 + h.crit / 100) * 2 + h.hp * 0.25 + h.def * 1.5);
 export function itemScore(G: State, it: Item) {

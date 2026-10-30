@@ -70,7 +70,7 @@ function view(G: L.State, now: number, uid = 0) {
     s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
     pet: { defs: L.PETS, cfg: L.PET, info: L.petInfo(G, now) },
     gem: { sockets: L.SOCKETS, out: L.GEM_OUT, m: L.GEM_M, crit: L.GEM_CRIT, max: L.GEM_MAX, pts: L.ARENA_SHOP.stone.pts },
-    forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G) },
+    forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G), set: L.setInfo(G), setCfg: L.SET },
     arena: {
       stage: L.ARENA.stage, daily: L.ARENA.daily, left: Math.max(0, L.ARENA.daily - (G.arena.day === new Date(now).toISOString().slice(0, 10) ? G.arena.used : 0)),
       pts: G.arena.pts, rating: G.arena.rating, w: G.arena.w, l: G.arena.l, win: L.ARENA.win, lose: L.ARENA.lose, shop: L.ARENA_SHOP,
