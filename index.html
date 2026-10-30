@@ -18,7 +18,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 .bar{height:7px;background:#2a2430;border-radius:4px;overflow:hidden;margin-top:3px}
 .bar>i{display:block;height:100%;width:0;transition:width .15s}
 .gold{font-weight:800;color:var(--gold);font-size:15px;white-space:nowrap}
-.cur{text-align:right;line-height:1.15}.souls{font-weight:700;color:#ff9a4a;font-size:12px;white-space:nowrap}
+.cur{text-align:right;line-height:1.15}.souls{font-weight:700;color:#ff9a4a;font-size:12px;white-space:nowrap}.ashv{color:#c9b8a8;margin-left:6px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
 .card h4{margin:0 0 6px;font-size:14px}.card .hint{margin:4px 0}
 .resg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.resg div{background:var(--panel2);border-radius:8px;padding:6px 8px;font-size:12px;display:flex;justify-content:space-between}
@@ -194,7 +194,7 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
     <div class="xpl"><span id="pw">Сила 0</span><span id="xpt">0/0</span></div>
     <div class="bar"><i id="xpb" style="background:linear-gradient(90deg,#7b4fd0,#b07cf0)"></i></div>
   </div>
-  <div class="cur"><div class="gold">💰 <span id="gold">0</span></div><div class="souls">🔥 <span id="souls">0</span></div></div>
+  <div class="cur"><div class="gold">💰 <span id="gold">0</span></div><div class="souls">🔥 <span id="souls">0</span> <span class="ashv">⚱️ <span id="ashv">0</span></span></div></div>
 </div>
 
 <div class="scene" id="scene"></div>
@@ -245,6 +245,6 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
 <div class="toast" id="toast"></div>
 
 <script src="src/i18n.js?v=26"></script>
-<script src="src/game.js?v=32"></script>
+<script src="src/game.js?v=33"></script>
 </body>
 </html>

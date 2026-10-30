@@ -179,7 +179,7 @@ function itemScore(it){const g=gemSum(it);return((it.st.atk||0)+g.atk)*2+((it.st
 function renderTop(){
  if(!G)return;
  const gold=G.gold+pend.gold;let xp=G.xp+pend.xp;
- $('lvl').textContent=G.lvl;$('gold').textContent=fmt(gold);$('souls').textContent=fmt(G.souls||0);$('pw').textContent=T('power',{n:fmt(power(H))});
+ $('lvl').textContent=G.lvl;$('gold').textContent=fmt(gold);$('souls').textContent=fmt(G.souls||0);$('ashv').textContent=fmt(G.ash||0);$('pw').textContent=T('power',{n:fmt(power(H))});
  $('xpt').textContent=fmt(xp)+'/'+fmt(xpNeed(G.lvl));$('xpb').style.width=Math.min(100,xp/xpNeed(G.lvl)*100)+'%';
  const mhp=B.rep?B.rep.maxHp:H.hp;
  $('hhp').style.width=Math.max(0,B.hp/mhp*100)+'%';$('hhpt').textContent=fmt(Math.max(0,B.hp))+' / '+fmt(mhp);
