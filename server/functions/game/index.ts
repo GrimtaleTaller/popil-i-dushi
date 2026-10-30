@@ -68,6 +68,7 @@ function view(G: L.State, now: number, uid = 0) {
   const H = L.hero(G);
   return {
     s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
+    pet: { defs: L.PETS, cfg: L.PET, info: L.petInfo(G, now) },
     gem: { sockets: L.SOCKETS, out: L.GEM_OUT, m: L.GEM_M, crit: L.GEM_CRIT, max: L.GEM_MAX, pts: L.ARENA_SHOP.stone.pts },
     forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G) },
     arena: {
@@ -475,6 +476,12 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "gemInsert": out = L.actGemInsert(G, Number(args.id), String(args.k)); break;
       case "gemRemove": out = L.actGemRemove(G, Number(args.id), Number(args.i)); break;
       case "gemMerge": out = L.actGemMerge(G, String(args.k), Number(args.n ?? 1)); break;
+      case "petSet": out = L.actPetSet(G, String(args.sp), now); break;
+      case "petFeed": out = L.actPetFeed(G, Number(args.n ?? 1)); break;
+      case "petHatch": out = L.actPetHatch(G, String(args.e), now); break;
+      case "petSpeed": out = L.actPetSpeed(G, now); break;
+      case "petClaim": out = L.actPetClaim(G, now); break;
+      case "petFind": out = L.actPetFind(G, now); break;
       case "arena": case "arenaRefresh": {
         if (G.maxStage < L.ARENA.stage) throw new L.GameError("arena_locked");
         L.arenaDay(G, now); G.arena.rating = await myRating(user.id);

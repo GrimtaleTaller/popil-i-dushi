@@ -45,7 +45,7 @@ export const REGIONS = 8;
 export const ENCH_STEP = 0.08, ENCH_MAX = 25;
 export const MYTH = { base: 30, extra: 10, fail: 5, cap: 80, need: 3 };
 // Душі: лише за рівень і час гри, донат на них не впливає
-export const soulsPerHour = (G: State) => (10 + 2 * G.lvl) * (1 + 0.06 * mythicCount(G));
+export const soulsPerHour = (G: State) => (10 + 2 * G.lvl) * (1 + 0.06 * mythicCount(G)) * (1 + petB(G, "souls") / 100);
 export const mythicCount = (G: State) => SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 5).length + SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 6).length;
 export const catChance = (s: number) => (s % 10 === 0 ? 1 : 0.2); // каталізатор з боса; регіональний бос — завжди
 export const disXp = (it: Item) => Math.round(mobXp(it.il) * 3 * RAR[it.r].m);
@@ -97,6 +97,7 @@ export type State = {
   dngd?: Record<string, number>;             // тир -> найвища пройдена складність
   cb?: { atk: number; gold: number; xp?: number };        // бонуси будівель клану, % (ставить сервер з даних клану)
   gems?: Record<string, number>;                          // камені в сумці: "a1" -> кількість (тип a/h/d/c, рівень 1–5)
+  pet?: PetState;                                         // пітомці: колекція, активний, яйця, інкубатор, знахідки
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
 export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
@@ -118,6 +119,7 @@ export function migrate(G: State): State {
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
   if (!G.dngd && G.dng) { G.dngd = {}; for (let t = 1; t <= (G.dng.max || 0); t++) G.dngd[String(t)] = 1; }
+  if (!G.pet && G.maxStage > 10) { const n = Math.floor((G.maxStage - 1) / 10), r = Math.floor((G.maxStage - 1) / 40); G.pet = { list: {}, act: null, eggs: { c: n - r, r }, inc: null, ft: 0, fn: 0 }; } // яйця за вже пройдених регіональних босів (30.10)
   for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay", "ckey"]) if (g[k] === undefined) g[k] = d[k];
   return G;
 }
@@ -137,6 +139,7 @@ export function hero(G: State) {
     if (it) { a += (it.st.atk || 0) * em; h += (it.st.hp || 0) * em; d += (it.st.def || 0) * em; c += it.st.crit || 0; const g = gemStats(it); a += g.atk; h += g.hp; d += g.def; c += g.crit; }
   }
   const cm = 1 + (G.cb?.atk || 0) / 100; // Казарма клану
+  a *= 1 + petB(G, "atk") / 100; d *= 1 + petB(G, "def") / 100; // Вовк і Голем
   return { atk: a * cm, hp: h * cm, def: d, crit: Math.min(60, c) };
 }
 export const power = (h: ReturnType<typeof hero>) => Math.round(h.atk * (1 + h.crit / 100) * 2 + h.hp * 0.25 + h.def * 1.5);
@@ -219,7 +222,8 @@ export function progress(G: State, now: number): Progress {
   const offline = sec > ONLINE_WINDOW;
   const res: Progress = { sec, offline, stage: G.stage, kills: 0, gold: 0, xp: 0, items: 0, lvlUps: 0, souls: 0 };
   if (sec < 0.5) return res;
-  const eff = Math.min(sec, ONLINE_WINDOW) + Math.max(0, sec - ONLINE_WINDOW) * OFFLINE_RATE;
+  petTick(G, now);
+  const eff = Math.min(sec, ONLINE_WINDOW) + Math.max(0, sec - ONLINE_WINDOW) * OFFLINE_RATE * (1 + petB(G, "off") / 100); // Привид
   const sf = eff / 3600 * soulsPerHour(G) + (G.soulFrac || 0);
   const souls = Math.floor(sf); G.soulFrac = sf - souls; G.souls += souls; res.souls = souls;
   // офлайн герой сам відступає на етап, який тягне
@@ -230,7 +234,7 @@ export function progress(G: State, now: number): Progress {
   const kills = Math.floor(k);
   G.frac = k - kills;
   if (!kills) return res;
-  const gold = kills * mobGold(s) * (1 + (G.cb?.gold || 0) / 100), xp = kills * mobXp(s) * (1 + (G.cb?.xp || 0) / 100); // Скарбниця й Бібліотека клану
+  const gold = kills * mobGold(s) * (1 + ((G.cb?.gold || 0) + petB(G, "gold")) / 100), xp = kills * mobXp(s) * (1 + ((G.cb?.xp || 0) + petB(G, "xp")) / 100); // Скарбниця й Бібліотека клану
   G.gold += gold; res.gold = gold; res.xp = xp;
   res.lvlUps = gainXp(G, xp);
   G.tot.kills += kills; res.kills = kills;
@@ -248,7 +252,7 @@ export function progress(G: State, now: number): Progress {
 }
 
 export type BossEv = [number, 0 | 1, number, 0 | 1]; // [час, хто б'є: 0 герой / 1 бос, шкода, крит]
-export type BossResult = { win: boolean; ev: BossEv[]; hp: number; bossHp: number; gold: number; xp: number; item?: Item; stage: number; timeout?: boolean; souls?: number; cat?: number; ash?: number; gems?: string[] };
+export type BossResult = { win: boolean; ev: BossEv[]; hp: number; bossHp: number; gold: number; xp: number; item?: Item; stage: number; timeout?: boolean; souls?: number; cat?: number; ash?: number; gems?: string[]; egg?: string };
 
 export function fightBoss(G: State): BossResult {
   const s = G.stage, H = hero(G);
@@ -286,6 +290,7 @@ export function fightBoss(G: State): BossResult {
     if (Math.random() < catChance(s)) { res.cat = 1; G.cat += 1; }
     if (first && s % 10 === 0) { res.ash = ASH.region * (s / 10); G.ash += res.ash; } // перший прохід регіонального боса: 50 × номер регіону
     if (first) { const n = s % 10 === 0 ? GEM_DROP.region : Math.random() < GEM_DROP.boss ? 1 : 0; if (n) res.gems = randGem(G, n); } // камені: регіональний бос 2, звичайний 15%
+    if (first && s % 10 === 0) { res.egg = s % 40 === 0 ? "r" : "c"; addEgg(G, res.egg); } // яйце пітомця: регіональний бос (40 і 80 — рідкісне)
     log(G, "boss", [s, Math.round(res.gold)]);
     G.stage++; if (G.stage > G.maxStage) G.maxStage = G.stage;
     G.kills = 0; G.frac = 0;
@@ -595,7 +600,7 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
   // скрині й матеріали — пропорційно пройденим кімнатам; бос дає решту
   const chests = full ? R.chests : Math.floor(R.chests * cleared / (DNG_ROOMS + 1));
   const matN = full ? R.matN : Math.floor(R.matN * cleared / (DNG_ROOMS + 1));
-  const gain = { chests, chestIl: R.chestIl, chestG: R.chestG, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0, ash: 0, gems: 0 };
+  const gain = { chests, chestIl: R.chestIl, chestG: R.chestG, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0, ash: 0, gems: 0, egg: "" };
   if (chests) addChests(G, R.chestIl, chests, R.chestG);
   if (matN) G.mats[R.mat] += matN;
   if (full) {
@@ -603,6 +608,7 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
     if (Math.random() < R.catChance) { gain.cat = 1; G.cat++; }
     if (Math.random() < R.essChance) { gain.ess = 1; G.ess++; }
     if (Math.random() < R.gemChance) { randGem(G); gain.gems++; if (Math.random() < R.gem2) { randGem(G); gain.gems++; } }
+    if (d === 3 && Math.random() < PET.nightEgg) { gain.egg = Math.random() < PET.nightRare ? "r" : "c"; addEgg(G, gain.egg); }
     if (t > G.dng.max) G.dng.max = t;
     G.dngd = G.dngd || {}; if (d > dngDiffMax(G, t)) { G.dngd[String(t)] = d; gain.ash = ASH.first * t * d; G.ash += gain.ash; } // перший прохід складності
   }
@@ -613,14 +619,14 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
 // серія заходів (до 10) без показу бою: лише безкоштовні заходи й ключі, за Золото не платить
 export function actDungeonBatch(G: State, t: number, now: number, d = 1, n = 10) {
   n = Math.max(1, Math.min(10, Math.floor(Number(n) || 1)));
-  const sum = { chests: 0, matN: 0, souls: 0, cat: 0, ess: 0, ash: 0, gems: 0 };
+  const sum = { chests: 0, matN: 0, souls: 0, cat: 0, ess: 0, ash: 0, gems: 0, eggs: 0 };
   let runs = 0, wins = 0, keys = 0, mat = 0, chestIl = 0, chestG = 1;
   for (let i = 0; i < n; i++) {
     const day = dayStr(now); if (G.dngDay.day !== day) G.dngDay = { day, used: 0, paid: 0 };
     if (G.dngDay.used >= DNG_DAILY && !((G.keys[String(t)] || 0) > 0)) break;
     const r = actDungeon(G, t, now, d);
     runs++; if (r.full) wins++; if (r.usedKey) keys++;
-    sum.chests += r.gain.chests; sum.matN += r.gain.matN; sum.souls += r.gain.souls; sum.cat += r.gain.cat; sum.ess += r.gain.ess; sum.ash += r.gain.ash; sum.gems += r.gain.gems;
+    sum.chests += r.gain.chests; sum.matN += r.gain.matN; sum.souls += r.gain.souls; sum.cat += r.gain.cat; sum.ess += r.gain.ess; sum.ash += r.gain.ash; sum.gems += r.gain.gems; if (r.gain.egg) sum.eggs++;
     mat = r.gain.mat; chestIl = r.gain.chestIl; chestG = r.gain.chestG;
   }
   if (!runs) fail("no_keys");
@@ -669,7 +675,7 @@ export function actAstral(G: State, id: number) {
 
 // ---------- арена ----------
 export const ARENA = { stage: 10, daily: 5, win: 10, lose: 3, time: 30 };
-export const ARENA_SHOP: Record<string, { pts: number }> = { chest: { pts: 60 }, gem: { pts: 150 }, stone: { pts: 40 } }; // stone — випадковий камінь 1 рівня
+export const ARENA_SHOP: Record<string, { pts: number }> = { chest: { pts: 60 }, gem: { pts: 150 }, stone: { pts: 40 }, egg: { pts: 200 } }; // stone — випадковий камінь 1 рівня, egg — звичайне яйце пітомця
 const BOT_NAMES = ["Morwen", "Kairos", "Valdis", "Ingrid", "Torvald", "Seraphine", "Bram", "Elric", "Isolde", "Ragnar", "Vesna", "Dorian"];
 export function arenaDay(G: State, now: number) {
   const d = dayStr(now);
@@ -703,6 +709,7 @@ export function actArenaShop(G: State, item: string) {
   G.arena.pts -= it.pts;
   if (item === "chest") addChests(G, G.maxStage, 1);
   if (item === "gem") G.cat += 1;
+  if (item === "egg") addEgg(G, "c");
   const got = item === "stone" ? randGem(G) : undefined;
   return { item, got };
 }
@@ -832,6 +839,100 @@ export function actGemMerge(G: State, k: string, n = 1) {
   return { k: up, n };
 }
 const noGems = (G: State, ids: number[]) => { const bad = new Set(G.inv.filter((i) => i.gm?.length).map((i) => i.id)); return ids.map(Number).filter((x) => !bad.has(x)); };
+
+// ---------- пітомці (рішення 30.10) ----------
+// Активний один пітомець: постійний бонус свого виду + знахідки кожні 8 год (зберігається до 3).
+// Яйця: звичайне (Вовк/Голем/Ворон/Сова, 4 год), рідкісне (Привид, Фенікс або звичайний вид, 12 год).
+// Ріст: годування матеріалами й уламками до 30 рівня; на 10 і 20 — еволюція за 1 Самоцвіт; дублікати: 2 копії → +1 зірка (до 5).
+export type PetSp = "wolf" | "golem" | "raven" | "owl" | "ghost" | "phoenix";
+export type PetBonus = "atk" | "def" | "gold" | "xp" | "off" | "souls";
+export const PETS: Record<PetSp, { b: PetBonus; v: number; rare?: boolean }> = {
+  wolf: { b: "atk", v: 3 }, golem: { b: "def", v: 4 }, raven: { b: "gold", v: 5 }, owl: { b: "xp", v: 4 },
+  ghost: { b: "off", v: 10, rare: true }, phoenix: { b: "souls", v: 6, rare: true },
+};
+export const PET = { maxLvl: 30, maxStar: 5, dupStar: 2, evo: [10, 20], hatch: { c: 4 * 3600e3, r: 12 * 3600e3 }, findEvery: 8 * 3600e3, findMax: 3,
+  nightEgg: 0.04, nightRare: 0.2, rareOdds: { ghost: 0.45, phoenix: 0.25 }, speedAsh: 5 };
+export type Pet = { l: number; s: number; d: number };
+export type PetState = { list: Partial<Record<PetSp, Pet>>; act: PetSp | null; eggs: { c: number; r: number }; inc: { e: "c" | "r"; at: number } | null; ft: number; fn: number };
+export const petOf = (G: State): PetState => (G.pet = G.pet || { list: {}, act: null, eggs: { c: 0, r: 0 }, inc: null, ft: 0, fn: 0 });
+export const petEvo = (l: number) => (l >= PET.evo[1] ? 2 : l >= PET.evo[0] ? 1 : 0);
+export function petBonusOf(sp: PetSp, p: Pet) { return Math.round(PETS[sp].v * (1 + 0.06 * (p.l - 1)) * [1, 1.25, 1.5][petEvo(p.l)] * (1 + 0.5 * (p.s - 1)) * 10) / 10; }
+export function petB(G: State, b: PetBonus) { const P = G.pet; if (!P || !P.act) return 0; const p = P.list[P.act]; return p && PETS[P.act].b === b ? petBonusOf(P.act, p) : 0; }
+export function addEgg(G: State, e: string) { const P = petOf(G); if (e === "r") P.eggs.r++; else P.eggs.c++; }
+// корм на рівень l → l+1: матеріал тиру за ступенем еволюції + уламки; на 10 і 20 ще Самоцвіт
+export function petFeedCost(l: number) { if (l >= PET.maxLvl) return null; return { mat: Math.min(2, Math.floor(l / 10)), matN: 5 + l, shards: 15 * l, cat: PET.evo.includes(l) ? 1 : 0 }; }
+// знахідки накопичуються, поки є активний пітомець
+export function petTick(G: State, now: number) {
+  const P = G.pet; if (!P || !P.act) return;
+  if (!P.ft) P.ft = now;
+  while (P.fn < PET.findMax && now - P.ft >= PET.findEvery) { P.fn++; P.ft += PET.findEvery; }
+  if (P.fn >= PET.findMax) P.ft = now;
+}
+export function actPetSet(G: State, sp: string, now: number) {
+  const P = petOf(G); if (!P.list[sp as PetSp]) fail("no_pet");
+  petTick(G, now); if (!P.act) P.ft = now;
+  P.act = sp as PetSp; return { act: sp };
+}
+export function actPetFeed(G: State, n = 1) {
+  const P = petOf(G); if (!P.act) fail("no_pet");
+  const act = P.act!, p = P.list[act]!; let done = 0; const want = Math.max(1, Math.min(30, Math.floor(Number(n) || 1)));
+  while (done < want) {
+    const c = petFeedCost(p.l); if (!c) { if (!done) fail("max"); break; }
+    if (c.cat && done) break; // еволюція — окремою дією
+    if (matsFrom(G, c.mat) < c.matN) { if (!done) fail("no_mats"); break; }
+    if (G.shards < c.shards) { if (!done) fail("no_shards"); break; }
+    if (G.cat < c.cat) { if (!done) fail("no_catalyst"); break; }
+    takeMats(G, c.mat, c.matN); G.shards -= c.shards; G.cat -= c.cat; p.l++; done++;
+    if (c.cat) { log(G, "petEvo", [act, petEvo(p.l)]); break; }
+  }
+  return { sp: act, l: p.l, n: done };
+}
+export function actPetHatch(G: State, e: string, now: number) {
+  const P = petOf(G); if (P.inc) fail("pet_busy");
+  const k = e === "r" ? "r" : "c"; if (!(P.eggs[k] > 0)) fail("no_egg");
+  P.eggs[k]--; P.inc = { e: k, at: now + PET.hatch[k] }; return { inc: P.inc };
+}
+export const petSpeedCost = (G: State, now: number) => { const i = G.pet?.inc; return i ? Math.max(0, Math.ceil((i.at - now) / 3600e3)) * PET.speedAsh : 0; };
+export function actPetSpeed(G: State, now: number) {
+  const P = petOf(G); if (!P.inc) fail("no_egg");
+  const c = petSpeedCost(G, now); if (G.ash < c) fail("no_ash");
+  G.ash -= c; P.inc!.at = now; return { cost: c };
+}
+export function actPetClaim(G: State, now: number) {
+  const P = petOf(G); if (!P.inc) fail("no_egg"); if (P.inc!.at > now) fail("pet_wait");
+  let sp: PetSp;
+  if (P.inc!.e === "r") { const r = Math.random(); sp = r < PET.rareOdds.ghost ? "ghost" : r < PET.rareOdds.ghost + PET.rareOdds.phoenix ? "phoenix" : pick(["wolf", "golem", "raven", "owl"] as PetSp[]); }
+  else sp = pick(["wolf", "golem", "raven", "owl"] as PetSp[]);
+  P.inc = null;
+  const have = P.list[sp]; let isNew = false, star = 0;
+  if (!have) { P.list[sp] = { l: 1, s: 1, d: 0 }; isNew = true; if (!P.act) { P.act = sp; P.ft = now; } }
+  else { have.d++; if (have.s < PET.maxStar && have.d >= PET.dupStar) { have.d -= PET.dupStar; have.s++; star = have.s; } }
+  log(G, "pet", [sp, isNew ? 1 : 0, star]);
+  return { sp, isNew, star };
+}
+// знахідка: кидків 1 + (зірки−1)/2; скриня, камінь, матеріали, Попіл або уламки
+export function actPetFind(G: State, now: number) {
+  petTick(G, now); const P = petOf(G); if (!P.act || !P.fn) fail("no_find");
+  const p = P.list[P.act!]!, rolls = 1 + Math.floor((p.s - 1) / 2), got: { k: string; n: number; x?: string }[] = [];
+  for (let f = 0; f < P.fn; f++) for (let i = 0; i < rolls; i++) {
+    const r = Math.random(), S = G.maxStage;
+    if (r < 0.3) { addChests(G, S, 1); got.push({ k: "chest", n: 1 }); }
+    else if (r < 0.5) { const x = randGem(G)[0]; got.push({ k: "gem", n: 1, x }); }
+    else if (r < 0.75) { const m = Math.min(3, Math.floor(S / 20)), n = Math.round(5 + S / 4); G.mats[m] += n; got.push({ k: "mat", n, x: String(m) }); }
+    else if (r < 0.9) { const n = 5 + Math.floor(Math.random() * 11); G.ash += n; got.push({ k: "ash", n }); }
+    else { const n = 50 + S * 3; G.shards += n; got.push({ k: "shards", n }); }
+  }
+  P.fn = 0; P.ft = now;
+  return { got };
+}
+export function petInfo(G: State, now: number) {
+  const P = G.pet; if (!P) return null;
+  petTick(G, now);
+  const a = P.act ? P.list[P.act] : null;
+  return { next: a ? petFeedCost(a.l) : null, incLeft: P.inc ? Math.max(0, P.inc.at - now) : 0, speed: petSpeedCost(G, now),
+    findIn: P.act && P.fn < PET.findMax ? Math.max(0, P.ft + PET.findEvery - now) : 0,
+    bonus: Object.fromEntries(Object.entries(P.list).map(([k, v]) => [k, petBonusOf(k as PetSp, v!)])) };
+}
 
 // ---------- ринок між гравцями: за Попіл або за Золото (рішення 29.10) ----------
 // речі від рідкісних (r >= 2), легендарні й кращі — лише за Попіл; матеріали I–IV — будь-яка валюта.
