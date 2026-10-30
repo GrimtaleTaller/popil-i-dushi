@@ -98,6 +98,8 @@ export type State = {
   cb?: { atk: number; gold: number; xp?: number };        // бонуси будівель клану, % (ставить сервер з даних клану)
   gems?: Record<string, number>;                          // камені в сумці: "a1" -> кількість (тип a/h/d/c, рівень 1–5)
   pet?: PetState;                                         // пітомці: колекція, активний, яйця, інкубатор, знахідки
+  tut?: string[];                                         // навчання: ключі пройдених кроків ("old" — гравець до навчання, "off" — вимкнув)
+  nws?: number;                                           // остання побачена новина (id з таблиці news)
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
 export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
@@ -119,6 +121,7 @@ export function migrate(G: State): State {
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
   if (!G.dngd && G.dng) { G.dngd = {}; for (let t = 1; t <= (G.dng.max || 0); t++) G.dngd[String(t)] = 1; }
+  if (!G.tut) G.tut = G.maxStage > 5 ? ["old"] : [];
   if (!G.pet && G.maxStage > 10) { const n = Math.floor((G.maxStage - 1) / 10), r = Math.floor((G.maxStage - 1) / 40); G.pet = { list: {}, act: null, eggs: { c: n - r, r }, inc: null, ft: 0, fn: 0 }; } // яйця за вже пройдених регіональних босів (30.10)
   for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay", "ckey"]) if (g[k] === undefined) g[k] = d[k];
   return G;
@@ -383,6 +386,15 @@ export function actSettings(G: State, a: { autoBoss?: boolean; autoSell?: boolea
   if (typeof a.autoSell === "boolean") G.autoSell = a.autoSell;
   return {};
 }
+// навчання: позначити крок пройденим, вимкнути або почати заново
+export function actTut(G: State, k: string, reset?: boolean) {
+  if (reset) { G.tut = []; return {}; }
+  if (!/^[a-z0-9_]{1,16}$/.test(k)) fail("bad_tut");
+  const t = G.tut || (G.tut = []);
+  if (!t.includes(k)) { t.push(k); if (t.length > 60) t.splice(0, t.length - 60); }
+  return {};
+}
+export function actNewsSeen(G: State, id: number) { if (id > (G.nws || 0) && id < 1e9) G.nws = Math.floor(id); return {}; }
 export function actSeen(G: State) { for (const i of G.inv) delete i.nw; return {}; }
 
 const dayStr = (ms: number) => new Date(ms).toISOString().slice(0, 10);

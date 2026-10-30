@@ -92,6 +92,15 @@ function view(G: L.State, now: number, uid = 0) {
   };
 }
 
+// ---------- новини: остання розіслана ботом (кеш 60 с), гра показує її у вікні «Що нового» ----------
+let newsCache: { at: number; n: { id: number; uk: string; en: string; ru: string } | null } = { at: 0, n: null };
+async function latestNews() {
+  if (Date.now() - newsCache.at < 60000) return newsCache.n;
+  const { data } = await SB.from("news").select("id,uk,en,ru").eq("status", "sent").order("id", { ascending: false }).limit(1).maybeSingle();
+  newsCache = { at: Date.now(), n: data as typeof newsCache.n };
+  return newsCache.n;
+}
+
 // ---------- арена й рейтинги ----------
 async function myRating(id: number) {
   const { data } = await SB.from("stats").select("rating").eq("player_id", id).maybeSingle();
@@ -203,7 +212,7 @@ async function clanInfo(id: number, G: L.State, now: number, q = "") {
   }).sort((a, b) => ro[a.role] - ro[b.role] || b.power - a.power);
   const kn = Number(c!.kn || 0), bld = (c!.bld || {}) as Record<string, number>;
   const builds = (Object.keys(L.BUILD) as L.BldKey[]).map((k) => ({ k, lvl: Number(bld[k] || 0), max: L.BUILD[k].max, step: L.BUILD[k].step, cost: L.bldCost(k, Number(bld[k] || 0)) }));
-  const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, ash: L.clanKeyCost(i + 1, 1, Number(bld.forge || 0)), ash5: L.clanKeyCost(i + 1, 5, Number(bld.forge || 0)), can: (G.dng?.max || 0) >= i + 1 }));
+  const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, ash: L.clanKeyCost(i + 1, 1, Number(bld.forge || 0)), ash5: L.clanKeyCost(i + 1, 5, Number(bld.forge || 0)), can: L.dngOpen(G, i + 1) })); // ключі — на всі тири, відкриті крафтеру для входу (30.10)
   const { data: lg } = await SB.from("clan_log").select("name,kind,data,at").eq("clan_id", me.clan_id).order("id", { ascending: false }).limit(30);
   let apps: unknown[] = [];
   if (me.role === "leader" || me.role === "officer") {
@@ -408,7 +417,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
     case "clanCraft": {
       if (!me || !canLead(me.role)) fail("clan_rights");
       const t = Math.floor(Number(args.t)), n = Math.max(1, Math.min(10, Math.floor(Number(args.n) || 1)));
-      if (!(t >= 1 && t <= L.DNG_TIERS) || (G.dng?.max || 0) < t) fail("dng_locked");
+      if (!(t >= 1 && t <= L.DNG_TIERS) || !L.dngOpen(G, t)) fail("dng_locked");
       // ключі крафтяться за золото з казни клану, не з кишені крафтера
       const { data: cv } = await SB.from("clan_view").select("ash,bld").eq("id", me!.clan_id).single();
       const cost = L.clanKeyCost(t, n, Number((cv!.bld || {}).forge || 0)); // Попіл з казни клану
@@ -436,6 +445,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
   await settleWeek(Date.now());
   // нагороди тижневих рейтингів забираємо лише на sync: він не кидає ігрових помилок, тож нагорода не загубиться
   const reward = action === "sync" ? Number((await SB.rpc("reward_claim", { p_player: user.id })).data || 0) : 0;
+  const nw = action === "sync" ? await latestNews() : null;
   const cb = await clanBonusOf(user.id); // бонуси будівель клану (0, якщо гравець не в клані)
   for (let attempt = 0; attempt < 4; attempt++) {
     const now = Date.now();
@@ -449,6 +459,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     let sellLot: { it?: L.Item; mat?: L.MatLot; price: number; cur: L.MCur } | null = null;
     let giveRes: { k: string; n: number } | null = null;
     const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat, ess: G.ess };
+    if (isNew && nw) G.nws = nw.id; // новачкам старі новини не показуємо
     if (reward) { G.ash += reward; G.log.unshift({ t: now, k: "reward", a: [reward] }); if (G.log.length > 40) G.log.length = 40; }
     if (pre) { pre.fx?.(G, now); out = pre.out; }
     else switch (action) {
@@ -461,6 +472,8 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "boss": out = L.actBoss(G); break;
       case "settings": out = L.actSettings(G, args as { autoBoss?: boolean; autoSell?: boolean }); break;
       case "seen": out = L.actSeen(G); break;
+      case "tut": out = L.actTut(G, String(args.k || ""), !!args.reset); break;
+      case "newsSeen": out = L.actNewsSeen(G, Number(args.id)); break;
       case "daily": out = L.actDaily(G, now); break;
       case "dismantle": out = L.actDismantle(G, args.ids as number[], String(args.mode)); break;
       case "dismantleJunk": out = L.actDismantleJunk(G, String(args.mode)); break;
@@ -587,7 +600,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
         },
       });
     }
-    return { ok: true, isNew, prog, out, reward, view: view(G, now, user.id) };
+    return { ok: true, isNew, prog, out, reward, news: nw && nw.id > (G.nws || 0) ? nw : null, view: view(G, now, user.id) };
   }
   throw new Error("busy");
 }

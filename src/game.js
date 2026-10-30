@@ -548,8 +548,9 @@ function renderProfile(){
   <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
   <div><span>${T('dng_runs')}</span><b>${(G.dng&&G.dng.runs)||0}</b></div><div><span>${T('power',{n:''}).trim()}</span><b>${fmt(H.power)}</b></div></div></div>`;
  if(V.isAdmin)h+=adminHtml();
- h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button></div>`;
+ h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button><button class="btn" id="pTut">${T('tut_restart')}</button></div>`;
  el.innerHTML=h;
+ $('pTut').onclick=tutRestart;
  $('cpId').onclick=e=>{e.preventDefault();copyText(String(P.id))};
  $('pInv').onclick=invite;$('pCopy').onclick=()=>copyText(link);
  $('pRef').onclick=()=>{profData=null;adminData=null;renderProfile()};
@@ -606,7 +607,7 @@ function renderClan(){
  h+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint')}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('tier',{n:t})}: <b>${K[t]}</b></span><button class="btn" data-ct="${t}">${T('take')}</button></div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)+'</div>';
  if(lead){const opts=C.craft.filter(x=>x.can);if(!opts.some(x=>x.t===craftT)&&opts.length)craftT=opts[opts.length-1].t;
   const cur=C.craft.find(x=>x.t===craftT);
-  h+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${opts.map(x=>`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`).join('')}</div>
+  h+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${C.craft.map(x=>x.can?`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`:`<button disabled title="${esc(T('craft_lock',{n:x.t-1}))}">🔒 ${T('tier',{n:x.t})}</button>`).join('')}</div>${C.craft.some(x=>!x.can)?`<p class="hint">${T('craft_lock',{n:C.craft.find(x=>!x.can).t-1})}</p>`:''}
    <div class="row"><button class="btn pri" data-cn="1" ${(C.clan.ash||0)>=cur.ash?'':'disabled'}>×1 · ⚱️${fmt(cur.ash)}</button><button class="btn" data-cn="5" ${(C.clan.ash||0)>=cur.ash5?'':'disabled'}>×5 · ⚱️${fmt(cur.ash5)}</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
  const BL=C.builds||[],RS=C.clan.res||{m:[0,0,0,0],sh:0};
  const bldOk=c=>(C.clan.bank||0)>=c.gold&&(RS.m[c.mat]||0)>=c.matN&&(RS.sh||0)>=c.sh;
@@ -711,6 +712,7 @@ function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show')
 let dailyShown='';
 function afterSync(r){
  const p=r.prog;
+ if(r.news)showNews(r.news);
  if(r.reward)modal(`<div class="big">🏆</div><h3>${T('reward_t')}</h3><p>${T('reward_txt',{a:fmt(r.reward)})}</p>`,T('claim'));
  if(p&&p.offline&&p.sec>=60&&p.kills>0){const h=Math.floor(p.sec/3600),m=Math.floor(p.sec%3600/60);
   modal(`<div class="big">🌙</div><h3>${T('away')}</h3><p>${T('away_line',{t:(h?T('hours',{n:h})+' ':'')+T('mins',{n:m}),s:p.stage})}</p><p>${T('p_killed')} <b>${fmt(p.kills)}</b></p><p>${T('p_gold')} <b>+${fmt(p.gold)}</b></p><p>${T('p_xp')} <b>+${fmt(p.xp)}</b></p>${p.souls?`<p>${T('p_souls')} <b>+${fmt(p.souls)}</b></p>`:''}${p.items?`<p>${T('p_items')} <b>${p.items}</b></p>`:''}`,T('claim'))}
@@ -743,6 +745,85 @@ function setLang(l){
  if(B.m&&!B.m.boss){B.m=null;B.resp=0.1}else if(B.m)$('mn').textContent='👑 '+B.m.n;
  renderBoss();paintArena();flush();renderSub();
 }
+
+// ---------- навчання: вступ для новачків, підказки-вказівники й пояснення розділів ----------
+// Прогрес — на сервері (G.tut): "intro", "p_<розділ>", "tg_<ціль>"; "old" — гравець до навчання, "off" — вимкнув.
+const tutLocal=new Set();let tutCur=null,newsShown=0;
+const tutHas=k=>tutLocal.has(k)||((G&&G.tut)||[]).includes(k);
+const tutOff=()=>tutHas('off');
+function tutMark(k){if(tutHas(k))return;tutLocal.add(k);api('tut',{k}).catch(()=>{})}
+const TUT_INTRO=[['ti_1','#arena'],['ti_2','#bossBtn'],['ti_3','#autoBtn'],['ti_4','.cur'],['ti_5','.tabs']];
+const TUT_PANES=['bag','market','train','pet','res','gem','ench','myth','ast','dng','arena','top','clan','prof'];
+const tabBtn=t=>'.tabs button[data-t="'+t+'"]';
+// вказівники: умова, куди показати, після якого пояснення розділу крок уже не потрібен; all — і для старих гравців (нові функції)
+const TUT_GOALS=[
+ {k:'bag',tab:'bag',p:'bag',c:()=>G.inv.length>0},
+ {k:'train',tab:'hero',p:'train',c:()=>G.maxStage>=2&&G.gold>=150},
+ {k:'forge',tab:'forge',p:'res',c:()=>G.maxStage>=4},
+ {k:'dng',tab:'dng',p:'dng',c:()=>V.dng&&G.maxStage>=V.dng.unlockStage},
+ {k:'arena',tab:'arena',p:'arena',c:()=>V.arena&&G.maxStage>=V.arena.stage},
+ {k:'clan',tab:'clan',p:'clan',c:()=>G.maxStage>=(V.clanStage||5)},
+ {k:'pet',tab:'hero',p:'pet',all:1,c:()=>{const P=G.pet;return !!P&&(P.eggs.c+P.eggs.r>0||!!P.inc||Object.keys(P.list).length>0)}},
+ {k:'gem',tab:'forge',p:'gem',all:1,c:()=>Object.values(G.gems||{}).some(n=>n>0)},
+];
+function tutEl(){let e=$('tut');if(!e){e=document.createElement('div');e.id='tut';e.innerHTML='<div class="tring" id="tring"></div><div class="tbub" id="tbub"></div>';document.body.appendChild(e)}return e}
+function tutHide(){tutCur=null;const e=$('tut');if(e)e.className=''}
+function tutPlace(){
+ if(!tutCur)return;const t=document.querySelector(tutCur.sel);
+ if(!t||!t.offsetParent){tutHide();return}
+ const r=t.getBoundingClientRect(),vh=innerHeight,top=Math.max(4,r.top-4),bot=Math.min(vh-4,r.bottom+4);
+ if(bot-top<20){tutHide();return}
+ const ring=$('tring'),bub=$('tbub');
+ Object.assign(ring.style,{left:(r.left-4)+'px',top:top+'px',width:(r.width+8)+'px',height:(bot-top)+'px'});
+ const bh=bub.offsetHeight||120;
+ if(vh-bot>=bh+12){bub.style.top=(bot+10)+'px';bub.style.bottom=''}
+ else if(top>=bh+12){bub.style.top=(top-10-bh)+'px';bub.style.bottom=''}
+ else{bub.style.top='';bub.style.bottom='12px'}
+}
+function tutShow(o){
+ tutCur=o;const e=tutEl();e.className='show'+(o.block?' block':'');
+ const step=o.n?`<div class="tstep">${T('tut_step',{i:o.i,n:o.n})}</div>`:'';
+ $('tbub').innerHTML=`${step}<p>${T(o.txt)}</p><div class="row"><button class="btn pri" id="tutOk">${T(o.n&&o.i<o.n?'tut_next':'tut_ok')}</button>${o.skip?`<button class="btn" id="tutSkip">${T('tut_skip')}</button>`:''}</div>`;
+ $('tutOk').onclick=()=>{const c=tutCur;tutHide();c&&c.ok()};
+ if(o.skip)$('tutSkip').onclick=()=>{tutHide();tutMark('off')};
+ tutPlace();
+}
+let introI=0;
+const curPane=()=>groupOf(tab)==='forge'?fsub:tab;
+const tipPending=()=>{const k=curPane();return TUT_PANES.includes(k)&&!tutHas('p_'+k)};
+function tutCheck(){
+ if(!G||!V)return;
+ if(tutOff()){if(tutCur)tutHide();return}
+ const blocked=B.rep||$('dngv')||$('boot')||document.querySelector('.modal.show');
+ if(blocked){if(tutCur)tutHide();return}
+ if(tutCur){if(tutCur.still&&!tutCur.still())tutHide();else{tutPlace();return}}
+ const old=tutHas('old');
+ if(!old&&!tutHas('intro')){
+  if(tab!=='hero'&&groupOf(tab)!=='hero')return;
+  const [txt,sel]=TUT_INTRO[introI]||TUT_INTRO[0];
+  tutShow({txt,sel,block:1,skip:1,i:introI+1,n:TUT_INTRO.length,ok:()=>{introI++;if(introI>=TUT_INTRO.length){introI=0;tutMark('intro')}}});return;
+ }
+ const pk=curPane();
+ if(tipPending()){
+  const sel=$('subtabs').style.display!=='none'?'#subtabs':'#p-'+tab;
+  tutShow({txt:'tp_'+pk,sel,skip:!old,still:()=>curPane()===pk,ok:()=>tutMark('p_'+pk)});return;
+ }
+ for(const g of TUT_GOALS){
+  if((old&&!g.all)||tutHas('tg_'+g.k)||tutHas('p_'+g.p))continue;
+  let ok=false;try{ok=g.c()}catch(e){}
+  if(!ok)continue;
+  const inG=groupOf(tab)===g.tab,sel=inG?`#subtabs button[data-s="${g.p}"]`:tabBtn(g.tab);
+  tutShow({txt:'tg_'+g.k,sel,skip:!old,still:()=>(groupOf(tab)===g.tab)===inG&&curPane()!==g.p&&!tipPending(),ok:()=>tutMark('tg_'+g.k)});return;
+ }
+}
+function tutRestart(){tutLocal.clear();introI=0;api('tut',{reset:true}).then(()=>{toast(T('tut_restarted'));tab='hero';document.querySelector(tabBtn('hero')).click()}).catch(e=>toast(errT(e)))}
+// новина з бота: показуємо один раз
+function newsHtml(s){return esc(s).replace(/&lt;(\/?)(b|i)&gt;/g,'<$1$2>').replace(/\n/g,'<br>')}
+function showNews(n){
+ if(!n||n.id===newsShown)return;newsShown=n.id;
+ modal(`<h3>${T('news_t')}</h3><div class="newsb">${newsHtml(n[LANG]||n.en)}</div>`,T('tut_ok'),()=>api('newsSeen',{id:n.id}).catch(()=>{}));
+}
+setInterval(tutCheck,500);addEventListener('resize',()=>tutPlace());addEventListener('scroll',()=>tutPlace(),true);
 
 // ---------- старт ----------
 function boot(msg,retry){
