@@ -167,7 +167,7 @@ async function arenaDivision(rating: number) {
 
 // ---------- профіль, клани, адмін: дії з базою, що виконуються один раз до запису стану ----------
 type Pre = { out?: unknown; fx?: (G: L.State, now: number) => void };
-const PRE = new Set(["clanBuild", "profile", "admin", "clan", "clanCreate", "clanJoin", "clanLeave", "clanKick", "clanRole", "clanCraft", "clanTake", "clanApp", "clanSettings", "clanUnapply", "market", "marketBuy", "marketCancel"]);
+const PRE = new Set(["clanBuild", "profile", "admin", "clan", "clanCreate", "clanJoin", "clanLeave", "clanKick", "clanRole", "clanCraft", "clanTake", "clanGiveKeys", "clanApp", "clanSettings", "clanUnapply", "market", "marketBuy", "marketCancel"]);
 const uname = (u: TgUser) => String(u.first_name || u.username || "Hero").slice(0, 24);
 // журнал клану: останні дії учасників
 async function clog(clan: number, u: TgUser | null, kind: string, data: Record<string, unknown> = {}) {
@@ -427,13 +427,37 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       await clog(me!.clan_id, user, "craft", { t, n, ash: cost });
       return { out: await clanInfo(user.id, G, now) };
     }
+    case "clanGiveKeys": {
+      // лідер або офіцер передає ключі зі складу клану учаснику (30.10): склад — атомарно в базі, ключі — у стан учасника під блокуванням версії
+      if (!me || !canLead(me.role)) fail("clan_rights");
+      const t = Math.floor(Number(args.t)), pid = Number(args.pid), n = Math.max(1, Math.min(1000, Math.floor(Number(args.n) || 1)));
+      if (!(t >= 1 && t <= L.DNG_TIERS)) fail("dng_locked");
+      const to = await clanOf(pid); if (!to || to.clan_id !== me!.clan_id) fail("clan_none");
+      const { data: left, error } = await SB.rpc("clan_keys_add", { p_clan: me!.clan_id, p_tier: t, p_n: -n }); if (error) throw error;
+      if (left === null) fail("clan_no_keys");
+      if (pid === user.id) { await clog(me!.clan_id, user, "givekey", { who: await nameOf(pid), t, n }); return { fx: (S) => { S.keys[String(t)] = (S.keys[String(t)] || 0) + n; }, out: await clanInfo(user.id, G, now) }; }
+      let ok = false;
+      for (let i = 0; i < 5 && !ok; i++) {
+        const { data: row } = await SB.from("game_state").select("version,state").eq("player_id", pid).maybeSingle();
+        if (!row) break;
+        const S = L.migrate(row.state as L.State); S.keys[String(t)] = (S.keys[String(t)] || 0) + n;
+        const { data: upd } = await SB.from("game_state").update({ state: S, version: (row.version as number) + 1 }).eq("player_id", pid).eq("version", row.version).select("version");
+        ok = !!upd?.length;
+      }
+      if (!ok) { await SB.rpc("clan_keys_add", { p_clan: me!.clan_id, p_tier: t, p_n: n }); fail("busy"); } // не вдалося — повертаємо ключі на склад
+      await clog(me!.clan_id, user, "givekey", { who: await nameOf(pid), t, n });
+      return { out: await clanInfo(user.id, G, now) };
+    }
     case "clanTake": {
       if (!me) fail("clan_none");
       const t = Math.floor(Number(args.t));
-      const { data: left, error } = await SB.rpc("clan_keys_add", { p_clan: me!.clan_id, p_tier: t, p_n: -1 }); if (error) throw error;
+      // n — скільки ключів забрати; all — усі ключі цього тиру зі складу (30.10)
+      let n = Math.max(1, Math.min(1000, Math.floor(Number(args.n) || 1)));
+      if (args.all) { const { data: cv } = await SB.from("clans").select("keys").eq("id", me!.clan_id).single(); n = Math.min(1000, Number((cv?.keys || {})[String(t)] || 0)); if (n < 1) fail("clan_no_keys"); }
+      const { data: left, error } = await SB.rpc("clan_keys_add", { p_clan: me!.clan_id, p_tier: t, p_n: -n }); if (error) throw error;
       if (left === null) fail("clan_no_keys");
-      await clog(me!.clan_id, user, "take", { t });
-      return { fx: (S) => { S.keys[String(t)] = (S.keys[String(t)] || 0) + 1; }, out: await clanInfo(user.id, G, now) };
+      await clog(me!.clan_id, user, "take", { t, n });
+      return { fx: (S) => { S.keys[String(t)] = (S.keys[String(t)] || 0) + n; }, out: await clanInfo(user.id, G, now) };
     }
   }
   return {};

@@ -604,7 +604,8 @@ function renderClan(){
   <div class="chips" style="margin-top:8px">${['m0','m1','m2','m3','sh'].map(k=>`<button data-rk="${k}" class="${resK===k?'act':''}">${k==='sh'?'🔩 '+fmt(G.shards||0):'⛏️'+MATN[+k[1]]+' '+fmt((G.mats||[])[+k[1]]||0)}</button>`).join('')}</div>
   <div class="row" style="align-items:center"><input id="cRes" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cResAll">${T('give_all')}</button><button class="btn pri" id="cResGo">${T('give')}</button></div></div>`;
  const tiers=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);
- h+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint')}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('tier',{n:t})}: <b>${K[t]}</b></span><button class="btn" data-ct="${t}">${T('take')}</button></div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)+'</div>';
+ h+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint')}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:1.4">${T('tier',{n:t})}: <b>${K[t]}</b></span><input class="inp" data-ktq="${t}" type="number" min="1" max="${K[t]}" value="1" inputmode="numeric" style="width:64px;flex:0 0 64px"><button class="btn pri" data-ct="${t}">${T('take')}</button>${K[t]>1?`<button class="btn" data-cta="${t}">${T('take_all',{n:K[t]})}</button>`:''}</div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)
+  +(lead&&tiers.length?`<h4 style="margin-top:12px">🤝 ${T('key_give_t')}</h4><div class="row" style="align-items:center"><select id="kgP" class="inp">${(C.members||[]).map(m=>`<option value="${m.id}">${esc(m.name)}${m.me?' ('+T('you')+')':''}</option>`).join('')}</select><select id="kgT" class="inp" style="flex:0 0 120px">${tiers.map(t=>`<option value="${t}">${T('tier',{n:t})} (${K[t]})</option>`).join('')}</select></div><div class="row" style="align-items:center"><input id="kgN" class="inp" type="number" min="1" value="1" inputmode="numeric" placeholder="${T('key_qty')}"><button class="btn pri" id="kgGo">${T('key_give')}</button></div>`:'')+'</div>';
  if(lead){const opts=C.craft.filter(x=>x.can);if(!opts.some(x=>x.t===craftT)&&opts.length)craftT=opts[opts.length-1].t;
   const cur=C.craft.find(x=>x.t===craftT);
   h+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${C.craft.map(x=>x.can?`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`:`<button disabled title="${esc(T('craft_lock',{n:x.t-1}))}">🔒 ${T('tier',{n:x.t})}</button>`).join('')}</div>${C.craft.some(x=>!x.can)?`<p class="hint">${T('craft_lock',{n:C.craft.find(x=>!x.can).t-1})}</p>`:''}
@@ -630,7 +631,9 @@ function renderClan(){
  h+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
  if(C.role==='leader')h+=`<p class="hint">${T('clan_leader_hint')}</p>`;
  el.innerHTML=h;
- el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.ct}));
+ el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ct,q=el.querySelector(`[data-ktq="${t}"]`),n=Math.floor(+(q&&q.value)||1);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanTake',{t,n})});
+ const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
+ el.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.cta,all:1}));
  el.querySelectorAll('[data-bk]').forEach(b=>b.onclick=()=>clanAct('clanBuild',{k:b.dataset.bk},()=>{toast(T('bld_done'));haptic('medium')}));
  el.querySelectorAll('[data-ay]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.ay,ok:true}));
  el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.an,ok:false}));
