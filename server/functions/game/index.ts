@@ -68,6 +68,7 @@ function view(G: L.State, now: number, uid = 0) {
   const H = L.hero(G);
   return {
     s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
+    gem: { sockets: L.SOCKETS, out: L.GEM_OUT, m: L.GEM_M, crit: L.GEM_CRIT, max: L.GEM_MAX, pts: L.ARENA_SHOP.stone.pts },
     forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G) },
     arena: {
       stage: L.ARENA.stage, daily: L.ARENA.daily, left: Math.max(0, L.ARENA.daily - (G.arena.day === new Date(now).toISOString().slice(0, 10) ? G.arena.used : 0)),
@@ -471,6 +472,9 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "ovfSeen": out = L.actOvfSeen(G); break;
       case "openChests": out = L.actOpenChests(G); break;
       case "astral": out = L.actAstral(G, Number(args.id)); break;
+      case "gemInsert": out = L.actGemInsert(G, Number(args.id), String(args.k)); break;
+      case "gemRemove": out = L.actGemRemove(G, Number(args.id), Number(args.i)); break;
+      case "gemMerge": out = L.actGemMerge(G, String(args.k), Number(args.n ?? 1)); break;
       case "arena": case "arenaRefresh": {
         if (G.maxStage < L.ARENA.stage) throw new L.GameError("arena_locked");
         L.arenaDay(G, now); G.arena.rating = await myRating(user.id);

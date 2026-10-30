@@ -65,7 +65,7 @@ export const mobXp = (s: number) => 6 * Math.pow(XPC.mob, s - 1);
 export const xpNeed = (l: number) => Math.floor(XPC.base * Math.pow(XPC.need, l - 1));
 export const gearScale = (il: number) => Math.pow(1.16, il - 1);
 
-export type Item = { id: number; slot: Slot; r: number; il: number; nm: number; st: Stats; nw?: number };
+export type Item = { id: number; slot: Slot; r: number; il: number; nm: number; st: Stats; nw?: number; gm?: string[] }; // gm — камені в гніздах, коди "a3"
 export type LogE = { t: number; k: string; a?: (string | number)[] };
 export type State = {
   v: 2;
@@ -96,6 +96,7 @@ export type State = {
   ckey: { day: string; n: number };          // застаріле: ключі, скрафчені гравцем за день (тепер лічильник у клані)
   dngd?: Record<string, number>;             // тир -> найвища пройдена складність
   cb?: { atk: number; gold: number; xp?: number };        // бонуси будівель клану, % (ставить сервер з даних клану)
+  gems?: Record<string, number>;                          // камені в сумці: "a1" -> кількість (тип a/h/d/c, рівень 1–5)
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
 export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
@@ -133,14 +134,15 @@ export function hero(G: State) {
   const em = 1 + ENCH_STEP * (G.ench || 0);
   for (const s of SLOTS) {
     const it = G.eq[s];
-    if (it) { a += (it.st.atk || 0) * em; h += (it.st.hp || 0) * em; d += (it.st.def || 0) * em; c += it.st.crit || 0; }
+    if (it) { a += (it.st.atk || 0) * em; h += (it.st.hp || 0) * em; d += (it.st.def || 0) * em; c += it.st.crit || 0; const g = gemStats(it); a += g.atk; h += g.hp; d += g.def; c += g.crit; }
   }
   const cm = 1 + (G.cb?.atk || 0) / 100; // Казарма клану
   return { atk: a * cm, hp: h * cm, def: d, crit: Math.min(60, c) };
 }
 export const power = (h: ReturnType<typeof hero>) => Math.round(h.atk * (1 + h.crit / 100) * 2 + h.hp * 0.25 + h.def * 1.5);
 export function itemScore(G: State, it: Item) {
-  return (it.st.atk || 0) * 2 + (it.st.hp || 0) * 0.25 + (it.st.def || 0) * 1.5 + (it.st.crit || 0) * 0.03 * hero(G).atk;
+  const g = gemStats(it);
+  return ((it.st.atk || 0) + g.atk) * 2 + ((it.st.hp || 0) + g.hp) * 0.25 + ((it.st.def || 0) + g.def) * 1.5 + ((it.st.crit || 0) + g.crit) * 0.03 * hero(G).atk;
 }
 export const sellPrice = (it: Item) => Math.max(1, Math.round(mobGold(it.il) * 2 * Math.pow(RAR[it.r].m, 1.5)));
 
@@ -246,7 +248,7 @@ export function progress(G: State, now: number): Progress {
 }
 
 export type BossEv = [number, 0 | 1, number, 0 | 1]; // [час, хто б'є: 0 герой / 1 бос, шкода, крит]
-export type BossResult = { win: boolean; ev: BossEv[]; hp: number; bossHp: number; gold: number; xp: number; item?: Item; stage: number; timeout?: boolean; souls?: number; cat?: number; ash?: number };
+export type BossResult = { win: boolean; ev: BossEv[]; hp: number; bossHp: number; gold: number; xp: number; item?: Item; stage: number; timeout?: boolean; souls?: number; cat?: number; ash?: number; gems?: string[] };
 
 export function fightBoss(G: State): BossResult {
   const s = G.stage, H = hero(G);
@@ -283,6 +285,7 @@ export function fightBoss(G: State): BossResult {
     if (first) { res.souls = 5 + s; G.souls += res.souls; }
     if (Math.random() < catChance(s)) { res.cat = 1; G.cat += 1; }
     if (first && s % 10 === 0) { res.ash = ASH.region * (s / 10); G.ash += res.ash; } // перший прохід регіонального боса: 50 × номер регіону
+    if (first) { const n = s % 10 === 0 ? GEM_DROP.region : Math.random() < GEM_DROP.boss ? 1 : 0; if (n) res.gems = randGem(G, n); } // камені: регіональний бос 2, звичайний 15%
     log(G, "boss", [s, Math.round(res.gold)]);
     G.stage++; if (G.stage > G.maxStage) G.maxStage = G.stage;
     G.kills = 0; G.frac = 0;
@@ -354,7 +357,8 @@ export function actEquipBest(G: State) {
 }
 export function actSell(G: State, ids: number[]) {
   if (!Array.isArray(ids) || ids.length > invMax(G)) fail("bad_ids");
-  const set = new Set(ids.map(Number)); let g = 0, n = 0;
+  const ok = noGems(G, ids); if (ids.length && !ok.length) fail("has_gems");
+  const set = new Set(ok); let g = 0, n = 0;
   G.inv = G.inv.filter((i) => { if (set.has(i.id)) { g += sellPrice(i); n++; return false; } return true; });
   G.gold += g;
   return { gold: g, n };
@@ -407,6 +411,7 @@ function disOne(G: State, it: Item, mode: "xp" | "shards") {
 export function actDismantle(G: State, ids: number[], mode: string) {
   if (!Array.isArray(ids) || !ids.length || ids.length > invMax(G)) fail("bad_ids");
   const m = mode === "xp" ? "xp" : "shards"; G.dismode = m;
+  ids = noGems(G, ids); if (!ids.length) fail("has_gems");
   let xp = 0, shards = 0;
   for (const it of takeItems(G, ids)) { const r = disOne(G, it, m); xp += r.xp; shards += r.shards; }
   if (shards || xp) log(G, "dis", [ids.length, m === "xp" ? xp : shards, m]);
@@ -414,7 +419,7 @@ export function actDismantle(G: State, ids: number[], mode: string) {
 }
 // предмети, які гра вважає непотрібними: гірші за надіте, не легендарні й не міфічні
 export function junkIds(G: State) {
-  return G.inv.filter((i) => i.r < 4 && G.eq[i.slot] && itemScore(G, i) <= itemScore(G, G.eq[i.slot]!)).map((i) => i.id);
+  return G.inv.filter((i) => i.r < 4 && !i.gm?.length && G.eq[i.slot] && itemScore(G, i) <= itemScore(G, G.eq[i.slot]!)).map((i) => i.id);
 }
 export function actDismantleJunk(G: State, mode: string) {
   const ids = junkIds(G); if (!ids.length) fail("no_junk");
@@ -426,8 +431,8 @@ export function actEnchant(G: State, id?: number) {
   if (G.shards < c.shards) fail("no_shards");
   if (G.gold < c.gold) fail("no_gold");
   // легендарка: вказана або найслабша в сумці
-  let leg = id ? G.inv.find((i) => i.id === Number(id) && i.r === 4) : undefined;
-  if (!leg) leg = G.inv.filter((i) => i.r === 4).sort((a, b) => itemScore(G, a) - itemScore(G, b))[0];
+  let leg = id ? G.inv.find((i) => i.id === Number(id) && i.r === 4 && !i.gm?.length) : undefined;
+  if (!leg) leg = G.inv.filter((i) => i.r === 4 && !i.gm?.length).sort((a, b) => itemScore(G, a) - itemScore(G, b))[0];
   if (!leg) fail("no_legendary");
   takeItems(G, [leg!.id]);
   G.shards -= c.shards; G.gold -= c.gold; G.ench++;
@@ -440,6 +445,7 @@ export function actMythic(G: State, ids: number[]) {
   const items = G.inv.filter((i) => set.has(i.id));
   if (items.length !== set.size) fail("no_item");
   if (items.some((i) => i.r !== 4)) fail("not_legendary");
+  if (items.some((i) => i.gm?.length)) fail("has_gems");
   const slot = items[0].slot;
   if (items.some((i) => i.slot !== slot)) fail("mixed_slots");
   const il = Math.max(...items.map((i) => i.il));
@@ -499,7 +505,7 @@ export function dngRewards(t: number, d = 1) {
   const m = DIFF_MUL[d - 1] || 1;
   return {
     chests: Math.round((1 + t) * m), chestIl: dngStage(t, d), chestG: d, mat: Math.min(3, Math.floor((t - 1) / 2.5)), matN: Math.round((3 + t) * m),
-    souls: 2 * t * d, catChance: Math.min(1, (t >= 8 ? 1 : t >= 4 ? 0.5 : 0) + 0.15 * (d - 1)), essChance: t >= 8 ? 0.15 + 0.1 * (d - 1) : t >= 6 && d === 3 ? 0.05 : 0,
+    souls: 2 * t * d, gemChance: Math.min(1, 0.2 + 0.04 * t + 0.15 * (d - 1)), gem2: d === 3 && t >= 5 ? 0.3 : 0, catChance: Math.min(1, (t >= 8 ? 1 : t >= 4 ? 0.5 : 0) + 0.15 * (d - 1)), essChance: t >= 8 ? 0.15 + 0.1 * (d - 1) : t >= 6 && d === 3 ? 0.05 : 0,
   };
 }
 type Foe = { hp: number; atk: number; boss: boolean };
@@ -589,13 +595,14 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
   // скрині й матеріали — пропорційно пройденим кімнатам; бос дає решту
   const chests = full ? R.chests : Math.floor(R.chests * cleared / (DNG_ROOMS + 1));
   const matN = full ? R.matN : Math.floor(R.matN * cleared / (DNG_ROOMS + 1));
-  const gain = { chests, chestIl: R.chestIl, chestG: R.chestG, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0, ash: 0 };
+  const gain = { chests, chestIl: R.chestIl, chestG: R.chestG, mat: R.mat, matN, souls: 0, cat: 0, ess: 0, key: 0, ash: 0, gems: 0 };
   if (chests) addChests(G, R.chestIl, chests, R.chestG);
   if (matN) G.mats[R.mat] += matN;
   if (full) {
     gain.souls = R.souls; G.souls += R.souls;
     if (Math.random() < R.catChance) { gain.cat = 1; G.cat++; }
     if (Math.random() < R.essChance) { gain.ess = 1; G.ess++; }
+    if (Math.random() < R.gemChance) { randGem(G); gain.gems++; if (Math.random() < R.gem2) { randGem(G); gain.gems++; } }
     if (t > G.dng.max) G.dng.max = t;
     G.dngd = G.dngd || {}; if (d > dngDiffMax(G, t)) { G.dngd[String(t)] = d; gain.ash = ASH.first * t * d; G.ash += gain.ash; } // перший прохід складності
   }
@@ -606,14 +613,14 @@ export function actDungeon(G: State, t: number, now = Date.now(), d = 1) {
 // серія заходів (до 10) без показу бою: лише безкоштовні заходи й ключі, за Золото не платить
 export function actDungeonBatch(G: State, t: number, now: number, d = 1, n = 10) {
   n = Math.max(1, Math.min(10, Math.floor(Number(n) || 1)));
-  const sum = { chests: 0, matN: 0, souls: 0, cat: 0, ess: 0, ash: 0 };
+  const sum = { chests: 0, matN: 0, souls: 0, cat: 0, ess: 0, ash: 0, gems: 0 };
   let runs = 0, wins = 0, keys = 0, mat = 0, chestIl = 0, chestG = 1;
   for (let i = 0; i < n; i++) {
     const day = dayStr(now); if (G.dngDay.day !== day) G.dngDay = { day, used: 0, paid: 0 };
     if (G.dngDay.used >= DNG_DAILY && !((G.keys[String(t)] || 0) > 0)) break;
     const r = actDungeon(G, t, now, d);
     runs++; if (r.full) wins++; if (r.usedKey) keys++;
-    sum.chests += r.gain.chests; sum.matN += r.gain.matN; sum.souls += r.gain.souls; sum.cat += r.gain.cat; sum.ess += r.gain.ess; sum.ash += r.gain.ash;
+    sum.chests += r.gain.chests; sum.matN += r.gain.matN; sum.souls += r.gain.souls; sum.cat += r.gain.cat; sum.ess += r.gain.ess; sum.ash += r.gain.ash; sum.gems += r.gain.gems;
     mat = r.gain.mat; chestIl = r.gain.chestIl; chestG = r.gain.chestG;
   }
   if (!runs) fail("no_keys");
@@ -662,7 +669,7 @@ export function actAstral(G: State, id: number) {
 
 // ---------- арена ----------
 export const ARENA = { stage: 10, daily: 5, win: 10, lose: 3, time: 30 };
-export const ARENA_SHOP: Record<string, { pts: number }> = { chest: { pts: 60 }, gem: { pts: 150 } };
+export const ARENA_SHOP: Record<string, { pts: number }> = { chest: { pts: 60 }, gem: { pts: 150 }, stone: { pts: 40 } }; // stone — випадковий камінь 1 рівня
 const BOT_NAMES = ["Morwen", "Kairos", "Valdis", "Ingrid", "Torvald", "Seraphine", "Bram", "Elric", "Isolde", "Ragnar", "Vesna", "Dorian"];
 export function arenaDay(G: State, now: number) {
   const d = dayStr(now);
@@ -696,7 +703,8 @@ export function actArenaShop(G: State, item: string) {
   G.arena.pts -= it.pts;
   if (item === "chest") addChests(G, G.maxStage, 1);
   if (item === "gem") G.cat += 1;
-  return { item };
+  const got = item === "stone" ? randGem(G) : undefined;
+  return { item, got };
 }
 
 // ---------- переплавка: уламки → скриня рівня макс. етапу ----------
@@ -765,6 +773,65 @@ export function actVault(G: State) {
   return { n: take.length, left: G.vault.length };
 }
 export function actOvfSeen(G: State) { G.ovf = { v: 0, d: 0, sh: 0 }; return {}; }
+
+// ---------- камені в спорядженні (рішення 30.10) ----------
+// 4 типи: a Рубін (атака), h Сапфір (здоров'я), d Аметист (захист), c Смарагд (крит). Рівні 1–5, 3 однакові → 1 рівнем вище.
+// Гнізда за рідкістю речі: епічна 1, легендарна 2, прадавня й вічна 3. Сила каменя росте з рівнем речі, тож камінь варто
+// переносити в нові речі. Вставка безкоштовна, вилучення — за Попіл. Річ з каменями не продається торговцю й не розбирається.
+export const GEM_TYPES = ["a", "h", "d", "c"] as const;
+export const GEM_MAX = 5;
+export const SOCKETS = [0, 0, 0, 1, 2, 3, 3];
+export const GEM_M = [0.5, 1.2, 2.5, 5, 9];        // множник сили каменя за рівнем
+export const GEM_CRIT = [0.5, 1, 2, 3.5, 5];       // Смарагд: +крит, %
+export const GEM_OUT = [2, 5, 12, 25, 50];         // ціна вилучення, Попіл
+export const GEM_DROP = { boss: 0.15, region: 2 }; // магазин арени: камінь за 40 очок (ARENA_SHOP.stone)
+export const gemKey = (t: string, l: number) => `${t}${l}`;
+export const gemParse = (k: string) => { const m = /^([ahdc])([1-5])$/.exec(String(k)); return m ? { t: m[1], l: Number(m[2]) } : null; };
+export const sockets = (it: Item) => SOCKETS[it.r] || 0;
+export function gemStat(k: string, il: number) {
+  const g = gemParse(k), o = { atk: 0, hp: 0, def: 0, crit: 0 }; if (!g) return o;
+  const v = gearScale(il) * GEM_M[g.l - 1];
+  if (g.t === "a") o.atk = 3 * v; else if (g.t === "h") o.hp = 14 * v; else if (g.t === "d") o.def = 2 * v; else o.crit = GEM_CRIT[g.l - 1];
+  return o;
+}
+export function gemStats(it: Item) {
+  const o = { atk: 0, hp: 0, def: 0, crit: 0 };
+  for (const k of it.gm || []) { const s = gemStat(k, it.il); o.atk += s.atk; o.hp += s.hp; o.def += s.def; o.crit += s.crit; }
+  return o;
+}
+export function addGem(G: State, k: string, n = 1) { G.gems = G.gems || {}; G.gems[k] = (G.gems[k] || 0) + n; }
+export function randGem(G: State, n = 1) { const got: string[] = []; for (let i = 0; i < n; i++) { const k = gemKey(pick(GEM_TYPES), 1); addGem(G, k); got.push(k); } return got; }
+const findItem = (G: State, id: number) => G.inv.find((i) => i.id === Number(id)) || SLOTS.map((s) => G.eq[s]).find((i) => i && i.id === Number(id));
+export function actGemInsert(G: State, id: number, k: string) {
+  const it = findItem(G, id); if (!it) fail("no_item");
+  if (!gemParse(k)) fail("bad_gem");
+  if ((it!.gm?.length || 0) >= sockets(it!)) fail("no_socket");
+  if (!((G.gems?.[k] || 0) > 0)) fail("no_gem");
+  G.gems![k]--; if (!G.gems![k]) delete G.gems![k];
+  it!.gm = [...(it!.gm || []), k];
+  return { id: it!.id, k };
+}
+export function actGemRemove(G: State, id: number, i: number) {
+  const it = findItem(G, id); if (!it) fail("no_item");
+  i = Math.floor(Number(i)); const k = it!.gm?.[i]; if (!k) fail("no_gem");
+  const cost = GEM_OUT[gemParse(k!)!.l - 1];
+  if (G.ash < cost) fail("no_ash");
+  G.ash -= cost; it!.gm!.splice(i, 1); if (!it!.gm!.length) delete it!.gm;
+  addGem(G, k!);
+  return { id: it!.id, k, cost };
+}
+// злиття: 3 камені рівня l → 1 рівня l+1; n = 0 — скільки вистачить
+export function actGemMerge(G: State, k: string, n = 1) {
+  const g = gemParse(k); if (!g) fail("bad_gem");
+  if (g!.l >= GEM_MAX) fail("max");
+  const have = G.gems?.[k] || 0, can = Math.floor(have / 3);
+  n = Math.floor(Number(n)) || 0; n = n <= 0 ? can : Math.min(n, can);
+  if (!n) fail("no_gem");
+  G.gems![k] -= 3 * n; if (!G.gems![k]) delete G.gems![k];
+  const up = gemKey(g!.t, g!.l + 1); addGem(G, up, n);
+  return { k: up, n };
+}
+const noGems = (G: State, ids: number[]) => { const bad = new Set(G.inv.filter((i) => i.gm?.length).map((i) => i.id)); return ids.map(Number).filter((x) => !bad.has(x)); };
 
 // ---------- ринок між гравцями: за Попіл або за Золото (рішення 29.10) ----------
 // речі від рідкісних (r >= 2), легендарні й кращі — лише за Попіл; матеріали I–IV — будь-яка валюта.

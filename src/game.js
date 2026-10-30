@@ -154,7 +154,7 @@ function replayTick(dt){
  }
  if(R.i>=R.res.ev.length&&R.t>=(R.res.ev.length?R.res.ev[R.res.ev.length-1][0]:0)+0.4){
   const res=R.res;B.rep=null;B.boss=false;
-  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:''));B.m=null;B.resp=0.8}
+  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:'')+(res.gems?' '+res.gems.map(k=>gemIc(k)).join(''):''));B.m=null;B.resp=0.8}
   else{B.dead=2.5;$('dead').style.display='grid';toast(T(res.timeout?'boss_timeout':'boss_lose')+(res.auto?' '+T('auto_off'):''));B.m=null}
   R.after&&R.after();renderBoss();paintArena();
  }
@@ -165,7 +165,17 @@ const dirty={hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
-function itemScore(it){return(it.st.atk||0)*2+(it.st.hp||0)*0.25+(it.st.def||0)*1.5+(it.st.crit||0)*0.03*H.atk}
+// ---------- камені: a Рубін (атака), h Сапфір (здоров'я), d Аметист (захист), c Смарагд (крит) ----------
+const GEMC={a:'#e0475a',h:'#3f86e8',d:'#a15be0',c:'#2fb36b'},GEMS=['a','h','d','c'],ROM=['I','II','III','IV','V'];
+const gemP=k=>({t:k[0],l:+k[1]}),gemCfg=()=>V.gem||{sockets:[0,0,0,1,2,3,3],out:[2,5,12,25,50],m:[0.5,1.2,2.5,5,9],crit:[0.5,1,2,3.5,5],max:5,pts:40};
+function gemStat(k,il){const g=gemP(k),C=gemCfg(),v=Math.pow(1.16,il-1)*C.m[g.l-1],o={};if(g.t==='a')o.atk=3*v;else if(g.t==='h')o.hp=14*v;else if(g.t==='d')o.def=2*v;else o.crit=C.crit[g.l-1];return o}
+function gemSum(it){const o={atk:0,hp:0,def:0,crit:0};for(const k of it.gm||[]){const s=gemStat(k,it.il);for(const x in s)o[x]+=s[x]}return o}
+const gemIc=(k,big)=>{const g=gemP(k);return `<span class="gem${big?' big':''}" style="--gc:${GEMC[g.t]}">◆<i>${ROM[g.l-1]}</i></span>`};
+const gemName=k=>{const g=gemP(k);return T('gem_'+g.t)+' '+ROM[g.l-1]};
+const gemTxt=(k,il)=>{const s=gemStat(k,il),x=Object.keys(s)[0];return '+'+(x==='crit'?s[x].toFixed(1)+'%':fmt(s[x]))+' '+STATN[x]};
+const sockN=it=>gemCfg().sockets[it.r]||0;
+function sockView(it){const n=sockN(it);if(!n)return '';const gm=it.gm||[];let h='';for(let i=0;i<n;i++)h+=gm[i]?gemIc(gm[i]):'<span class="gem empty">◇</span>';return `<span class="socks">${h}</span>`}
+function itemScore(it){const g=gemSum(it);return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5+((it.st.crit||0)+g.crit)*0.03*H.atk}
 function renderTop(){
  if(!G)return;
  const gold=G.gold+pend.gold;let xp=G.xp+pend.xp;
@@ -208,7 +218,7 @@ function renderHero(){
  let h=`<div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
  for(const s of SLOTS){const it=G.eq[s];
   h+=`<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
-   (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sn">${T('lvl',{n:it.il})}</div>`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
+   (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
  h+=`</div><div class="stats">
   <div><span>${STATN.atk}</span><b>${fmt(H.atk)}</b></div><div><span>${STATN.hp}</span><b>${fmt(H.hp)}</b></div>
   <div><span>${STATN.def}</span><b>${fmt(H.def)}</b></div><div><span>${T('crit_chance')}</span><b>${H.crit.toFixed(1)}%</b></div>
@@ -236,9 +246,9 @@ function renderBag(){
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
  for(const it of list){const eq=G.eq[it.slot],better=!eq||itemScore(it)>itemScore(eq);
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info">
-   <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})}${better?` · <span class="up">${T('better')}</span>`:''}</div>
-   <div class="st">${statLine(it.st,eq?eq.st:{})}</div></div>
-   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button><button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>${it.r<4?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}</div></div>`}
+   <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
+   <div class="st">${statLine(it.st,eq?eq.st:{})}</div>${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
+   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('vTake'))$('vTake').onclick=()=>act('vault',{},r=>toast(T('vault_took',{n:r.out.n})));
@@ -250,8 +260,9 @@ function renderBag(){
  $('p-bag').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell([+b.dataset.sell]));
  $('p-bag').querySelectorAll('[data-dis]').forEach(b=>b.onclick=()=>dismantle([+b.dataset.dis]));
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
+ $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
  $('sellC').onclick=()=>sell(G.inv.filter(i=>i.r===0).map(i=>i.id));
- $('sellW').onclick=()=>sell(G.inv.filter(i=>G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id));
+ $('sellW').onclick=()=>sell(G.inv.filter(i=>!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id));
  $('autoS').onclick=()=>act('settings',{autoSell:!G.autoSell});
 }
 // ---------- ринок: за Попіл або Золото, речі й матеріали ----------
@@ -262,7 +273,7 @@ function mktAct(a,args,cb){act(a,{...mktF,...args},r=>{if(r.out)mktData=r.out;di
 function curChips(id,sel,lockAsh){return `<div class="chips" id="${id}">${['ash','gold'].map(c=>`<button data-cur="${c}" class="${sel===c?'act':''}" ${lockAsh&&c==='gold'?'disabled':''}>${T('cur_'+c)}</button>`).join('')}</div>`}
 function bindCur(id,set){const w=$(id);if(!w)return;w.querySelectorAll('[data-cur]').forEach(b=>b.onclick=()=>{if(b.disabled)return;set(b.dataset.cur);w.querySelectorAll('[data-cur]').forEach(x=>x.classList.toggle('act',x===b))})}
 function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const lock=it.r>=((mktData&&mktData.ashOnlyR)||4);let cur='ash';
- modal(`<div class="big">⚱️</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="hint">${T('mkt_sell_hint',{p:10})}</p>${curChips('mCur','ash',lock)}${lock?`<p class="hint">${T('mkt_ash_only')}</p>`:''}<input id="mPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}" style="width:100%"><div class="row"><button class="btn" id="mNo">${T('cancel')}</button></div>`,T('mkt_put'),()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{id,price:p,cur},()=>toast(T('mkt_listed')))});
+ modal(`<div class="big">⚱️</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="hint">${T('mkt_sell_hint',{p:10})}</p>${it.gm&&it.gm.length?`<p class="hint">${sockView(it)} ${T('gem_mkt_warn')}</p>`:''}${curChips('mCur','ash',lock)}${lock?`<p class="hint">${T('mkt_ash_only')}</p>`:''}<input id="mPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}" style="width:100%"><div class="row"><button class="btn" id="mNo">${T('cancel')}</button></div>`,T('mkt_put'),()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{id,price:p,cur},()=>toast(T('mkt_listed')))});
  setTimeout(()=>{bindCur('mCur',c=>cur=c);const n=$('mNo');if(n)n.onclick=()=>{queue.shift();showModal()};const i=$('mPrice');if(i)i.focus()},0)}
 function lotView(l){const it=l.item||{};
  if(it.kind==='mat')return {c:'#8a7a5a',ic:'⛏️',nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
@@ -299,7 +310,28 @@ function renderMarket(){
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
 function dismantle(ids){act('dismantle',{ids,mode:G.dismode},r=>toast(disMsg(r.out)))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
-let mSlot=null,mN=3,fsub='res';
+let mSlot=null,mN=3,fsub='res',gemSel=null;
+function gemPane(){const C=gemCfg(),GM=G.gems||{};
+ const all=[...SLOTS.map(s=>G.eq[s]).filter(Boolean),...G.inv.filter(i=>sockN(i))].filter(i=>sockN(i));
+ if(gemSel&&!all.some(i=>i.id===gemSel))gemSel=null;
+ let h=`<div class="card"><h4>◆ ${T('gem_title')}</h4><p class="hint">${T('gem_hint',{p:C.pts})}</p><div class="gemg">`+GEMS.map(t=>`<div class="gemrow"><span class="gname" style="color:${GEMC[t]}">${T('gem_'+t)}</span>`+[1,2,3,4,5].map(l=>{const k=t+l,n=GM[k]||0;return `<div class="gcell ${n?'':'dim'}">${gemIc(k)}<b>${n}</b>${l<C.max&&n>=3?`<button class="btn mini" data-gm="${k}">⬆${Math.floor(n/3)}</button>`:''}</div>`}).join('')+'</div>').join('')+`</div><p class="hint">${T('gem_merge_hint')}</p></div>`;
+ h+=`<div class="card"><h4>${T('gem_items')}</h4><p class="hint">${T('gem_items_hint',{o:C.out.join(' / ')})}</p>`;
+ if(!all.length)h+=`<p class="hint">${T('gem_no_items')}</p>`;
+ for(const it of all){const eqd=SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id),n=sockN(it),gm=it.gm||[];
+  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${eqd?' · '+T('equipped'):''}</div><div class="socrow">`+
+   Array.from({length:n},(_,i)=>gm[i]?`<button class="sock full" data-gr="${it.id}:${i}">${gemIc(gm[i],1)}<small>${gemTxt(gm[i],it.il)}</small><small class="out">✕ ⚱️${C.out[gemP(gm[i]).l-1]}</small></button>`:`<button class="sock" data-gi="${it.id}">◇<small>${T('gem_put')}</small></button>`).join('')+'</div></div></div>'}
+ return h+'</div>'}
+function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.id===id);if(!it)return;const GM=G.gems||{};
+ const ks=Object.keys(GM).filter(k=>GM[k]>0).sort((a,b)=>b[1]-a[1]||GEMS.indexOf(a[0])-GEMS.indexOf(b[0]));
+ modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),T('cancel'));
+ setTimeout(()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),0)}
+function bindGem(){const P=$('p-forge');
+ P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>act('gemMerge',{k:b.dataset.gm,n:0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}));
+ P.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>gemPick(+b.dataset.gi));
+ P.querySelectorAll('[data-gr]').forEach(b=>b.onclick=()=>{const[id,i]=b.dataset.gr.split(':').map(Number);const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(x=>x&&x.id===id);const k=it&&it.gm&&it.gm[i];if(!k)return;const c=gemCfg().out[gemP(k).l-1];
+  modal(`<div class="big">◆</div><h3>${gemName(k)}</h3><p>${T('gem_out_q',{c})}</p><div class="row"><button class="btn" id="gNo">${T('cancel')}</button></div>`,T('gem_out_btn',{c}),()=>act('gemRemove',{id,i},()=>toast(T('gem_out_ok',{g:gemName(k)}))));
+  setTimeout(()=>{const n=$('gNo');if(n)n.onclick=()=>{queue.shift();showModal()}},0)});
+ if(gemSel){const e=P.querySelector(`[data-gi="${gemSel}"],[data-gr^="${gemSel}:"]`);if(e)e.scrollIntoView({block:'center'});gemSel=null}}
 function renderForge(){
  const F=V.forge,legs=s=>G.inv.filter(i=>i.r===4&&i.slot===s);
  if(!mSlot||!legs(mSlot).length)mSlot=SLOTS.find(s=>legs(s).length>=3)||SLOTS.find(s=>legs(s).length)||'weapon';
@@ -332,7 +364,9 @@ function renderForge(){
  if(fsub==='ast')h+=`<div class="card"><h4><span style="color:${RAR[6].c}">✦</span> ${T('ast_title')}</h4>
   <p class="hint">${T('ast_hint',{cat:A.cat,ess:A.ess,c:F.astChance,f:A.fail,m:A.cap})}</p>
   ${myths.length?myths.map(it=>{const so=Math.round(400+it.il*12),ok=G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=so;return `<div class="item" style="border-left-color:${RAR[5].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[5].c}">${itemName(it)}</div><div class="sub">${T('lvl',{n:it.il})} · 🔥${fmt(so)}${SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id)?' · '+T('equipped'):''}</div></div><div class="acts"><button class="btn pri" data-ast="${it.id}" ${ok?'':'disabled'}>✦ ${F.astChance}%</button></div></div>`}).join(''):`<p class="hint">${T('first_myth')}</p>`}</div>`;
+ if(fsub==='gem')h+=gemPane();
  $('p-forge').innerHTML=h;
+ if(fsub==='gem')bindGem();
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
  if($('smelt')){$('smelt').onclick=()=>act('smelt',{n:1},r=>toast(T('smelted',{n:r.out.n})));$('smeltAll').onclick=()=>act('smelt',{n:20},r=>toast(T('smelted',{n:r.out.n})))}
  if($('disJunk'))$('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
@@ -409,14 +443,14 @@ function dngPlay(o){
 // підсумок серії заходів
 function dngBatch(o){
  const d=DNG[o.t-1],g=o.gain;
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
  modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
  haptic('heavy');
 }
 function dngResult(o){
  const d=DNG[o.t-1],g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?T('boss'):T('room',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
  modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
  haptic(o.full?'heavy':'medium');
@@ -601,7 +635,7 @@ function renderArena(){
  el.innerHTML=h;
  $('aRef').onclick=()=>act('arenaRefresh',{},r=>{arenaInfo=r.out});
  el.querySelectorAll('[data-af]').forEach(b=>b.onclick=()=>act('arenaFight',{i:+b.dataset.af},r=>pvpResult(r.out)));
- el.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>act('arenaShop',{item:b.dataset.ab},()=>{toast('✓ '+T('shop_'+b.dataset.ab));haptic('light')}));
+ el.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>act('arenaShop',{item:b.dataset.ab},r=>{toast('✓ '+T('shop_'+b.dataset.ab)+(r.out&&r.out.got?' '+r.out.got.map(k=>gemIc(k)).join(''):''));haptic('light')}));
 }
 function pvpResult(o){
  modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T(o.win?'pvp_win':'pvp_lose')}</h3>
@@ -703,7 +737,7 @@ function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.to
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='forge'?['res','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
+ const items=g==='hero'?[['hero','sub_eq'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:tab;e.style.display='flex';
  e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');
