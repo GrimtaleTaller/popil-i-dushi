@@ -262,7 +262,7 @@ function renderBag(){
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
  $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
  $('sellC').onclick=()=>sell(G.inv.filter(i=>i.r===0).map(i=>i.id));
- $('sellW').onclick=()=>sell(G.inv.filter(i=>!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id));
+ $('sellW').onclick=()=>sell(G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id));
  $('autoS').onclick=()=>act('settings',{autoSell:!G.autoSell});
 }
 // ---------- ринок: за Попіл або Золото, речі й матеріали ----------
