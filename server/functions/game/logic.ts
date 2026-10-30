@@ -66,7 +66,10 @@ export function mythChance(G: State, n: number) {
 }
 
 export const mobHp = (s: number) => 25 * Math.pow(1.25, s - 1);
-export const mobAtk = (s: number) => 4 * Math.pow(1.19, s - 1);
+// атака ворогів ×1,22 за етап (було 1,19) і м'який захист: урон = атака² / (атака + захист), без «мінімуму 20%».
+// Рішення Влада 30.10 після симуляції: раніше бос не міг убити героя (знімав ≤33% HP за бій), здоров'я й захист не грали ролі.
+export const mobAtk = (s: number) => 4 * Math.pow(1.22, s - 1);
+export const dmgTaken = (atk: number, def: number) => atk * atk / (atk + Math.max(0, def));
 export const mobGold = (s: number) => 4 * Math.pow(1.17, s - 1);
 // крива досвіду: параметри винесено, щоб їх можна було підбирати симуляцією
 export const XPC = { mob: 1.07, need: 1.27, base: 25 }; // симуляція 28.10: 50 рівень за ~9–16 днів
@@ -222,7 +225,7 @@ export function canFarm(G: State, s: number) {
   const H = hero(G);
   const dmg = H.atk * (1 + H.crit / 100);
   const kt = Math.ceil(mobHp(s) / dmg) + 0.45;
-  const taken = Math.max(mobAtk(s) * 0.2, mobAtk(s) - H.def) / 1.4 * kt;
+  const taken = dmgTaken(mobAtk(s), H.def) / 1.4 * kt;
   return taken < H.hp * 0.8 + H.hp * 0.02 * kt;
 }
 export function killTime(G: State, s: number) {
@@ -294,7 +297,7 @@ export function fightBoss(G: State): BossResult {
       hp = Math.min(H.hp, hp + H.hp * 0.02);
     } else {
       mt = nm;
-      const d = Math.max(batk * 0.2, batk - H.def) * rnd(0.9, 1.1);
+      const d = dmgTaken(batk, H.def) * rnd(0.9, 1.1);
       hp -= d; ev.push([r2(t), 1, Math.round(d), 0]);
       if (hp <= 0) break;
     }
@@ -565,7 +568,7 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
         hp = Math.min(H.hp, hp + H.hp * 0.02);
       } else {
         mt = nm; t = nm;
-        const dd = Math.max(f.atk * 0.2, f.atk - H.def) * rnd(0.9, 1.1);
+        const dd = dmgTaken(f.atk, H.def) * rnd(0.9, 1.1);
         hp -= dd; if (rec) ev.push([r2(t), 1, Math.round(dd), 0]);
         if (hp <= 0) break;
       }
@@ -586,7 +589,7 @@ function dngWinAvg(H: HStat, t: number, d: number) {
   for (let i = 0; i <= DNG_ROOMS; i++) {
     const boss = i === DNG_ROOMS, fhp = mobHp(s) * (boss ? 12 : 3), fat = mobAtk(s) * (boss ? 1.5 : 1.2);
     let fh = fhp, ht = 0, mt = 0.6, tt = 0, win = false;
-    const hit = Math.max(fat * 0.2, fat - H.def);
+    const hit = dmgTaken(fat, H.def);
     while (total + tt < DNG_TIME) {
       const nh = ht + 1, nm = mt + 1.4;
       if (nh <= nm) { ht = nh; tt = nh; fh -= dmg; if (fh <= 0) { win = true; break; } hp = Math.min(H.hp, hp + H.hp * 0.02); }
