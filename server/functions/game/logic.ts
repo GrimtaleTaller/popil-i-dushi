@@ -644,16 +644,19 @@ export function actDungeonBatch(G: State, t: number, now: number, d = 1, n = 10)
   if (!runs) fail("no_keys");
   return { t, d, batch: true, runs, wins, keys, gain: { ...sum, mat, chestIl, chestG } };
 }
+// рівень речі зі скрині = рівень героя; з шансом 50% — вище на 1–3 (рішення Влада 30.10). Тир підземелля на рівень речі не впливає
+export const CHEST_LVL = { up: 0.5, max: 3 };
+export const chestItemLvl = (G: State) => Math.max(1, G.lvl) + (Math.random() < CHEST_LVL.up ? 1 + Math.floor(Math.random() * CHEST_LVL.max) : 0);
 export function actOpenChests(G: State, max = 100) {
   const free = Math.max(0, invMax(G) - G.inv.length);
   if (!free) fail("bag_full");
   let n = 0; const got: Item[] = [];
-  // спершу кращі скрині: вищий вид, потім вищий рівень
+  // спершу кращі скрині: вищий вид (рівень речі — від героя, див. chestItemLvl)
   const ks = Object.keys(G.chests).sort((a, b) => { const x = chestParse(a), y = chestParse(b); return y.g - x.g || y.il - x.il; });
   for (const il of ks) {
     const c = chestParse(il);
     while (G.chests[il] > 0 && n < free && n < max) {
-      G.chests[il]--; const it = makeItem(G, c.il, c.g, CHEST_LW[c.g] ?? 1); G.inv.unshift(it); got.push(it); n++;
+      G.chests[il]--; const it = makeItem(G, chestItemLvl(G), c.g, CHEST_LW[c.g] ?? 1); G.inv.unshift(it); got.push(it); n++;
       if (it.r >= 3) log(G, "loot", [it.r, it.slot, it.nm, it.il]);
     }
     if (!G.chests[il]) delete G.chests[il];
