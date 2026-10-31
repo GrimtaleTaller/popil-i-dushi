@@ -72,7 +72,7 @@ export const mobAtk = (s: number) => 4 * Math.pow(1.22, s - 1);
 export const dmgTaken = (atk: number, def: number) => atk * atk / (atk + Math.max(0, def));
 export const mobGold = (s: number) => 4 * Math.pow(1.17, s - 1);
 // крива досвіду: параметри винесено, щоб їх можна було підбирати симуляцією
-export const XPC = { mob: 1.07, need: 1.27, base: 25 }; // симуляція 28.10: 50 рівень за ~9–16 днів
+export const XPC = { mob: 1.07, need: 1.12, base: 3000 }; // 31.10 (рішення Влада): плавна крива — 30 рів. ~день 1,5, 50 ~6,5, 60 ~14, 70 ~30 для активного гравця; було 1,27 / 25 (30 рів. за пів дня, 60-й недосяжний)
 export const mobXp = (s: number) => 6 * Math.pow(XPC.mob, s - 1);
 export const xpNeed = (l: number) => Math.floor(XPC.base * Math.pow(XPC.need, l - 1));
 export const gearScale = (il: number) => Math.pow(1.16, il - 1);

@@ -57,7 +57,7 @@ const UPG=[
 ];
 const WAVES=10,BOSS_TIME=30,INV_MAX=40;
 const mobHp=s=>25*Math.pow(1.25,s-1),mobAtk=s=>4*Math.pow(1.22,s-1),mobGold=s=>4*Math.pow(1.17,s-1),mobXp=s=>V&&V.xp?V.xp.mob:6*Math.pow(1.07,s-1);
-const xpNeed=l=>V&&V.xp?V.xp.need:Math.floor(25*Math.pow(1.27,l-1)); // точні значення дає сервер
+const xpNeed=l=>V&&V.xp?V.xp.need:Math.floor(3000*Math.pow(1.12,l-1)); // точні значення дає сервер
 function region(s){const i=Math.floor((s-1)/10);return{r:REGIONS[i%REGIONS.length],tier:Math.floor(i/REGIONS.length)}}
 const itemName=it=>SLOT[it.slot].names[Math.min(it.nm,SLOT[it.slot].names.length-1)];
 const sellPrice=it=>Math.max(1,Math.round(mobGold(it.il)*2*Math.pow(RAR[it.r].m,1.5)));
