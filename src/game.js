@@ -403,7 +403,7 @@ function renderForge(){
  if($('astGo'))$('astGo').onclick=()=>{if(aIt)act('astral',{id:aIt.id},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else toast(T('ast_fail',{c:r.out.chance}))})};
  if($('myth'))$('myth').onclick=()=>{const ids=LGs.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
 }
-const DNG=[{n:'Нора щурів',bg:1},{n:'Вовче лігво',bg:1},{n:'Склеп короля',bg:2},{n:'Болотне капище',bg:3},{n:'Вогняна кузня',bg:4},{n:'Крижана печера',bg:5},{n:'Затонулий храм',bg:6},{n:'Зала дзеркал',bg:7},{n:'Серце безодні',bg:8},{n:'Трон попелу',bg:8}];
+const DNG=[{n:'Нора щурів',bg:'dbg1'},{n:'Вовче лігво',bg:'dbg2'},{n:'Склеп короля',bg:'dbg3'},{n:'Болотне капище',bg:'dbg4'},{n:'Вогняна кузня',bg:'dbg5'},{n:'Крижана печера',bg:'dbg6'},{n:'Затонулий храм',bg:'dbg7'},{n:'Зала дзеркал',bg:'dbg8'},{n:'Серце безодні',bg:'dbg9'},{n:'Трон попелу',bg:'dbg10'}]; // власні фони підземель (31.10)
 const MATN=['I','II','III','IV'];
 const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');return d.toDateString()===n.toDateString()?p(d.getHours())+':'+p(d.getMinutes()):p(d.getDate())+'.'+p(d.getMonth()+1)};
 const dngD={}; // вибрана складність для кожного тиру
@@ -416,7 +416,7 @@ function renderDng(){
   if(!dngD[T.t]||!DF[dngD[T.t]-1]||!DF[dngD[T.t]-1].open)dngD[T.t]=Math.max(1,...DF.filter(x=>x.open).map(x=>x.d));
   const cd=DF[dngD[T.t]-1]||DF[0],rw=cd.rw,e=cd.est;
   const ec=e==null?'':e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e';
-  h+=`<div class="dcard ${T.open?'':'lock'}"><div class="th" style="background-image:url(${IMG('bg'+d.bg)})"><b>${ROMAN[T.t-1]||'I'}</b></div><div class="info">
+  h+=`<div class="dcard ${T.open?'':'lock'}"><div class="th" style="background-image:url(${IMG(d.bg)})"><b>${ROMAN[T.t-1]||'I'}</b></div><div class="info">
    <div class="nm">${d.n} <span class="sub">· ${tr('tier',{n:T.t})}</span></div>
    <div class="rw">${chestIc(rw.chestG)}×${rw.chests} (${tr('lvl',{n:G.lvl+'–'+(G.lvl+3)})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
    ${cd.need?(()=>{const my=V.hero.power,ok=my>=cd.need;return `<div class="sub need ${ok?'ok':'bad'}">💪 ${tr('need_power',{n:fmt(cd.need),m:fmt(my)})}${ok?' ✓':' · '+tr('need_short',{n:fmt(cd.need-my)})}</div>`})():''}
@@ -435,7 +435,7 @@ function dngPlay(o){
  if(!o.rooms||!o.rooms[0]||!o.rooms[0].ev){dngResult(o);return}
  const d=DNG[o.t-1],R=REGIONS[(d.bg-1)%REGIONS.length],timers=[];let done=false;
  const el=document.createElement('div');el.className='dngv';el.id='dngv';
- el.innerHTML=`<div class="dv-bg" style="background-image:url(${IMG('bg'+d.bg)})"></div>
+ el.innerHTML=`<div class="dv-bg" style="background-image:url(${IMG(d.bg)})"></div>
   <div class="dv-top"><div><b>${esc(d.n)} · ${T('tier',{n:o.t})}${o.d>1?' · '+T('diff_'+o.d):''}</b><span id="dvRoom"></span></div><button class="btn" id="dvSkip">${T('skip')} ⏭</button></div>
   <div class="dv-rooms">${o.rooms.map((x,i)=>`<i id="dvR${i}" class="${x.boss?'b':''}"></i>`).join('')}${o.rooms.length<6?Array.from({length:6-o.rooms.length},(_,k)=>`<i class="${o.rooms.length+k===5?'b':''}"></i>`).join(''):''}</div>
   <div class="dv-f"><div class="f hero"><div class="sprite" id="dvH"><img alt="" src="${IMG('hero')}"></div><div class="fname">${esc(T('hero_name'))}</div><div class="hpb"><i id="dvHh"></i></div></div>
@@ -534,14 +534,15 @@ function copyText(t){try{navigator.clipboard.writeText(t);toast(T('copied'))}cat
 const PETIC={wolf:'🐺',golem:'🗿',raven:'🐦‍⬛',owl:'🦉',ghost:'👻',phoenix:'🐦‍🔥'},PETS_ORD=['wolf','golem','raven','owl','ghost','phoenix'];
 const PGSLOTS=['saddle','parmor','phelmet'],PGIC={saddle:'🪑',parmor:'🛡️',phelmet:'⛑️'};let pgCat=false;
 const pgSt=it=>[['ab','pg_ab'],['atk','pg_atk'],['hp','pg_hp'],['def','pg_def'],['crit','pg_crit'],['xp','pg_xp']].filter(([k])=>it.st[k]).map(([k,t])=>T(t,{v:it.st[k]})).join(' · ');
-const petIc=(sp,big)=>`<span class="pet-ic${big?' big':''}">${PETIC[sp]||'❔'}</span>`,eggIc=e=>`<span class="egg ${e==='r'?'r':''}">🥚</span>`;
+const petImg=(sp,l)=>IMG('pet_'+sp+(1+petEvoN(l||1)));
+const petIc=(sp,big,l)=>PETIC[sp]?`<img class="pet-ic${big?' big':''}" src="${petImg(sp,l)}" alt="">`:`<span class="pet-ic${big?' big':''}">❔</span>`,eggIc=e=>`<span class="egg ${e==='r'?'r':''}">🥚</span>`;
 const petEvoN=l=>l>=20?2:l>=10?1:0,stars=(s,m=5)=>'<span class="stars">'+'★'.repeat(s)+'<i>'+'★'.repeat(m-s)+'</i></span>';
 const hms=ms=>{const m=Math.ceil(ms/60000),h=Math.floor(m/60);return h?T('t_hm',{h,m:m%60}):T('t_m',{m})};
-function petFighter(){const e=$('petf');if(!e)return;const P=G&&G.pet;if(P&&P.act){const p=P.list[P.act];e.innerHTML=PETIC[P.act];e.className='petf evo'+petEvoN(p.l);e.style.display=''}else e.style.display='none'}
+function petFighter(){const e=$('petf');if(!e)return;const P=G&&G.pet;if(P&&P.act){const p=P.list[P.act];e.innerHTML=`<img src="${petImg(P.act,p.l)}" alt="">`;e.className='petf evo'+petEvoN(p.l);e.style.display=''}else e.style.display='none'}
 function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn:0},D=V.pet||{},I=D.info||{},C=D.cfg||{},now=Date.now();
  let h='';const a=P.act&&P.list[P.act];
  if(a){const sp=P.act,b=(D.defs||{})[sp]||{},bv=(I.bonus||{})[sp]||0,nx=I.next,f=petEvoN(a.l);
-  h+=`<div class="card petcard"><div class="petmain">${petIc(sp,1)}<div><h4>${T('pet_'+sp)} · ${T('pet_form',{f:ROM[f]})}</h4><div>${stars(a.s)} · ${T('lvl',{n:a.l})}/${C.maxLvl||30}</div><div class="up">${T('petb_'+b.b,{v:bv})}</div><div class="sub">${a.s<5?T('pet_dups',{d:a.d,n:C.dupStar||2}):T('pet_maxstar')}</div></div></div>`;
+  h+=`<div class="card petcard"><div class="petmain">${petIc(sp,1,a.l)}<div><h4>${T('pet_'+sp)} · ${T('pet_form',{f:ROM[f]})}</h4><div>${stars(a.s)} · ${T('lvl',{n:a.l})}/${C.maxLvl||30}</div><div class="up">${T('petb_'+b.b,{v:bv})}</div><div class="sub">${a.s<5?T('pet_dups',{d:a.d,n:C.dupStar||2}):T('pet_maxstar')}</div></div></div>`;
   if(nx){const ok=(G.mats||[]).slice(nx.mat).reduce((x,y)=>x+(y||0),0)>=nx.matN&&G.shards>=nx.shards&&G.cat>=nx.cat;
    h+=`<p class="hint">${nx.cat?T('pet_evo_hint',{f:ROM[f+1]}):T('pet_feed_hint')}</p><div class="st">${T('pet_cost')}: ⛏️${MATN[nx.mat]}×${nx.matN} · 🔩${fmt(nx.shards)}${nx.cat?' · 💎1':''}</div><div class="row"><button class="btn pri" id="pFeed" ${ok?'':'disabled'}>${nx.cat?T('pet_evo_btn'):T('pet_feed')}</button>${nx.cat?'':`<button class="btn" id="pFeedM" ${ok?'':'disabled'}>${T('pet_feed_max')}</button>`}</div>`}
   else h+=`<p class="hint">${T('max_reached')}</p>`;
@@ -561,15 +562,15 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if(P.inc){const left=Math.max(0,P.inc.at-now);h+=`<div class="petinc">${eggIc(P.inc.e)}<div><b>${T(P.inc.e==='r'?'egg_r':'egg_c')}</b><div class="sub">${left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed" ${G.ash>=I.speed?'':'disabled'}>⚡ ⚱️${I.speed}</button>`:`<button class="btn pri" id="pClaim">${T('pet_claim')}</button>`}</div>`}
  h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&!P.inc?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||144e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||432e5)/36e5)})}</p></div>`;
  // колекція
- h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc ${P.act===sp?'act':''}" data-pset="${sp}">${petIc(sp)}<b>${T('pet_'+sp)}</b>${stars(p.s)}<small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
+ h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc ${P.act===sp?'act':''}" data-pset="${sp}">${petIc(sp,0,p.l)}<b>${T('pet_'+sp)}</b>${stars(p.s)}<small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
  if(!a&&!P.inc&&!(P.eggs.c||P.eggs.r))h=`<div class="card"><h4>🐾 ${T('sub_pet')}</h4><p class="hint">${T('pet_intro')}</p></div>`+h;
  $('p-pet').innerHTML=h;const E=$('p-pet');
  const fd=n=>act('petFeed',{n},r=>{toast(T('pet_fed',{l:r.out.l}));haptic('light')});
  if($('pFeed'))$('pFeed').onclick=()=>fd(1);if($('pFeedM'))$('pFeedM').onclick=()=>fd(30);
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
-  modal(`<div class="big">${PETIC[P.act]}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
+  modal(`<div class="big">${petIc(P.act,1,(P.list[P.act]||{}).l)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
  if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));
- if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},r=>{const o=r.out;modal(`<div class="big">${PETIC[o.sp]}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')});
+ if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},r=>{const o=r.out;modal(`<div class="big">${petIc(o.sp,1,(G.pet.list[o.sp]||{}).l)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')});
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
  if($('pgCat'))$('pgCat').onclick=()=>{pgCat=!pgCat;$('pgCat').classList.toggle('on',pgCat)};
  E.querySelectorAll('[data-pgc]').forEach(b=>b.onclick=()=>act('petCraft',{slot:b.dataset.pgc,cat:pgCat},r=>{const it=r.out.item;pgCat=pgCat&&G.cat>0;toast(`🐴 ${RAR[it.r].n} ${T('pslot_'+it.slot)} · ${T('lvl',{n:it.il})}`);haptic(it.r>=3?'heavy':'light')}));
