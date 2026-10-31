@@ -68,7 +68,7 @@ function view(G: L.State, now: number, uid = 0) {
   const H = L.hero(G);
   return {
     s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
-    pet: { defs: L.PETS, cfg: L.PET, info: L.petInfo(G, now) },
+    pet: { defs: L.PETS, cfg: L.PET, info: L.petInfo(G, now), gear: L.petGearInfo(G) },
     gem: { sockets: L.SOCKETS, out: L.GEM_OUT, m: L.GEM_M, crit: L.GEM_CRIT, max: L.GEM_MAX, pts: L.ARENA_SHOP.stone.pts },
     forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G), set: L.setInfo(G), setCfg: L.SET },
     arena: {
@@ -519,6 +519,10 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "petSpeed": out = L.actPetSpeed(G, now); break;
       case "petClaim": out = L.actPetClaim(G, now); break;
       case "petFind": out = L.actPetFind(G, now); break;
+      case "petCraft": out = L.actPetCraft(G, String(args.slot), !!args.cat); break;
+      case "petEquip": out = L.actPetEquip(G, Number(args.id)); break;
+      case "petUnequip": out = L.actPetUnequip(G, String(args.slot)); break;
+      case "petDis": out = L.actPetDis(G, args.ids as number[]); break;
       case "arena": case "arenaRefresh": {
         if (G.maxStage < L.ARENA.stage) throw new L.GameError("arena_locked");
         L.arenaDay(G, now); G.arena.rating = await myRating(user.id);

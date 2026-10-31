@@ -162,6 +162,7 @@ export function hero(G: State) {
   const cm = 1 + (G.cb?.atk || 0) / 100; // Казарма клану
   const sp = 1 + setInfo(G).pow / 100; // повний сет прадавніх / вічних
   a *= 1 + petB(G, "atk") / 100; d *= 1 + petB(G, "def") / 100; // Вовк і Голем
+  const pg = pgearSum(G); a *= 1 + pg.atk / 100; h *= 1 + pg.hp / 100; d *= 1 + pg.def / 100; c += pg.crit + abilV(G, "sight"); // спорядження пітомця, Прозріння Сови
   return { atk: a * cm * sp, hp: h * cm * sp, def: d * sp, crit: Math.min(60, c) };
 }
 export const power = (h: ReturnType<typeof hero>) => Math.round(h.atk * (1 + h.crit / 100) * 2 + h.hp * 0.25 + h.def * 1.5);
@@ -221,16 +222,17 @@ function gainXp(G: State, x: number): number {
 }
 
 // Чи витримує герой звичайних ворогів етапу s
+export const biteMul = (G: State) => 1 + abilV(G, "bite") / 100 / BITE_EVERY; // Укус Вовка: середній приріст урону
 export function canFarm(G: State, s: number) {
   const H = hero(G);
-  const dmg = H.atk * (1 + H.crit / 100);
+  const dmg = H.atk * (1 + H.crit / 100) * biteMul(G);
   const kt = Math.ceil(mobHp(s) / dmg) + 0.45;
-  const taken = dmgTaken(mobAtk(s), H.def) / 1.4 * kt;
+  const taken = dmgTaken(mobAtk(s), H.def) / 1.4 * kt * (1 - abilV(G, "dodge") / 100);
   return taken < H.hp * 0.8 + H.hp * 0.02 * kt;
 }
 export function killTime(G: State, s: number) {
   const H = hero(G);
-  return Math.ceil(mobHp(s) / (H.atk * (1 + H.crit / 100))) + 0.45;
+  return Math.ceil(mobHp(s) / (H.atk * (1 + H.crit / 100) * biteMul(G))) + 0.45;
 }
 
 export type Progress = { sec: number; offline: boolean; stage: number; kills: number; gold: number; xp: number; items: number; lvlUps: number; souls?: number; boss?: BossResult };
@@ -256,14 +258,15 @@ export function progress(G: State, now: number): Progress {
   const kills = Math.floor(k);
   G.frac = k - kills;
   if (!kills) return res;
-  const gold = kills * mobGold(s) * (1 + ((G.cb?.gold || 0) + petB(G, "gold")) / 100), xp = kills * mobXp(s) * (1 + ((G.cb?.xp || 0) + petB(G, "xp")) / 100); // Скарбниця й Бібліотека клану
+  const lootM = 1 + abilV(G, "loot") / 100; // Здобич Ворона: очікуваний приріст
+  const gold = kills * mobGold(s) * (1 + ((G.cb?.gold || 0) + petB(G, "gold")) / 100) * lootM, xp = kills * mobXp(s) * (1 + ((G.cb?.xp || 0) + petB(G, "xp") + pgearSum(G).xp) / 100); // Скарбниця й Бібліотека клану
   G.gold += gold; res.gold = gold; res.xp = xp;
   res.lvlUps = gainXp(G, xp);
   G.tot.kills += kills; res.kills = kills;
   if (G.stage === G.maxStage) G.kills = Math.min(WAVES, G.kills + kills);
   // лут: очікувана кількість + випадковість; офлайн не більше 15 предметів
   let drops = 0;
-  const exp = kills * DROP;
+  const exp = kills * DROP * lootM;
   drops = Math.floor(exp) + (Math.random() < exp - Math.floor(exp) ? 1 : 0);
   if (offline) drops = Math.min(15, drops);
   for (let i = 0; i < drops; i++) { res.gold += addItem(G, makeItem(G, s, 0), false); res.items++; }
@@ -273,11 +276,14 @@ export function progress(G: State, now: number): Progress {
   return res;
 }
 
-export type BossEv = [number, 0 | 1, number, 0 | 1]; // [час, хто б'є: 0 герой / 1 бос, шкода, крит]
+export type BossEv = [number, 0 | 1 | 2 | 3 | 4 | 5, number, 0 | 1]; // [час, хто: 0 герой / 1 бос / 2 укус / 3 ухилення / 4 поглинуто / 5 відродження, шкода, крит]
 export type BossResult = { win: boolean; ev: BossEv[]; hp: number; bossHp: number; gold: number; xp: number; item?: Item; stage: number; timeout?: boolean; souls?: number; cat?: number; ash?: number; gems?: string[]; egg?: string };
 
+// вміння пітомця в бою: who у подіях — 2 укус (додатковий урон), 3 ухилення, 4 поглинуто, 5 відродження (d = відновлене HP)
+export type FightAb = { bite: number; skin: number; dodge: number; rebirth: number; hits: number; skinLeft: number; reborn: boolean };
+export function fightAb(G: State): FightAb { return { bite: abilV(G, "bite"), skin: Math.floor(abilV(G, "skin")), dodge: abilV(G, "dodge"), rebirth: abilV(G, "rebirth"), hits: 0, skinLeft: Math.floor(abilV(G, "skin")), reborn: false }; }
 export function fightBoss(G: State): BossResult {
-  const s = G.stage, H = hero(G);
+  const s = G.stage, H = hero(G), A = fightAb(G);
   let hp = H.hp, bhp = mobHp(s) * 8;
   const batk = mobAtk(s) * 1.4, max = bhp;
   const ev: BossEv[] = [];
@@ -293,18 +299,23 @@ export function fightBoss(G: State): BossResult {
       const cr = Math.random() * 100 < H.crit;
       const d = H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1);
       bhp -= d; ev.push([r2(t), 0, Math.round(d), cr ? 1 : 0]);
+      if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; bhp -= b; ev.push([r2(t), 2, Math.round(b), 0]); }
       if (bhp <= 0) { win = true; break; }
       hp = Math.min(H.hp, hp + H.hp * 0.02);
     } else {
       mt = nm;
       const d = dmgTaken(batk, H.def) * rnd(0.9, 1.1);
+      if (A.skinLeft > 0) { A.skinLeft--; ev.push([r2(t), 4, Math.round(d), 0]); continue; }
+      if (A.dodge && Math.random() * 100 < A.dodge) { ev.push([r2(t), 3, 0, 0]); continue; }
       hp -= d; ev.push([r2(t), 1, Math.round(d), 0]);
+      if (hp <= 0 && A.rebirth && !A.reborn) { A.reborn = true; hp = H.hp * A.rebirth / 100; ev.push([r2(t), 5, Math.round(hp), 0]); }
       if (hp <= 0) break;
     }
   }
   const res: BossResult = { win, ev, hp: H.hp, bossHp: Math.round(max), gold: 0, xp: 0, stage: s, timeout };
   if (win) {
-    res.gold = mobGold(s) * 8; res.xp = mobXp(s) * 6 * (1 + (G.cb?.xp || 0) / 100);
+    const lootM = 1 + abilV(G, "loot") / 100;
+    res.gold = mobGold(s) * 8 * lootM; res.xp = mobXp(s) * 6 * (1 + ((G.cb?.xp || 0) + pgearSum(G).xp + 2 * abilV(G, "sight")) / 100); // Здобич Ворона, Прозріння Сови
     G.gold += res.gold; gainXp(G, res.xp); G.tot.kills++; G.tot.bosses++;
     const it = makeItem(G, s, 1); res.item = it; res.gold += addItem(G, it, true);
     const first = s === G.maxStage;
@@ -548,7 +559,7 @@ type Foe = { hp: number; atk: number; boss: boolean };
 export type DngRoom = { boss: boolean; win: boolean; hpLeft: number; ev?: BossEv[]; hp0?: number; foeHp?: number };
 // бій з кімнатами поспіль: здоров'я героя не відновлюється між кімнатами (лише +10%)
 export function simDungeon(G: State, t: number, rec = false, d = 1) {
-  const s = dngStage(t, d), H = hero(G);
+  const s = dngStage(t, d), H = hero(G), A = fightAb(G);
   const foes: Foe[] = [];
   for (let i = 0; i < DNG_ROOMS; i++) foes.push({ hp: mobHp(s) * 3, atk: mobAtk(s) * 1.2, boss: false });
   foes.push({ hp: mobHp(s) * 12, atk: mobAtk(s) * 1.5, boss: true });
@@ -557,6 +568,7 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
   for (const f of foes) {
     let fh = f.hp, ht = 0, mt = 0.6, t = 0, win = false;
     const ev: BossEv[] = [], hp0 = hp; // події бою для показу в клієнті
+    A.skinLeft = f.boss ? A.skin : 0; // Кам'яна шкіра — лише проти боса
     while (total + t < DNG_TIME) {
       const nh = ht + 1, nm = mt + 1.4;
       if (nh <= nm) {
@@ -564,12 +576,16 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
         const cr = Math.random() * 100 < H.crit;
         const dd = H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1);
         fh -= dd; if (rec) ev.push([r2(t), 0, Math.round(dd), cr ? 1 : 0]);
+        if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; fh -= b; if (rec) ev.push([r2(t), 2, Math.round(b), 0]); }
         if (fh <= 0) { win = true; break; }
         hp = Math.min(H.hp, hp + H.hp * 0.02);
       } else {
         mt = nm; t = nm;
         const dd = dmgTaken(f.atk, H.def) * rnd(0.9, 1.1);
+        if (A.skinLeft > 0) { A.skinLeft--; if (rec) ev.push([r2(t), 4, Math.round(dd), 0]); continue; }
+        if (A.dodge && Math.random() * 100 < A.dodge) { if (rec) ev.push([r2(t), 3, 0, 0]); continue; }
         hp -= dd; if (rec) ev.push([r2(t), 1, Math.round(dd), 0]);
+        if (hp <= 0 && A.rebirth && !A.reborn) { A.reborn = true; hp = H.hp * A.rebirth / 100; if (rec) ev.push([r2(t), 5, Math.round(hp), 0]); }
         if (hp <= 0) break;
       }
     }
@@ -583,13 +599,14 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
 // мінімальна сила для проходження: середній (без випадковості) бій з героєм гравця, масштабованим k разів;
 // шукаємо найменший k, за якого герой проходить усі кімнати й боса, і беремо +10% запасу
 type HStat = { atk: number; hp: number; def: number; crit: number };
-function dngWinAvg(H: HStat, t: number, d: number) {
-  const s = dngStage(t, d), dmg = H.atk * (1 + H.crit / 100);
-  let hp = H.hp, total = 0;
+function dngWinAvg(H: HStat, t: number, d: number, A?: FightAb) {
+  const s = dngStage(t, d), dmg = H.atk * (1 + H.crit / 100) * (1 + (A?.bite || 0) / 100 / BITE_EVERY);
+  let hp = H.hp + (A ? H.hp * A.rebirth / 100 : 0), total = 0; // Відродження — як додатковий запас
   for (let i = 0; i <= DNG_ROOMS; i++) {
     const boss = i === DNG_ROOMS, fhp = mobHp(s) * (boss ? 12 : 3), fat = mobAtk(s) * (boss ? 1.5 : 1.2);
     let fh = fhp, ht = 0, mt = 0.6, tt = 0, win = false;
-    const hit = dmgTaken(fat, H.def);
+    const hit = dmgTaken(fat, H.def) * (1 - (A?.dodge || 0) / 100);
+    if (boss && A) hp += hit * A.skin; // Кам'яна шкіра
     while (total + tt < DNG_TIME) {
       const nh = ht + 1, nm = mt + 1.4;
       if (nh <= nm) { ht = nh; tt = nh; fh -= dmg; if (fh <= 0) { win = true; break; } hp = Math.min(H.hp, hp + H.hp * 0.02); }
@@ -602,11 +619,11 @@ function dngWinAvg(H: HStat, t: number, d: number) {
   return true;
 }
 export function dngNeedPower(G: State, t: number, d = 1) {
-  const H = hero(G);
+  const H = hero(G), A = fightAb(G);
   const sc = (k: number): HStat => ({ atk: H.atk * k, hp: H.hp * k, def: H.def * k, crit: H.crit });
   let lo = 0, hi = 1;
-  while (!dngWinAvg(sc(hi), t, d) && hi < 1e7) { lo = hi; hi *= 2; }
-  for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (dngWinAvg(sc(m), t, d)) hi = m; else lo = m; }
+  while (!dngWinAvg(sc(hi), t, d, A) && hi < 1e7) { lo = hi; hi *= 2; }
+  for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (dngWinAvg(sc(m), t, d, A)) hi = m; else lo = m; }
   const p = power(sc(hi)) * 1.1, f = Math.pow(10, Math.max(0, Math.floor(Math.log10(p)) - 1));
   return Math.ceil(p / f) * f; // округлення вгору до 2 значущих цифр
 }
@@ -887,7 +904,7 @@ export const PETS: Record<PetSp, { b: PetBonus; v: number; rare?: boolean }> = {
 export const PET = { maxLvl: 30, maxStar: 5, dupStar: 2, evo: [10, 20], hatch: { c: 4 * 3600e3, r: 12 * 3600e3 }, findEvery: 8 * 3600e3, findMax: 3,
   nightEgg: 0.04, nightRare: 0.2, rareOdds: { ghost: 0.45, phoenix: 0.25 }, speedAsh: 5 };
 export type Pet = { l: number; s: number; d: number };
-export type PetState = { list: Partial<Record<PetSp, Pet>>; act: PetSp | null; eggs: { c: number; r: number }; inc: { e: "c" | "r"; at: number } | null; ft: number; fn: number };
+export type PetState = { list: Partial<Record<PetSp, Pet>>; act: PetSp | null; eggs: { c: number; r: number }; inc: { e: "c" | "r"; at: number } | null; ft: number; fn: number; eq?: Partial<Record<PSlot, PItem>>; inv?: PItem[]; craft?: number };
 export const petOf = (G: State): PetState => (G.pet = G.pet || { list: {}, act: null, eggs: { c: 0, r: 0 }, inc: null, ft: 0, fn: 0 });
 export const petEvo = (l: number) => (l >= PET.evo[1] ? 2 : l >= PET.evo[0] ? 1 : 0);
 export function petBonusOf(sp: PetSp, p: Pet) { return Math.round(PETS[sp].v * (1 + 0.06 * (p.l - 1)) * [1, 1.25, 1.5][petEvo(p.l)] * (1 + 0.5 * (p.s - 1)) * 10) / 10; }
@@ -950,7 +967,8 @@ export function actPetFind(G: State, now: number) {
   const p = P.list[P.act!]!, rolls = 1 + Math.floor((p.s - 1) / 2), got: { k: string; n: number; x?: string }[] = [];
   for (let f = 0; f < P.fn; f++) for (let i = 0; i < rolls; i++) {
     const r = Math.random(), S = G.maxStage;
-    if (r < 0.3) { addChests(G, S, 1); got.push({ k: "chest", n: 1 }); }
+    if (r < 0.1 && (P.inv || []).length < PINV_MAX) { P.inv = P.inv || []; const it = buildPItem(G, p.l, rollPRar(false), pick(PSLOTS)); P.inv.unshift(it); got.push({ k: "pgear", n: 1, x: it.slot + ":" + it.r }); } // спорядження пітомця його рівня
+    else if (r < 0.3) { addChests(G, S, 1); got.push({ k: "chest", n: 1 }); }
     else if (r < 0.5) { const x = randGem(G)[0]; got.push({ k: "gem", n: 1, x }); }
     else if (r < 0.75) { const m = Math.min(3, Math.floor(S / 20)), n = Math.round(5 + S / 4); G.mats[m] += n; got.push({ k: "mat", n, x: String(m) }); }
     else if (r < 0.9) { const n = 5 + Math.floor(Math.random() * 11); G.ash += n; got.push({ k: "ash", n }); }
@@ -966,6 +984,96 @@ export function petInfo(G: State, now: number) {
   return { next: a ? petFeedCost(a.l) : null, incLeft: P.inc ? Math.max(0, P.inc.at - now) : 0, speed: petSpeedCost(G, now),
     findIn: P.act && P.fn < PET.findMax ? Math.max(0, P.ft + PET.findEvery - now) : 0,
     bonus: Object.fromEntries(Object.entries(P.list).map(([k, v]) => [k, petBonusOf(k as PetSp, v!)])) };
+}
+
+// ---------- вміння й спорядження пітомців (рішення Влада 31.10) ----------
+// Кожен вид має унікальне вміння. Спорядження пітомця (Сідло, Броня, Шолом) підсилює вміння й додає герою характеристики.
+// Рівень речі = рівень пітомця в момент кування; діє лише річ рівня ≤ рівня активного пітомця (відокремлено від рівня героя).
+export type PSlot = "saddle" | "parmor" | "phelmet";
+export const PSLOTS: readonly PSlot[] = ["saddle", "parmor", "phelmet"];
+export type PItem = { id: number; slot: PSlot; r: number; il: number; nm: number; st: { ab: number; atk?: number; hp?: number; def?: number; crit?: number; xp?: number }; nw?: number };
+export type Abil = "bite" | "skin" | "loot" | "sight" | "dodge" | "rebirth";
+// bite: кожен 5-й удар героя — укус на base% атаки; skin: перші N ударів боса поглинаються; loot: % шанс подвійного золота/луту;
+// sight: +крит %, +2× досвіду з босів; dodge: % шанс ухилитись; rebirth: раз за бій встати з base% HP
+export const ABIL: Record<PetSp, { k: Abil; base: number; max: number }> = {
+  wolf: { k: "bite", base: 50, max: 200 }, golem: { k: "skin", base: 2, max: 8 }, raven: { k: "loot", base: 10, max: 50 },
+  owl: { k: "sight", base: 5, max: 20 }, ghost: { k: "dodge", base: 8, max: 35 }, phoenix: { k: "rebirth", base: 30, max: 90 },
+};
+export const BITE_EVERY = 5;
+// внесок слотів: сила вміння (%) і характеристики героя (%; крит — пункти) для легендарної речі 30 рівня
+export const PGEAR: Record<PSlot, { ab: number; atk?: number; hp?: number; def?: number; crit?: number; xp?: number }> = {
+  saddle: { ab: 60, atk: 10 }, parmor: { ab: 25, hp: 10, def: 10 }, phelmet: { ab: 25, crit: 5, xp: 10 },
+};
+export const PRAR = [0, 0.35, 0.5, 0.7, 1]; // множник за рідкістю (1 незвичайна … 4 легендарна)
+export const PGEAR_LVL = (il: number) => 0.25 + 0.75 * (il - 1) / (PET.maxLvl - 1); // 25% сили на 1 рівні, 100% на 30-му
+export const PINV_MAX = 30;
+export const pgearCost = (l: number) => ({ mat: Math.min(2, Math.floor(l / 10)), matN: 10 + l, shards: 30 * l });
+export const PCRAFT_W = [55, 30, 12, 3], PCRAFT_WCAT = [20, 40, 28, 12]; // ваги рідкостей 1..4; із Самоцвітом — краще
+export function buildPItem(G: State, il: number, r: number, slot: PSlot): PItem {
+  const k = PRAR[r] * PGEAR_LVL(il) * rnd(0.9, 1.1), d = PGEAR[slot], st: PItem["st"] = { ab: Math.round(d.ab * k * 10) / 10 };
+  for (const key of ["atk", "hp", "def", "crit", "xp"] as const) if (d[key]) st[key] = Math.round(d[key]! * k * 10) / 10;
+  return { id: G.nid++, slot, r, il, nm: Math.floor(Math.random() * 4), st, nw: 1 };
+}
+export function rollPRar(cat: boolean) { const w = cat ? PCRAFT_WCAT : PCRAFT_W, t = w.reduce((a, b) => a + b, 0); let x = Math.random() * t; for (let i = 0; i < 4; i++) { x -= w[i]; if (x <= 0) return i + 1; } return 4; }
+// діючі речі: лише ті, чий рівень не вищий за рівень активного пітомця
+export function pgearActive(G: State): PItem[] {
+  const P = G.pet; if (!P || !P.act || !P.eq) return [];
+  const l = P.list[P.act]?.l || 0;
+  return PSLOTS.map((s) => P.eq![s]).filter((it): it is PItem => !!it && it.il <= l);
+}
+export function pgearSum(G: State) {
+  const o = { ab: 0, atk: 0, hp: 0, def: 0, crit: 0, xp: 0 };
+  for (const it of pgearActive(G)) { o.ab += it.st.ab; o.atk += it.st.atk || 0; o.hp += it.st.hp || 0; o.def += it.st.def || 0; o.crit += it.st.crit || 0; o.xp += it.st.xp || 0; }
+  return o;
+}
+// сила вміння активного пітомця: база × (1 + спорядження) × (1 + 0,1·(зірки−1)), до максимуму
+export function abil(G: State): { k: Abil; v: number; sp: PetSp } | null {
+  const P = G.pet; if (!P || !P.act) return null;
+  const p = P.list[P.act]; if (!p) return null;
+  const a = ABIL[P.act];
+  return { k: a.k, sp: P.act, v: Math.min(a.max, Math.round(a.base * (1 + pgearSum(G).ab / 100) * (1 + 0.1 * (p.s - 1)) * 10) / 10) };
+}
+export const abilV = (G: State, k: Abil) => { const a = abil(G); return a && a.k === k ? a.v : 0; };
+export const pscore = (it: PItem) => it.st.ab + (it.st.atk || 0) + (it.st.hp || 0) + (it.st.def || 0) + (it.st.crit || 0) * 2 + (it.st.xp || 0) * 0.5;
+export function actPetCraft(G: State, slot: string, cat?: boolean) {
+  const P = petOf(G); if (!P.act) fail("no_pet");
+  if (!(PSLOTS as readonly string[]).includes(slot)) fail("bad_slot");
+  P.inv = P.inv || []; if (P.inv.length >= PINV_MAX) fail("pbag_full");
+  const l = P.list[P.act!]!.l, c = pgearCost(l);
+  if (matsFrom(G, c.mat) < c.matN) fail("no_mats");
+  if (G.shards < c.shards) fail("no_shards");
+  if (cat && G.cat < 1) fail("no_catalyst");
+  takeMats(G, c.mat, c.matN); G.shards -= c.shards; if (cat) G.cat--;
+  const it = buildPItem(G, l, rollPRar(!!cat), slot as PSlot); P.inv.unshift(it); P.craft = (P.craft || 0) + 1;
+  log(G, "pcraft", [it.r, it.slot, it.il]);
+  return { item: it, cost: c };
+}
+export function actPetEquip(G: State, id: number) {
+  const P = petOf(G); if (!P.act) fail("no_pet");
+  P.inv = P.inv || []; P.eq = P.eq || {};
+  const i = P.inv.findIndex((x) => x.id === Number(id)); if (i < 0) fail("no_item");
+  const it = P.inv[i]; if (it.il > P.list[P.act!]!.l) fail("pet_lvl_low");
+  P.inv.splice(i, 1); const old = P.eq[it.slot]; if (old) P.inv.unshift(old);
+  delete it.nw; P.eq[it.slot] = it; return { id: it.id };
+}
+export function actPetUnequip(G: State, slot: string) {
+  const P = petOf(G); P.inv = P.inv || []; P.eq = P.eq || {};
+  const it = P.eq[slot as PSlot]; if (!it) fail("no_item");
+  if (P.inv.length >= PINV_MAX) fail("pbag_full");
+  delete P.eq[slot as PSlot]; P.inv.unshift(it!); return {};
+}
+// розібрати спорядження пітомця на уламки (половина вартості кування за рідкістю)
+export function actPetDis(G: State, ids: number[]) {
+  const P = petOf(G); P.inv = P.inv || [];
+  if (!Array.isArray(ids) || !ids.length) fail("bad_ids");
+  const set = new Set(ids.map(Number)); let sh = 0, n = 0;
+  P.inv = P.inv.filter((it) => { if (set.has(it.id)) { sh += Math.round(pgearCost(it.il).shards * 0.5 * PRAR[it.r]); n++; return false; } return true; });
+  if (!n) fail("no_item");
+  G.shards += sh; return { n, shards: sh };
+}
+export function petGearInfo(G: State) {
+  const P = G.pet; const a = P && P.act ? P.list[P.act] : null;
+  return { abil: abil(G), sum: pgearSum(G), cost: a ? pgearCost(a.l) : null, defs: ABIL, slots: PSLOTS, gear: PGEAR, prar: PRAR, invMax: PINV_MAX, lvl: a ? a.l : 0 };
 }
 
 // ---------- ринок між гравцями: за Попіл або за Золото (рішення 29.10) ----------

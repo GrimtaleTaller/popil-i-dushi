@@ -150,6 +150,10 @@ function replayTick(dt){
  while(R.i<R.res.ev.length&&R.res.ev[R.i][0]<=R.t){
   const [,who,d,cr]=R.res.ev[R.i++];
   if(who===0){B.m.hp-=d;anim('hs','lunge-r');anim('ms','hit');floatNum(fmt(d)+(cr?'!':''),cr?'crit':'','m');B.hp=Math.min(R.maxHp,B.hp+R.maxHp*0.02)}
+  else if(who===2){B.m.hp-=d;anim('ms','hit');floatNum('🐺'+fmt(d),'crit','m')}
+  else if(who===3){anim('ms','lunge-l');floatNum('👻 '+T('ev_dodge'),'','h')}
+  else if(who===4){anim('ms','lunge-l');floatNum('🗿 '+T('ev_skin'),'','h')}
+  else if(who===5){B.hp=d;floatNum('🔥 '+T('ev_rebirth'),'crit','h');anim('hs','hit')}
   else{B.hp-=d;anim('ms','lunge-l');anim('hs','hit');floatNum('-'+fmt(d),'taken','h')}
  }
  if(R.i>=R.res.ev.length&&R.t>=(R.res.ev.length?R.res.ev[R.res.ev.length-1][0]:0)+0.4){
@@ -453,6 +457,10 @@ function dngPlay(o){
   let hp=x.hp0,fh=x.foeHp;
   x.ev.forEach((e,k)=>{t+=step;const tt=t;at(tt,()=>{
    if(e[1]===0){fh-=e[2];hit('dvH','lunge-r');hit('dvM','hit');fl(fmt(e[2])+(e[3]?'!':''),e[3]?'crit':'','m');$('dvMh').style.width=Math.max(0,fh/x.foeHp*100)+'%'}
+   else if(e[1]===2){fh-=e[2];hit('dvM','hit');fl('🐺'+fmt(e[2]),'crit','m');$('dvMh').style.width=Math.max(0,fh/x.foeHp*100)+'%'}
+   else if(e[1]===3){hit('dvM','lunge-l');fl('👻 '+T('ev_dodge'),'','h')}
+   else if(e[1]===4){hit('dvM','lunge-l');fl('🗿 '+T('ev_skin'),'','h')}
+   else if(e[1]===5){hp=e[2];fl('🔥 '+T('ev_rebirth'),'crit','h');$('dvHh').style.width=Math.max(0,hp/o.heroHp*100)+'%'}
    else{hp-=e[2];hit('dvM','lunge-l');hit('dvH','hit');fl('-'+fmt(e[2]),'taken','h');$('dvHh').style.width=Math.max(0,hp/o.heroHp*100)+'%'}})});
   t+=500;const te=t;
   at(te,()=>{const r=$('dvR'+i);if(r){r.classList.remove('cur');r.classList.add(x.win?'ok':'bad')}
@@ -506,6 +514,7 @@ const LOGT={
  reward:a=>T('log_reward',{a:fmt(a[0])}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
+ pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
  dis:a=>T('log_dis',{n:a[0],v:fmt(a[1])+' '+(a[2]==='xp'?'✨':'🔩')}),
  ench:a=>T('log_ench',{n:a[0]}),
  arena:a=>T('log_arena',{r:T(a[0]?'pvp_win':'pvp_lose'),n:esc(a[1]),d:(a[2]>=0?'+':'')+a[2]}),
@@ -523,6 +532,8 @@ const dt=s=>{if(!s)return '—';const d=new Date(s);return String(d.getDate()).p
 function copyText(t){try{navigator.clipboard.writeText(t);toast(T('copied'))}catch(e){toast(t)}}
 // ---------- пітомці ----------
 const PETIC={wolf:'🐺',golem:'🗿',raven:'🐦‍⬛',owl:'🦉',ghost:'👻',phoenix:'🐦‍🔥'},PETS_ORD=['wolf','golem','raven','owl','ghost','phoenix'];
+const PGSLOTS=['saddle','parmor','phelmet'],PGIC={saddle:'🪑',parmor:'🛡️',phelmet:'⛑️'};let pgCat=false;
+const pgSt=it=>[['ab','pg_ab'],['atk','pg_atk'],['hp','pg_hp'],['def','pg_def'],['crit','pg_crit'],['xp','pg_xp']].filter(([k])=>it.st[k]).map(([k,t])=>T(t,{v:it.st[k]})).join(' · ');
 const petIc=(sp,big)=>`<span class="pet-ic${big?' big':''}">${PETIC[sp]||'❔'}</span>`,eggIc=e=>`<span class="egg ${e==='r'?'r':''}">🥚</span>`;
 const petEvoN=l=>l>=20?2:l>=10?1:0,stars=(s,m=5)=>'<span class="stars">'+'★'.repeat(s)+'<i>'+'★'.repeat(m-s)+'</i></span>';
 const hms=ms=>{const m=Math.ceil(ms/60000),h=Math.floor(m/60);return h?T('t_hm',{h,m:m%60}):T('t_m',{m})};
@@ -534,7 +545,17 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
   if(nx){const ok=(G.mats||[]).slice(nx.mat).reduce((x,y)=>x+(y||0),0)>=nx.matN&&G.shards>=nx.shards&&G.cat>=nx.cat;
    h+=`<p class="hint">${nx.cat?T('pet_evo_hint',{f:ROM[f+1]}):T('pet_feed_hint')}</p><div class="st">${T('pet_cost')}: ⛏️${MATN[nx.mat]}×${nx.matN} · 🔩${fmt(nx.shards)}${nx.cat?' · 💎1':''}</div><div class="row"><button class="btn pri" id="pFeed" ${ok?'':'disabled'}>${nx.cat?T('pet_evo_btn'):T('pet_feed')}</button>${nx.cat?'':`<button class="btn" id="pFeedM" ${ok?'':'disabled'}>${T('pet_feed_max')}</button>`}</div>`}
   else h+=`<p class="hint">${T('max_reached')}</p>`;
-  h+=`<div class="petfind"><span>🎒 ${T('pet_finds',{n:P.fn||0,m:C.findMax||3})}${(P.fn||0)<(C.findMax||3)&&I.findIn?' · '+T('pet_next',{t:hms(I.findIn)}):''}</span><button class="btn pri" id="pFind" ${P.fn?'':'disabled'}>${T('take')}</button></div></div>`}
+  h+=`<div class="petfind"><span>🎒 ${T('pet_finds',{n:P.fn||0,m:C.findMax||3})}${(P.fn||0)<(C.findMax||3)&&I.findIn?' · '+T('pet_next',{t:hms(I.findIn)}):''}</span><button class="btn pri" id="pFind" ${P.fn?'':'disabled'}>${T('take')}</button></div></div>`;
+  // вміння й спорядження пітомця (31.10)
+  const GI=D.gear||{},ab=GI.abil,sum=GI.sum||{},PE=P.eq||{},PI=P.inv||[],cost=GI.cost;
+  if(ab)h+=`<div class="card"><h4>✨ ${T('pg_ab_t')}: ${T('ab_'+ab.k)}</h4><p>${T('abd_'+ab.k,{v:ab.v,w:2*ab.v})}</p></div>`;
+  h+=`<div class="card"><h4>${T('pg_t')}</h4><p class="hint">${T('pg_hint')}</p><div class="slots">`+PGSLOTS.map(s=>{const it=PE[s];return `<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${PGIC[s]}</div><div class="sn">${T('pslot_'+s)}</div>`+(it?`<div class="it" style="color:${RAR[it.r].c}">${RAR[it.r].n}</div><div class="sn">${T('lvl',{n:it.il})}${it.il>a.l?' ⚠️':''}</div><div class="sn">${pgSt(it)}</div><button class="btn" data-pgoff="${s}" style="margin-top:6px">${T('pg_take_off')}</button>`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}).join('')+`</div>`;
+  if(sum.ab||sum.atk||sum.hp||sum.crit)h+=`<div class="st" style="margin-top:8px">${T('pg_sum')}: ${pgSt({st:sum})}</div>`;
+  if(cost){const ok=(G.mats||[]).slice(cost.mat).reduce((x,y)=>x+(y||0),0)>=cost.matN&&G.shards>=cost.shards;
+   h+=`<h4 style="margin-top:12px">${T('pg_craft_t')}</h4><p class="hint">${T('pg_craft_hint',{l:a.l})}</p><div class="st">${T('pet_cost')}: ⛏️${MATN[cost.mat]}×${cost.matN} · 🔩${fmt(cost.shards)}</div><div class="row">`+PGSLOTS.map(s=>`<button class="btn pri" data-pgc="${s}" ${ok?'':'disabled'}>${PGIC[s]} ${T('pslot_'+s)}</button>`).join('')+`<button class="btn ${pgCat?'on':''}" id="pgCat" ${G.cat>0?'':'disabled'}>${T('pg_cat')} ${G.cat||0}</button></div>`}
+  h+=`<h4 style="margin-top:12px">${T('pg_bag')} ${PI.length}/${GI.invMax||30}</h4>`;
+  h+=PI.length?PI.map(it=>`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${PGIC[it.slot]}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${T('pslot_'+it.slot)}</div><div class="sub">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${it.il>a.l?' · ⚠️ '+T('pg_inactive'):''}</div><div class="st">${pgSt(it)}</div></div><div class="acts"><button class="btn pri" data-pgeq="${it.id}" ${it.il>a.l?'disabled':''}>${T('pg_equip')}</button><button class="btn" data-pgdis="${it.id}">⚒️ ${T('pg_dis')}</button></div></div>`).join(''):`<p class="hint">${T('pg_bag_empty')}</p>`;
+  h+=`</div>`}
  // інкубатор
  h+=`<div class="card"><h4>🥚 ${T('pet_inc')}</h4>`;
  if(P.inc){const left=Math.max(0,P.inc.at-now);h+=`<div class="petinc">${eggIc(P.inc.e)}<div><b>${T(P.inc.e==='r'?'egg_r':'egg_c')}</b><div class="sub">${left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed" ${G.ash>=I.speed?'':'disabled'}>⚡ ⚱️${I.speed}</button>`:`<button class="btn pri" id="pClaim">${T('pet_claim')}</button>`}</div>`}
@@ -546,10 +567,15 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  const fd=n=>act('petFeed',{n},r=>{toast(T('pet_fed',{l:r.out.l}));haptic('light')});
  if($('pFeed'))$('pFeed').onclick=()=>fd(1);if($('pFeedM'))$('pFeedM').onclick=()=>fd(30);
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
-  modal(`<div class="big">${PETIC[P.act]}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
+  modal(`<div class="big">${PETIC[P.act]}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
  if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));
  if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},r=>{const o=r.out;modal(`<div class="big">${PETIC[o.sp]}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')});
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
+ if($('pgCat'))$('pgCat').onclick=()=>{pgCat=!pgCat;$('pgCat').classList.toggle('on',pgCat)};
+ E.querySelectorAll('[data-pgc]').forEach(b=>b.onclick=()=>act('petCraft',{slot:b.dataset.pgc,cat:pgCat},r=>{const it=r.out.item;pgCat=pgCat&&G.cat>0;toast(`🐴 ${RAR[it.r].n} ${T('pslot_'+it.slot)} · ${T('lvl',{n:it.il})}`);haptic(it.r>=3?'heavy':'light')}));
+ E.querySelectorAll('[data-pgeq]').forEach(b=>b.onclick=()=>act('petEquip',{id:+b.dataset.pgeq},()=>haptic('light')));
+ E.querySelectorAll('[data-pgoff]').forEach(b=>b.onclick=()=>act('petUnequip',{slot:b.dataset.pgoff},()=>haptic('light')));
+ E.querySelectorAll('[data-pgdis]').forEach(b=>b.onclick=()=>act('petDis',{ids:[+b.dataset.pgdis]},r=>toast(T('pg_dis_done',{n:r.out.n,s:fmt(r.out.shards)}))));
  E.querySelectorAll('[data-pset]').forEach(b=>b.onclick=()=>{if(P.act===b.dataset.pset)return;act('petSet',{sp:b.dataset.pset},()=>toast(T('pet_set',{p:T('pet_'+b.dataset.pset)})))});
 }
 function renderProfile(){
@@ -790,6 +816,7 @@ const TUT_GOALS=[
  {k:'clan',tab:'clan',p:'clan',c:()=>G.maxStage>=(V.clanStage||5)},
  {k:'pet',tab:'hero',p:'pet',all:1,c:()=>{const P=G.pet;return !!P&&(P.eggs.c+P.eggs.r>0||!!P.inc||Object.keys(P.list).length>0)}},
  {k:'gem',tab:'forge',p:'gem',all:1,c:()=>Object.values(G.gems||{}).some(n=>n>0)},
+ {k:'pgear',tab:'hero',p:'pet',all:1,np:1,c:()=>{const P=G.pet;return !!P&&!!P.act&&!P.craft}},
 ];
 function tutEl(){let e=$('tut');if(!e){e=document.createElement('div');e.id='tut';e.innerHTML='<div class="tring" id="tring"></div><div class="tbub" id="tbub"></div>';document.body.appendChild(e)}return e}
 function tutHide(){tutCur=null;const e=$('tut');if(e)e.className=''}
@@ -834,7 +861,7 @@ function tutCheck(){
   tutShow({txt:'tp_'+pk,sel,skip:!old,still:()=>curPane()===pk,ok:()=>tutMark('p_'+pk)});return;
  }
  for(const g of TUT_GOALS){
-  if((old&&!g.all)||tutHas('tg_'+g.k)||tutHas('p_'+g.p))continue;
+  if((old&&!g.all)||tutHas('tg_'+g.k)||(tutHas('p_'+g.p)&&!g.np))continue;
   let ok=false;try{ok=g.c()}catch(e){}
   if(!ok)continue;
   const inG=groupOf(tab)===g.tab,sel=inG?`#subtabs button[data-s="${g.p}"]`:tabBtn(g.tab);
