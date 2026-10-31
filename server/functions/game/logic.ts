@@ -65,7 +65,9 @@ export function mythChance(G: State, n: number) {
   return Math.min(MYTH.cap, MYTH.base + MYTH.extra * Math.max(0, n - MYTH.need) + MYTH.fail * (G.mythFails || 0));
 }
 
-export const mobHp = (s: number) => 25 * Math.pow(1.25, s - 1);
+// здоров'я ворогів ×1,25 за етап, після 50-го — ×1,18 (31.10, рішення Влада: знято стіну на ~60–69; симуляція — активний гравець етап 79 на 45-й день)
+export const HP_SLOW = { from: 50, g: 1.18 };
+export const mobHp = (s: number) => s <= HP_SLOW.from ? 25 * Math.pow(1.25, s - 1) : 25 * Math.pow(1.25, HP_SLOW.from - 1) * Math.pow(HP_SLOW.g, s - HP_SLOW.from);
 // атака ворогів ×1,22 за етап (було 1,19) і м'який захист: урон = атака² / (атака + захист), без «мінімуму 20%».
 // Рішення Влада 30.10 після симуляції: раніше бос не міг убити героя (знімав ≤33% HP за бій), здоров'я й захист не грали ролі.
 export const mobAtk = (s: number) => 4 * Math.pow(1.22, s - 1);
