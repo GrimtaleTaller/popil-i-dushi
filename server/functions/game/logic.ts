@@ -179,13 +179,18 @@ function log(G: State, k: string, a?: (string | number)[]) {
   if (G.log.length > 40) G.log.length = 40;
 }
 
-export function makeItem(G: State, ilvl: number, minR: number, lw = 1): Item {
+// легендарні речі випадають лише зі скринь (рішення Влада 01.11): вороги й боси дають до епічної включно
+export const MOB_MAX_R = 4; // верхня межа (не включно) рідкості для ворогів і босів
+export function rollRar(minR: number, lw = 1, maxR = DROP_RAR) {
   let r = minR;
   const w = (i: number) => RAR[i].w * (i === 4 ? lw : 1); // lw — множник ваги легендарки (скрині вищого виду)
-  const tot = RAR.reduce((s, x, i) => s + (i >= minR && i < DROP_RAR ? w(i) : 0), 0);
+  const tot = RAR.reduce((s, x, i) => s + (i >= minR && i < maxR ? w(i) : 0), 0);
   let roll = Math.random() * tot;
-  for (let i = minR; i < DROP_RAR; i++) { roll -= w(i); r = i; if (roll <= 0) break; }
-  return buildItem(G, ilvl, r, pick(SLOTS));
+  for (let i = minR; i < maxR; i++) { roll -= w(i); r = i; if (roll <= 0) break; }
+  return r;
+}
+export function makeItem(G: State, ilvl: number, minR: number, lw = 1, maxR = DROP_RAR): Item {
+  return buildItem(G, ilvl, rollRar(minR, lw, maxR), pick(SLOTS));
 }
 export function buildItem(G: State, ilvl: number, r: number, slot: Slot): Item {
   const def = SLOT[slot], sc = gearScale(ilvl) * RAR[r].m * rnd(0.9, 1.1), st: Stats = {};
@@ -237,7 +242,7 @@ export function killTime(G: State, s: number) {
   return Math.ceil(mobHp(s) / (H.atk * (1 + H.crit / 100) * biteMul(G))) + 0.45;
 }
 
-export type Progress = { sec: number; offline: boolean; stage: number; kills: number; gold: number; xp: number; items: number; lvlUps: number; souls?: number; boss?: BossResult };
+export type Progress = { sec: number; offline: boolean; stage: number; kills: number; gold: number; xp: number; items: number; lvlUps: number; souls?: number; boss?: BossResult; offSh?: number; offBy?: number[] };
 
 // Нараховує прогрес за час, що минув з G.tick.
 export function progress(G: State, now: number): Progress {
@@ -270,9 +275,19 @@ export function progress(G: State, now: number): Progress {
   let drops = 0;
   const exp = kills * DROP * lootM;
   drops = Math.floor(exp) + (Math.random() < exp - Math.floor(exp) ? 1 : 0);
-  if (offline) drops = Math.min(15, drops);
-  for (let i = 0; i < drops; i++) { res.gold += addItem(G, makeItem(G, s, 0), false); res.items++; }
-  if (offline && sec >= 60) log(G, "offline", [Math.round(sec), Math.round(res.gold), res.items, res.souls || 0]);
+  if (!offline) for (let i = 0; i < drops; i++) { res.gold += addItem(G, makeItem(G, s, 0, 1, MOB_MAX_R), false); res.items++; }
+  else {
+    // офлайн (01.11): усі предмети, як онлайн (без ліміту 15); звичайні й незвичайні одразу розбираються на уламки за повну ціну,
+    // рідкісні й епічні — у сумку (повна сумка — у сховище або на уламки, як завжди)
+    const by: number[] = [0, 0, 0, 0]; let sh = 0;
+    for (let i = 0; i < drops; i++) {
+      const r = rollRar(0, 1, MOB_MAX_R); by[r]++;
+      if (r <= 1) sh += Math.round((r + 1) * (r + 1) * (1 + s / 10));
+      else { res.gold += addItem(G, buildItem(G, s, r, pick(SLOTS)), false); res.items++; }
+    }
+    G.shards += sh; res.offSh = sh; res.offBy = by;
+  }
+  if (offline && sec >= 60) log(G, "offline", [Math.round(sec), Math.round(res.gold), res.items, res.souls || 0, res.offSh || 0]);
   // авто-бос
   if (G.autoBoss && G.kills >= WAVES && G.stage === G.maxStage) res.boss = fightBoss(G);
   return res;
@@ -319,7 +334,7 @@ export function fightBoss(G: State): BossResult {
     const lootM = 1 + abilV(G, "loot") / 100;
     res.gold = mobGold(s) * 8 * lootM; res.xp = mobXp(s) * 6 * (1 + ((G.cb?.xp || 0) + pgearSum(G).xp + 2 * abilV(G, "sight")) / 100); // Здобич Ворона, Прозріння Сови
     G.gold += res.gold; gainXp(G, res.xp); G.tot.kills++; G.tot.bosses++;
-    const it = makeItem(G, s, 1); res.item = it; res.gold += addItem(G, it, true);
+    const it = makeItem(G, s, 1, 1, MOB_MAX_R); res.item = it; res.gold += addItem(G, it, true);
     const first = s === G.maxStage;
     if (first) { res.souls = 5 + s; G.souls += res.souls; }
     if (Math.random() < catChance(s)) { res.cat = 1; G.cat += 1; }
@@ -440,7 +455,7 @@ export function actDaily(G: State, now: number) {
   const d = dailyInfo(G, now); if (!d) fail("daily_taken");
   G.gold += d!.gold; G.ash += d!.ash; G.daily = { date: dayStr(now), streak: d!.streak };
   let item: Item | undefined;
-  if (d!.epic) { item = makeItem(G, G.maxStage, 3); addItem(G, item, true); }
+  if (d!.epic) { item = makeItem(G, G.maxStage, 3, 1, MOB_MAX_R); addItem(G, item, true); }
   log(G, "daily", [d!.streak]);
   return { ...d!, item };
 }

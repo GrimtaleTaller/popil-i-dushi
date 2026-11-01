@@ -506,7 +506,7 @@ const LOGT={
  lvl:a=>T('log_lvl',{n:a[0]}),
  loot:a=>`<span style="color:${RAR[a[0]].c}">${SLOT[a[1]].ic} ${RAR[a[0]].n}: ${SLOT[a[1]].names[a[2]]||''}</span>`,
  bagfull:()=>T('log_bagfull'),
- offline:a=>T('log_offline',{h:Math.floor(a[0]/3600),m:Math.floor(a[0]%3600/60),g:fmt(a[1]),i:a[2]})+(a[3]?', +'+a[3]+' 🔥':''),
+ offline:a=>T('log_offline',{h:Math.floor(a[0]/3600),m:Math.floor(a[0]%3600/60),g:fmt(a[1]),i:a[2]})+(a[3]?', +'+a[3]+' 🔥':'')+(a[4]?', +'+fmt(a[4])+' 🔩':''),
  boss:a=>T('log_boss',{s:a[0],g:fmt(a[1])}),
  bossDeath:a=>T('log_bossDeath',{s:a[0]}),
  bossTimeout:a=>T('log_bossTimeout',{s:a[0]}),
@@ -768,7 +768,7 @@ function afterSync(r){
  if(r.news)showNews(r.news);
  if(r.reward)modal(`<div class="big">🏆</div><h3>${T('reward_t')}</h3><p>${T('reward_txt',{a:fmt(r.reward)})}</p>`,T('claim'));
  if(p&&p.offline&&p.sec>=60&&p.kills>0){const h=Math.floor(p.sec/3600),m=Math.floor(p.sec%3600/60);
-  modal(`<div class="big">🌙</div><h3>${T('away')}</h3><p>${T('away_line',{t:(h?T('hours',{n:h})+' ':'')+T('mins',{n:m}),s:p.stage})}</p><p>${T('p_killed')} <b>${fmt(p.kills)}</b></p><p>${T('p_gold')} <b>+${fmt(p.gold)}</b></p><p>${T('p_xp')} <b>+${fmt(p.xp)}</b></p>${p.souls?`<p>${T('p_souls')} <b>+${fmt(p.souls)}</b></p>`:''}${p.items?`<p>${T('p_items')} <b>${p.items}</b></p>`:''}`,T('claim'))}
+  modal(`<div class="big">🌙</div><h3>${T('away')}</h3><p>${T('away_line',{t:(h?T('hours',{n:h})+' ':'')+T('mins',{n:m}),s:p.stage})}</p><p>${T('p_killed')} <b>${fmt(p.kills)}</b></p><p>${T('p_gold')} <b>+${fmt(p.gold)}</b></p><p>${T('p_xp')} <b>+${fmt(p.xp)}</b></p>${p.souls?`<p>${T('p_souls')} <b>+${fmt(p.souls)}</b></p>`:''}${p.items?`<p>${T('p_items')} <b>${p.items}</b>${p.offBy?' <small>('+[2,3].filter(r=>p.offBy[r]).map(r=>`<span style="color:${RAR[r].c}">${RAR[r].n} ${p.offBy[r]}</span>`).join(', ')+')</small>':''}</p>`:''}${p.offSh?`<p>${T('p_offsh',{n:(p.offBy?p.offBy[0]+p.offBy[1]:0)})} <b>+🔩${fmt(p.offSh)}</b></p>`:''}`,T('claim'))}
  if(p&&p.boss&&!p.boss.win){p.boss.auto=1;if(p.offline)modal(`<div class="big">⚔️</div><h3>${T('auto_off_t')}</h3><p>${T('auto_off_txt',{n:p.boss.stage})}</p>`,T('ok'))}
  if(p&&p.boss&&!B.rep)startReplay(p.boss);
  const d=V.daily;
