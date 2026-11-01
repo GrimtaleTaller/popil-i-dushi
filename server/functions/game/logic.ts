@@ -169,6 +169,12 @@ export function hero(G: State) {
   return { atk: a * cm * sp, hp: h * cm * sp, def: d * sp, crit: Math.min(60, c) };
 }
 export const power = (h: ReturnType<typeof hero>) => Math.round(h.atk * (1 + h.crit / 100) * 2 + h.hp * 0.25 + h.def * 1.5);
+// бойові вміння пітомця як еквівалент характеристик (01.11): Укус — атака, Ухилення й Відродження — здоров'я. Так «Сила» героя
+// і «Потрібна сила» підземелля рахуються однаково з будь-яким пітомцем
+type AbEq = { bite?: number; dodge?: number; rebirth?: number };
+export const powerAb = (h: { atk: number; hp: number; def: number; crit: number }, A?: AbEq) => power({
+  atk: h.atk * (1 + (A?.bite || 0) / 100 / BITE_EVERY), hp: h.hp * (1 + (A?.rebirth || 0) / 100) / (1 - Math.min(0.9, (A?.dodge || 0) / 100)), def: h.def, crit: h.crit });
+export const powerG = (G: State) => powerAb(hero(G), fightAb(G));
 export function itemScore(G: State, it: Item) {
   const g = gemStats(it);
   return ((it.st.atk || 0) + g.atk) * 2 + ((it.st.hp || 0) + g.hp) * 0.25 + ((it.st.def || 0) + g.def) * 1.5 + ((it.st.crit || 0) + g.crit) * 0.03 * hero(G).atk;
@@ -642,7 +648,7 @@ export function dngNeedPower(G: State, t: number, d = 1) {
   let lo = 0, hi = 1;
   while (!dngWinAvg(sc(hi), t, d, A) && hi < 1e7) { lo = hi; hi *= 2; }
   for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (dngWinAvg(sc(m), t, d, A)) hi = m; else lo = m; }
-  const p = power(sc(hi)) * 1.1, f = Math.pow(10, Math.max(0, Math.floor(Math.log10(p)) - 1));
+  const p = powerAb(sc(hi), A) * 1.1, f = Math.pow(10, Math.max(0, Math.floor(Math.log10(p)) - 1));
   return Math.ceil(p / f) * f; // округлення вгору до 2 значущих цифр
 }
 export function dngEstimate(G: State, t: number, n = 24, d = 1) {

@@ -67,7 +67,7 @@ async function loadOrCreate(u: TgUser, start: string | undefined, now: number) {
 function view(G: L.State, now: number, uid = 0) {
   const H = L.hero(G);
   return {
-    s: G, hero: { ...H, power: L.power(H) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
+    s: G, hero: { ...H, power: L.powerG(G) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
     pet: { defs: L.PETS, cfg: L.PET, info: L.petInfo(G, now), gear: L.petGearInfo(G) },
     gem: { sockets: L.SOCKETS, out: L.GEM_OUT, m: L.GEM_M, crit: L.GEM_CRIT, max: L.GEM_MAX, pts: L.ARENA_SHOP.stone.pts },
     forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G), set: L.setInfo(G), setCfg: L.SET },
@@ -197,7 +197,7 @@ async function clanInfo(id: number, G: L.State, now: number, q = "") {
     if (qq) qb = qb.ilike("name", `%${qq}%`);
     const { data } = await qb;
     const { data: ap } = await SB.from("clan_apps").select("clan_id").eq("player_id", id);
-    const myPower = L.power(L.hero(G));
+    const myPower = L.powerG(G);
     return { ...base, clan: null, q: qq, apps: (ap || []).map((a) => a.clan_id), list: (data || []).map((c) => ({ ...c, bld: undefined, max: L.clanMax(c.bld), power: Number(c.power), min_power: Number(c.min_power), ok: G.maxStage >= c.min_stage && myPower >= Number(c.min_power) })) };
   }
   const { data: c } = await SB.from("clan_view").select("id,name,members,power,keys,bank,kn,join_mode,min_stage,min_power,bld,res,ash").eq("id", me.clan_id).single();
@@ -290,7 +290,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
       const { data: c } = await SB.from("clan_view").select("id,members,join_mode,min_stage,min_power,bld").eq("id", Number(args.id)).maybeSingle();
       if (!c) fail("clan_none");
       if (c!.join_mode === "closed") fail("clan_closed");
-      if (G.maxStage < c!.min_stage || L.power(L.hero(G)) < Number(c!.min_power)) fail("clan_reqs");
+      if (G.maxStage < c!.min_stage || L.powerG(G) < Number(c!.min_power)) fail("clan_reqs");
       if (c!.members >= L.clanMax(c!.bld)) fail("clan_full");
       if (c!.join_mode === "apply") {
         const { count } = await SB.from("clan_apps").select("id", { count: "exact", head: true }).eq("player_id", user.id);
@@ -612,7 +612,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     // публічні показники для рейтингів
     if (action !== "sync" || prog.lvlUps || prog.boss?.win || isNew) {
       const H = L.hero(G);
-      await SB.from("stats").upsert({ player_id: user.id, name: (user.first_name || user.username || "Hero").slice(0, 24), lvl: G.lvl, max_stage: G.maxStage, power: L.power(H), snap: L.heroSnap(G), updated_at: new Date(now).toISOString() }, { onConflict: "player_id" });
+      await SB.from("stats").upsert({ player_id: user.id, name: (user.first_name || user.username || "Hero").slice(0, 24), lvl: G.lvl, max_stage: G.maxStage, power: L.powerG(G), snap: L.heroSnap(G), updated_at: new Date(now).toISOString() }, { onConflict: "player_id" });
     }
     // журнал: не пишемо кожну синхронізацію, лише дії та помітні події
     const notable = action !== "sync" || prog.offline || prog.boss || isNew;
