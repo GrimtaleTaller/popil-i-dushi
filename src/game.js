@@ -179,7 +179,12 @@ const gemName=k=>{const g=gemP(k);return T('gem_'+g.t)+' '+ROM[g.l-1]};
 const gemTxt=(k,il)=>{const s=gemStat(k,il),x=Object.keys(s)[0];return '+'+(x==='crit'?s[x].toFixed(1)+'%':fmt(s[x]))+' '+STATN[x]};
 const sockN=it=>gemCfg().sockets[it.r]||0;
 function sockView(it){const n=sockN(it);if(!n)return '';const gm=it.gm||[];let h='';for(let i=0;i<n;i++)h+=gm[i]?gemIc(gm[i]):'<span class="gem empty">◇</span>';return `<span class="socks">${h}</span>`}
-function itemScore(it){const g=gemSum(it);return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5+((it.st.crit||0)+g.crit)*0.03*H.atk}
+// оцінка речі = Сила героя, якщо надіти її (як itemScore на сервері; V.sc — сирі суми й множники героя)
+function itemScore(it){const x=V&&V.sc,g=gemSum(it);if(!x)return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5;
+ const o=x.eqs[it.slot]||{a:0,h:0,d:0,c:0},va=(it.st.atk||0)*x.em+g.atk,vh=(it.st.hp||0)*x.em+g.hp,vd=(it.st.def||0)*x.em+g.def,vc=(it.st.crit||0)+g.crit;
+ const atk=(x.a-o.a+va)*x.ma,crit=Math.min(60,x.c-o.c+vc);return Math.round(atk*(1+crit/100)*2+(x.h-o.h+vh)*x.mh*0.25+(x.d-o.d+vd)*x.md*1.5)}
+// внесок речі в Силу (скільки Сили додає річ порівняно з порожнім слотом) — для показу в Кузні
+function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore(it)-itemScore({slot:it.slot,st:{},il:it.il,gm:[]})}
 function renderTop(){
  if(!G)return;
  const gold=G.gold+pend.gold;let xp=G.xp+pend.xp;
@@ -361,17 +366,17 @@ function renderForge(){
  const ST=F.set||{a:0,e:0,n:6},SC=F.setCfg||{anc:{each:6,souls:40,pow:15},eter:{each:16,souls:60,pow:30}};
  const setBan=(k,c,ic)=>{const x=SC[k],have=k==='anc'?ST.a+ST.e:ST.e,on=k==='anc'?ST.fullA&&!ST.fullE:ST.fullE;return `<div class="setban" style="border-color:${c}55"><span style="color:${c}">${ic}</span><div>${T(k==='anc'?'set_anc':'set_eter',{e:x.each,s:x.souls,p:x.pow})}<div class="sub">${T('set_have',{n:have,m:ST.n})}${on?' · <b style="color:var(--green)">'+T('set_on')+'</b>':''}</div></div></div>`};
  const slotG=(cnt,sel,attr,need)=>`<div class="slotg">${SLOTS.map(s=>{const n=cnt(s);return `<button ${attr}="${s}" class="${s===sel?'act':''}"><i class="${n>=need?'ok':''}">${n}</i>${SLOT[s].ic}<span>${SLOT[s].n}</span></button>`}).join('')}</div>`;
- const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${SLOT[it.slot].ic}<b>${fmt(itemScore(it))}</b></div>`;
+ const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${SLOT[it.slot].ic}<b>${fmt(itemVal(it))}</b></div>`;
  const resC=(have,need,ic)=>`<span style="color:${have>=need?'inherit':'var(--red)'}">${ic}${fmt(have)}/${fmt(need)}</span>`;
  const maxExtra=Math.max(0,Math.ceil((F.myth.cap-F.myth.base-F.myth.fail*fails)/F.myth.extra));
- const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?Math.round(itemScore(onA[0])*1.8):0;
+ const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?Math.round(itemVal(onA[0])*1.8):0;
  if(fsub==='myth')h+=`<div class="card">${setBan('anc',RAR[5].c,'◆')}
   ${slotG(s=>legs(s).length,mSlot,'data-ms',need)}
   <div class="anrow"><span>${T('anvil',{a:Math.min(mN,LG.length),b:need})}${extra?' <b style="color:var(--gold)">+'+extra+'</b>':''}</span><button class="btn" id="mMinB">${T('btn_min')}</button><button class="btn" id="mMaxB" ${maxN>need?'':'disabled'}>${T('btn_max')}</button></div>
   <div class="anvil">${onA.map(tile).join('')}${Array.from({length:Math.max(0,need-onA.length)},()=>'<div class="atile empty">+</div>').join('')}</div>
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${chance}%</b></div><div class="cbar"><i style="width:${chance}%"></i></div>
    <p class="sub">${T('chance_parts',{b:F.myth.base,f:F.myth.fail*fails,e:F.myth.extra*extra,m:F.myth.cap})}</p>
-   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[5].c}">${RAR[5].n} · ${T('lvl',{n:ilA||'—'})}</b>${estM?`<span class="sub">≈ ${T('power',{n:fmt(estM)})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqM?T('power',{n:fmt(itemScore(eqM))}):'—'}</b></div></div>
+   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[5].c}">${RAR[5].n} · ${T('lvl',{n:ilA||'—'})}</b>${estM?`<span class="sub">≈ ${T('power',{n:fmt(estM)})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqM?T('power',{n:fmt(itemVal(eqM))}):'—'}</b></div></div>
    <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.cat,1,'💎')} · ${resC(G.souls,soA,'🔥')}</span></div></div>
   <p class="hint">${T('myth_keep',{need})}</p>
   <div class="row"><button class="btn pri big" id="myth" ${LG.length>=need&&G.cat>=1&&G.souls>=soA?'':'disabled'}>${LG.length<need?T('put_more',{n:need-LG.length}):'◆ '+T('forge_btn',{c:chance})}</button></div></div>`;
@@ -381,10 +386,10 @@ function renderForge(){
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aOk=aIt&&G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=aSo,eqA=G.eq[aSlot];
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
-  ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${SLOT[it.slot].ic}<b>${fmt(itemScore(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
+  ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${SLOT[it.slot].ic}<b>${fmt(itemVal(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
-   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemScore(aIt)*14/9))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemScore(eqA))}):'—'}</b></div></div>
+   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*14/9))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
    <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.souls,aSo,'🔥')} · ${resC(G.cat,A.cat,'💎')} · ${resC(G.ess||0,A.ess,'✦')}</span></div></div>
   <p class="hint">${T('ast_keep')}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;

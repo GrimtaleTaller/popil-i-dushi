@@ -67,7 +67,7 @@ async function loadOrCreate(u: TgUser, start: string | undefined, now: number) {
 function view(G: L.State, now: number, uid = 0) {
   const H = L.hero(G);
   return {
-    s: G, hero: { ...H, power: L.powerG(G) }, daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
+    s: G, hero: { ...H, power: L.powerG(G) }, sc: (({ eqs, ...x }) => ({ ...x, eqs }))(L.heroCtx(G)), daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
     pet: { defs: L.PETS, cfg: L.PET, info: L.petInfo(G, now), gear: L.petGearInfo(G) },
     gem: { sockets: L.SOCKETS, out: L.GEM_OUT, m: L.GEM_M, crit: L.GEM_CRIT, max: L.GEM_MAX, pts: L.ARENA_SHOP.stone.pts },
     forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G), set: L.setInfo(G), setCfg: L.SET },

@@ -152,21 +152,34 @@ const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)];
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
-export function hero(G: State) {
+// сирі суми характеристик і множники героя — для hero() і для точного порівняння речей (itemScore, 01.11)
+export function heroCtx(G: State) {
   let a = 8 + UPG.atk.val(G.up.atk) + 2 * (G.lvl - 1);
   let h = 60 + UPG.hp.val(G.up.hp) + 10 * (G.lvl - 1);
   let d = UPG.def.val(G.up.def);
   let c = 5 + UPG.crit.val(G.up.crit);
   const em = 1 + ENCH_STEP * (G.ench || 0);
+  const eqs: Record<string, { a: number; h: number; d: number; c: number }> = {};
   for (const s of SLOTS) {
     const it = G.eq[s];
-    if (it) { a += (it.st.atk || 0) * em; h += (it.st.hp || 0) * em; d += (it.st.def || 0) * em; c += it.st.crit || 0; const g = gemStats(it); a += g.atk; h += g.hp; d += g.def; c += g.crit; }
+    if (it) { const v = itemRaw(it, em); a += v.a; h += v.h; d += v.d; c += v.c; eqs[s] = v; }
   }
   const cm = 1 + (G.cb?.atk || 0) / 100; // Казарма клану
   const sp = 1 + setInfo(G).pow / 100; // повний сет прадавніх / вічних
-  a *= 1 + petB(G, "atk") / 100; d *= 1 + petB(G, "def") / 100; // Вовк і Голем
-  const pg = pgearSum(G); a *= 1 + pg.atk / 100; h *= 1 + pg.hp / 100; d *= 1 + pg.def / 100; c += pg.crit + abilV(G, "sight"); // спорядження пітомця, Прозріння Сови
-  return { atk: a * cm * sp, hp: h * cm * sp, def: d * sp, crit: Math.min(60, c) };
+  const pg = pgearSum(G);
+  const ma = (1 + petB(G, "atk") / 100) * (1 + pg.atk / 100) * cm * sp; // Вовк, спорядження пітомця
+  const mh = (1 + pg.hp / 100) * cm * sp;
+  const md = (1 + petB(G, "def") / 100) * (1 + pg.def / 100) * sp; // Голем
+  c += pg.crit + abilV(G, "sight"); // спорядження пітомця, Прозріння Сови
+  return { a, h, d, c, ma, mh, md, em, eqs };
+}
+export function itemRaw(it: Item, em: number) {
+  const g = gemStats(it);
+  return { a: (it.st.atk || 0) * em + g.atk, h: (it.st.hp || 0) * em + g.hp, d: (it.st.def || 0) * em + g.def, c: (it.st.crit || 0) + g.crit };
+}
+export function hero(G: State) {
+  const x = heroCtx(G);
+  return { atk: x.a * x.ma, hp: x.h * x.mh, def: x.d * x.md, crit: Math.min(60, x.c) };
 }
 export const power = (h: ReturnType<typeof hero>) => Math.round(h.atk * (1 + h.crit / 100) * 2 + h.hp * 0.25 + h.def * 1.5);
 // бойові вміння пітомця як еквівалент характеристик (01.11): Укус — атака, Ухилення й Відродження — здоров'я. Так «Сила» героя
@@ -175,9 +188,11 @@ type AbEq = { bite?: number; dodge?: number; rebirth?: number };
 export const powerAb = (h: { atk: number; hp: number; def: number; crit: number }, A?: AbEq) => power({
   atk: h.atk * (1 + (A?.bite || 0) / 100 / BITE_EVERY), hp: h.hp * (1 + (A?.rebirth || 0) / 100) / (1 - Math.min(0.9, (A?.dodge || 0) / 100)), def: h.def, crit: h.crit });
 export const powerG = (G: State) => powerAb(hero(G), fightAb(G));
-export function itemScore(G: State, it: Item) {
-  const g = gemStats(it);
-  return ((it.st.atk || 0) + g.atk) * 2 + ((it.st.hp || 0) + g.hp) * 0.25 + ((it.st.def || 0) + g.def) * 1.5 + ((it.st.crit || 0) + g.crit) * 0.03 * hero(G).atk;
+// оцінка речі = Сила героя, якщо надіти її у свій слот (з рунами, межею криту 60%, бонусами клану, пітомця й сету).
+// Раніше крит рахувався без межі й без рун — прадавня річ з +1% криту «перемагала» сильнішу легендарку (01.11)
+export function itemScore(G: State, it: Item, x = heroCtx(G)) {
+  const o = x.eqs[it.slot] || { a: 0, h: 0, d: 0, c: 0 }, v = itemRaw(it, x.em);
+  return power({ atk: (x.a - o.a + v.a) * x.ma, hp: (x.h - o.h + v.h) * x.mh, def: (x.d - o.d + v.d) * x.md, crit: Math.min(60, x.c - o.c + v.c) });
 }
 export const sellPrice = (it: Item) => Math.max(1, Math.round(mobGold(it.il) * 2 * Math.pow(RAR[it.r].m, 1.5)));
 
@@ -412,7 +427,8 @@ export function actEquipBest(G: State) {
   let n = 0;
   for (const s of SLOTS) {
     let best = G.eq[s], bi = -1;
-    G.inv.forEach((it, i) => { if (it.slot === s && (!best || itemScore(G, it) > itemScore(G, best))) { best = it; bi = i; } });
+    const x = heroCtx(G); let bs = best ? itemScore(G, best, x) : -1;
+    G.inv.forEach((it, i) => { if (it.slot !== s) return; const sc = itemScore(G, it, x); if (sc > bs) { best = it; bi = i; bs = sc; } });
     if (bi >= 0) { G.inv.splice(bi, 1); const o = G.eq[s]; if (o) G.inv.unshift(o); G.eq[s] = best; n++; }
   }
   return { n };
@@ -490,7 +506,8 @@ export function actDismantle(G: State, ids: number[], mode: string) {
 }
 // предмети, які гра вважає непотрібними: гірші за надіте, не легендарні й не міфічні
 export function junkIds(G: State) {
-  return G.inv.filter((i) => i.r < 4 && !i.gm?.length && G.eq[i.slot] && itemScore(G, i) <= itemScore(G, G.eq[i.slot]!)).map((i) => i.id);
+  const x = heroCtx(G), cur: Record<string, number> = {}; for (const s of SLOTS) if (G.eq[s]) cur[s] = itemScore(G, G.eq[s]!, x);
+  return G.inv.filter((i) => i.r < 4 && !i.gm?.length && G.eq[i.slot] && itemScore(G, i, x) <= cur[i.slot]).map((i) => i.id);
 }
 export function actDismantleJunk(G: State, mode: string) {
   const ids = junkIds(G); if (!ids.length) fail("no_junk");
