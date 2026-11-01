@@ -137,6 +137,7 @@ export function migrate(G: State): State {
   const g = G as unknown as Record<string, unknown>;
   if (!G.dngd && G.dng) { G.dngd = {}; for (let t = 1; t <= (G.dng.max || 0); t++) G.dngd[String(t)] = 1; }
   if (!G.tut) G.tut = G.maxStage > 5 ? ["old"] : [];
+  if (G.pet?.eq) { const P = G.pet, sp = P.act || (Object.keys(P.list)[0] as PetSp | undefined); if (sp) { P.eqs = P.eqs || {}; P.eqs[sp] = { ...(P.eqs[sp] || {}) }; for (const s of PSLOTS) { const it = P.eq?.[s]; if (it) { it.sp = sp; P.eqs[sp]![s] = it; } } } delete P.eq; }
   if ((G.rv || 0) < 1) { // 30.10: прадавні ×7,5→×9, вічні ×11→×14 — перераховуємо вже скуті речі
     const k: Record<number, number> = { 5: 9 / 7.5, 6: 14 / 11 };
     for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it && k[it.r]) for (const s of ["atk", "hp", "def"] as const) if (it.st[s]) it.st[s] = Math.round(it.st[s]! * k[it.r]);
@@ -266,7 +267,7 @@ export function progress(G: State, now: number): Progress {
   G.frac = k - kills;
   if (!kills) return res;
   const lootM = 1 + abilV(G, "loot") / 100; // Здобич Ворона: очікуваний приріст
-  const gold = kills * mobGold(s) * (1 + ((G.cb?.gold || 0) + petB(G, "gold")) / 100) * lootM, xp = kills * mobXp(s) * (1 + ((G.cb?.xp || 0) + petB(G, "xp") + pgearSum(G).xp) / 100); // Скарбниця й Бібліотека клану
+  const gold = kills * mobGold(s) * (1 + ((G.cb?.gold || 0) + petB(G, "gold") + pgearSum(G).gold) / 100) * lootM, xp = kills * mobXp(s) * (1 + ((G.cb?.xp || 0) + petB(G, "xp") + pgearSum(G).xp) / 100); // Скарбниця й Бібліотека клану
   G.gold += gold; res.gold = gold; res.xp = xp;
   res.lvlUps = gainXp(G, xp);
   G.tot.kills += kills; res.kills = kills;
@@ -332,7 +333,7 @@ export function fightBoss(G: State): BossResult {
   const res: BossResult = { win, ev, hp: H.hp, bossHp: Math.round(max), gold: 0, xp: 0, stage: s, timeout };
   if (win) {
     const lootM = 1 + abilV(G, "loot") / 100;
-    res.gold = mobGold(s) * 8 * lootM; res.xp = mobXp(s) * 6 * (1 + ((G.cb?.xp || 0) + pgearSum(G).xp + 2 * abilV(G, "sight")) / 100); // Здобич Ворона, Прозріння Сови
+    res.gold = mobGold(s) * 8 * lootM * (1 + pgearSum(G).gold / 100); res.xp = mobXp(s) * 6 * (1 + ((G.cb?.xp || 0) + pgearSum(G).xp + 2 * abilV(G, "sight")) / 100); // Здобич Ворона, Прозріння Сови
     G.gold += res.gold; gainXp(G, res.xp); G.tot.kills++; G.tot.bosses++;
     const it = makeItem(G, s, 1, 1, MOB_MAX_R); res.item = it; res.gold += addItem(G, it, true);
     const first = s === G.maxStage;
@@ -921,7 +922,7 @@ export const PETS: Record<PetSp, { b: PetBonus; v: number; rare?: boolean }> = {
 export const PET = { maxLvl: 30, maxStar: 5, dupStar: 2, evo: [10, 20], hatch: { c: 4 * 3600e3, r: 12 * 3600e3 }, findEvery: 8 * 3600e3, findMax: 3,
   nightEgg: 0.04, nightRare: 0.2, rareOdds: { ghost: 0.45, phoenix: 0.25 }, speedAsh: 5 };
 export type Pet = { l: number; s: number; d: number };
-export type PetState = { list: Partial<Record<PetSp, Pet>>; act: PetSp | null; eggs: { c: number; r: number }; inc: { e: "c" | "r"; at: number } | null; ft: number; fn: number; eq?: Partial<Record<PSlot, PItem>>; inv?: PItem[]; craft?: number };
+export type PetState = { list: Partial<Record<PetSp, Pet>>; act: PetSp | null; eggs: { c: number; r: number }; inc: { e: "c" | "r"; at: number } | null; ft: number; fn: number; eq?: Partial<Record<PSlot, PItem>>; eqs?: Partial<Record<PetSp, Partial<Record<PSlot, PItem>>>>; inv?: PItem[]; craft?: number }; // eq — застаріле (до 01.11), переноситься в eqs
 export const petOf = (G: State): PetState => (G.pet = G.pet || { list: {}, act: null, eggs: { c: 0, r: 0 }, inc: null, ft: 0, fn: 0 });
 export const petEvo = (l: number) => (l >= PET.evo[1] ? 2 : l >= PET.evo[0] ? 1 : 0);
 export function petBonusOf(sp: PetSp, p: Pet) { return Math.round(PETS[sp].v * (1 + 0.06 * (p.l - 1)) * [1, 1.25, 1.5][petEvo(p.l)] * (1 + 0.5 * (p.s - 1)) * 10) / 10; }
@@ -984,7 +985,7 @@ export function actPetFind(G: State, now: number) {
   const p = P.list[P.act!]!, rolls = 1 + Math.floor((p.s - 1) / 2), got: { k: string; n: number; x?: string }[] = [];
   for (let f = 0; f < P.fn; f++) for (let i = 0; i < rolls; i++) {
     const r = Math.random(), S = G.maxStage;
-    if (r < 0.1 && (P.inv || []).length < PINV_MAX) { P.inv = P.inv || []; const it = buildPItem(G, p.l, rollPRar(false), pick(PSLOTS)); P.inv.unshift(it); got.push({ k: "pgear", n: 1, x: it.slot + ":" + it.r }); } // спорядження пітомця його рівня
+    if (r < 0.1 && (P.inv || []).length < PINV_MAX) { P.inv = P.inv || []; const it = buildPItem(G, p.l, rollPRar(false), pick(PSLOTS), P.act!); P.inv.unshift(it); got.push({ k: "pgear", n: 1, x: it.slot + ":" + it.r }); } // спорядження пітомця його рівня
     else if (r < 0.3) { addChests(G, S, 1); got.push({ k: "chest", n: 1 }); }
     else if (r < 0.5) { const x = randGem(G)[0]; got.push({ k: "gem", n: 1, x }); }
     else if (r < 0.75) { const m = Math.min(3, Math.floor(S / 20)), n = Math.round(5 + S / 4); G.mats[m] += n; got.push({ k: "mat", n, x: String(m) }); }
@@ -1008,7 +1009,8 @@ export function petInfo(G: State, now: number) {
 // Рівень речі = рівень пітомця в момент кування; діє лише річ рівня ≤ рівня активного пітомця (відокремлено від рівня героя).
 export type PSlot = "saddle" | "parmor" | "phelmet";
 export const PSLOTS: readonly PSlot[] = ["saddle", "parmor", "phelmet"];
-export type PItem = { id: number; slot: PSlot; r: number; il: number; nm: number; st: { ab: number; atk?: number; hp?: number; def?: number; crit?: number; xp?: number }; nw?: number };
+export type PStats = { ab: number; atk?: number; hp?: number; def?: number; crit?: number; xp?: number; gold?: number };
+export type PItem = { id: number; slot: PSlot; r: number; il: number; nm: number; st: PStats; nw?: number; sp?: PetSp }; // sp — для якого пітомця (з 01.11 спорядження прив'язане до виду)
 export type Abil = "bite" | "skin" | "loot" | "sight" | "dodge" | "rebirth";
 // bite: кожен 5-й удар героя — укус на base% атаки; skin: перші N ударів боса поглинаються; loot: % шанс подвійного золота/луту;
 // sight: +крит %, +2× досвіду з босів; dodge: % шанс ухилитись; rebirth: раз за бій встати з base% HP
@@ -1021,26 +1023,38 @@ export const BITE_EVERY = 5;
 export const PGEAR: Record<PSlot, { ab: number; atk?: number; hp?: number; def?: number; crit?: number; xp?: number }> = {
   saddle: { ab: 60, atk: 10 }, parmor: { ab: 25, hp: 10, def: 10 }, phelmet: { ab: 25, crit: 5, xp: 10 },
 };
+// 01.11 (рішення Влада): спорядження окреме для кожного виду й підсилює характеристики під його роль
+// (Вовк — атака, Голем — захист і здоров'я, Ворон — золото, Сова — досвід і крит, Привид — живучість, Фенікс — здоров'я)
+export const PGEAR_SP: Record<PetSp, Record<PSlot, Omit<PStats, "ab">>> = {
+  wolf: { saddle: { atk: 12 }, parmor: { atk: 6, hp: 6 }, phelmet: { crit: 6 } },
+  golem: { saddle: { def: 12 }, parmor: { hp: 10, def: 10 }, phelmet: { hp: 8 } },
+  raven: { saddle: { gold: 15 }, parmor: { hp: 6, def: 6 }, phelmet: { gold: 10, xp: 5 } },
+  owl: { saddle: { xp: 15 }, parmor: { hp: 6, def: 6 }, phelmet: { crit: 6, xp: 10 } },
+  ghost: { saddle: { def: 8, hp: 8 }, parmor: { hp: 10, def: 10 }, phelmet: { crit: 4, atk: 4 } },
+  phoenix: { saddle: { hp: 12 }, parmor: { hp: 10, def: 6 }, phelmet: { atk: 6, hp: 6 } },
+};
 export const PRAR = [0, 0.35, 0.5, 0.7, 1]; // множник за рідкістю (1 незвичайна … 4 легендарна)
 export const PGEAR_LVL = (il: number) => 0.25 + 0.75 * (il - 1) / (PET.maxLvl - 1); // 25% сили на 1 рівні, 100% на 30-му
 export const PINV_MAX = 30;
 export const pgearCost = (l: number) => ({ mat: Math.min(2, Math.floor(l / 10)), matN: 10 + l, shards: 30 * l });
 export const PCRAFT_W = [55, 30, 12, 3], PCRAFT_WCAT = [20, 40, 28, 12]; // ваги рідкостей 1..4; із Самоцвітом — краще
-export function buildPItem(G: State, il: number, r: number, slot: PSlot): PItem {
-  const k = PRAR[r] * PGEAR_LVL(il) * rnd(0.9, 1.1), d = PGEAR[slot], st: PItem["st"] = { ab: Math.round(d.ab * k * 10) / 10 };
-  for (const key of ["atk", "hp", "def", "crit", "xp"] as const) if (d[key]) st[key] = Math.round(d[key]! * k * 10) / 10;
-  return { id: G.nid++, slot, r, il, nm: Math.floor(Math.random() * 4), st, nw: 1 };
+export function buildPItem(G: State, il: number, r: number, slot: PSlot, sp?: PetSp): PItem {
+  const k = PRAR[r] * PGEAR_LVL(il) * rnd(0.9, 1.1), d = { ab: PGEAR[slot].ab, ...(sp ? PGEAR_SP[sp][slot] : PGEAR[slot]) } as PStats, st: PStats = { ab: Math.round(d.ab * k * 10) / 10 };
+  for (const key of ["atk", "hp", "def", "crit", "xp", "gold"] as const) if (d[key]) st[key] = Math.round(d[key]! * k * 10) / 10;
+  return { id: G.nid++, slot, r, il, nm: Math.floor(Math.random() * 4), st, nw: 1, ...(sp ? { sp } : {}) };
 }
+// надіте спорядження активного пітомця (з 01.11 — окремо для кожного виду)
+export const pgearEq = (G: State) => { const P = G.pet; if (!P || !P.act) return {} as Partial<Record<PSlot, PItem>>; P.eqs = P.eqs || {}; return (P.eqs[P.act] = P.eqs[P.act] || {}); };
 export function rollPRar(cat: boolean) { const w = cat ? PCRAFT_WCAT : PCRAFT_W, t = w.reduce((a, b) => a + b, 0); let x = Math.random() * t; for (let i = 0; i < 4; i++) { x -= w[i]; if (x <= 0) return i + 1; } return 4; }
 // діючі речі: лише ті, чий рівень не вищий за рівень активного пітомця
 export function pgearActive(G: State): PItem[] {
-  const P = G.pet; if (!P || !P.act || !P.eq) return [];
-  const l = P.list[P.act]?.l || 0;
-  return PSLOTS.map((s) => P.eq![s]).filter((it): it is PItem => !!it && it.il <= l);
+  const P = G.pet; if (!P || !P.act) return [];
+  const l = P.list[P.act]?.l || 0, eq = P.eqs?.[P.act] || {};
+  return PSLOTS.map((s) => eq[s]).filter((it): it is PItem => !!it && it.il <= l);
 }
 export function pgearSum(G: State) {
-  const o = { ab: 0, atk: 0, hp: 0, def: 0, crit: 0, xp: 0 };
-  for (const it of pgearActive(G)) { o.ab += it.st.ab; o.atk += it.st.atk || 0; o.hp += it.st.hp || 0; o.def += it.st.def || 0; o.crit += it.st.crit || 0; o.xp += it.st.xp || 0; }
+  const o = { ab: 0, atk: 0, hp: 0, def: 0, crit: 0, xp: 0, gold: 0 };
+  for (const it of pgearActive(G)) { o.ab += it.st.ab; o.atk += it.st.atk || 0; o.hp += it.st.hp || 0; o.def += it.st.def || 0; o.crit += it.st.crit || 0; o.xp += it.st.xp || 0; o.gold += it.st.gold || 0; }
   return o;
 }
 // сила вміння активного пітомця: база × (1 + спорядження) × (1 + 0,1·(зірки−1)), до максимуму
@@ -1051,7 +1065,7 @@ export function abil(G: State): { k: Abil; v: number; sp: PetSp } | null {
   return { k: a.k, sp: P.act, v: Math.min(a.max, Math.round(a.base * (1 + pgearSum(G).ab / 100) * (1 + 0.1 * (p.s - 1)) * 10) / 10) };
 }
 export const abilV = (G: State, k: Abil) => { const a = abil(G); return a && a.k === k ? a.v : 0; };
-export const pscore = (it: PItem) => it.st.ab + (it.st.atk || 0) + (it.st.hp || 0) + (it.st.def || 0) + (it.st.crit || 0) * 2 + (it.st.xp || 0) * 0.5;
+export const pscore = (it: PItem) => it.st.ab + (it.st.atk || 0) + (it.st.hp || 0) + (it.st.def || 0) + (it.st.crit || 0) * 2 + (it.st.xp || 0) * 0.5 + (it.st.gold || 0) * 0.5;
 export function actPetCraft(G: State, slot: string, cat?: boolean) {
   const P = petOf(G); if (!P.act) fail("no_pet");
   if (!(PSLOTS as readonly string[]).includes(slot)) fail("bad_slot");
@@ -1061,23 +1075,24 @@ export function actPetCraft(G: State, slot: string, cat?: boolean) {
   if (G.shards < c.shards) fail("no_shards");
   if (cat && G.cat < 1) fail("no_catalyst");
   takeMats(G, c.mat, c.matN); G.shards -= c.shards; if (cat) G.cat--;
-  const it = buildPItem(G, l, rollPRar(!!cat), slot as PSlot); P.inv.unshift(it); P.craft = (P.craft || 0) + 1;
+  const it = buildPItem(G, l, rollPRar(!!cat), slot as PSlot, P.act!); P.inv.unshift(it); P.craft = (P.craft || 0) + 1;
   log(G, "pcraft", [it.r, it.slot, it.il]);
   return { item: it, cost: c };
 }
 export function actPetEquip(G: State, id: number) {
   const P = petOf(G); if (!P.act) fail("no_pet");
-  P.inv = P.inv || []; P.eq = P.eq || {};
+  P.inv = P.inv || []; const eq = pgearEq(G);
   const i = P.inv.findIndex((x) => x.id === Number(id)); if (i < 0) fail("no_item");
   const it = P.inv[i]; if (it.il > P.list[P.act!]!.l) fail("pet_lvl_low");
-  P.inv.splice(i, 1); const old = P.eq[it.slot]; if (old) P.inv.unshift(old);
-  delete it.nw; P.eq[it.slot] = it; return { id: it.id };
+  if (it.sp && it.sp !== P.act) fail("pg_other_pet"); // річ іншого пітомця
+  P.inv.splice(i, 1); const old = eq[it.slot]; if (old) P.inv.unshift(old);
+  delete it.nw; it.sp = P.act!; eq[it.slot] = it; return { id: it.id };
 }
 export function actPetUnequip(G: State, slot: string) {
-  const P = petOf(G); P.inv = P.inv || []; P.eq = P.eq || {};
-  const it = P.eq[slot as PSlot]; if (!it) fail("no_item");
+  const P = petOf(G); P.inv = P.inv || []; const eq = pgearEq(G);
+  const it = eq[slot as PSlot]; if (!it) fail("no_item");
   if (P.inv.length >= PINV_MAX) fail("pbag_full");
-  delete P.eq[slot as PSlot]; P.inv.unshift(it!); return {};
+  delete eq[slot as PSlot]; P.inv.unshift(it!); return {};
 }
 // розібрати спорядження пітомця на уламки (половина вартості кування за рідкістю)
 export function actPetDis(G: State, ids: number[]) {
@@ -1090,7 +1105,7 @@ export function actPetDis(G: State, ids: number[]) {
 }
 export function petGearInfo(G: State) {
   const P = G.pet; const a = P && P.act ? P.list[P.act] : null;
-  return { abil: abil(G), sum: pgearSum(G), cost: a ? pgearCost(a.l) : null, defs: ABIL, slots: PSLOTS, gear: PGEAR, prar: PRAR, invMax: PINV_MAX, lvl: a ? a.l : 0 };
+  return { abil: abil(G), sum: pgearSum(G), cost: a ? pgearCost(a.l) : null, defs: ABIL, slots: PSLOTS, gear: PGEAR, gearSp: PGEAR_SP, prar: PRAR, invMax: PINV_MAX, lvl: a ? a.l : 0 };
 }
 
 // ---------- ринок між гравцями: за Попіл або за Золото (рішення 29.10) ----------
