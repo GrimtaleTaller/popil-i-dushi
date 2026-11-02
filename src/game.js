@@ -165,7 +165,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1,market:1};
+const dirty={quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1,market:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?span[ >])/g,'&lt;');e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -195,6 +195,7 @@ function renderTop(){
  if(B.m){$('mhp').style.width=Math.max(0,B.m.hp/B.m.max*100)+'%';$('mhpt').textContent=fmt(Math.max(0,B.m.hp))+' / '+fmt(B.m.max)}
  $('timer').style.display=B.rep?'block':'none';if(B.rep)$('timeri').style.width=Math.max(0,(BOSS_TIME-B.rep.t)/BOSS_TIME*100)+'%';
  const nw=G.inv.filter(i=>i.nw).length,nb=$('newb');nb.style.display=nw?'inline':'none';nb.textContent=nw;
+ {const P=V.pass,qb=$('qb');const q=(P&&(P.lv>P.f.length||(P.prem&&P.lv>P.p.length)))||(V.ach||[]).some(x=>x.done>x.got);if(qb)qb.style.display=q?'inline':'none'}
  if(tab==='train')renderTrainBtns();
 }
 // поки сервер не підтвердив 10 перемог, показуємо не більше 9
@@ -517,6 +518,7 @@ const LOGT={
  bossTimeout:a=>T('log_bossTimeout',{s:a[0]}),
  daily:a=>T('log_daily',{n:a[0]}),
  reward:a=>T('log_reward',{a:fmt(a[0])}),
+ pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
  pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
@@ -529,7 +531,7 @@ const LOGT={
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):`<div class="empty">${T('log_empty')}</div>`)+'</div>'}
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,clan:renderClan,market:renderMarket})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,clan:renderClan,market:renderMarket})[tab]()}}
 
 // ---------- профіль ----------
 let profData=null,profBusy=false,adminData=null;
@@ -603,9 +605,11 @@ function renderProfile(){
   <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
   <div><span>${T('dng_runs')}</span><b>${(G.dng&&G.dng.runs)||0}</b></div><div><span>${T('power',{n:''}).trim()}</span><b>${fmt(H.power)}</b></div></div></div>`;
  if(V.isAdmin)h+=adminHtml();
+ h+=`<div class="card"><h4>🔔 ${T('ntf')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${T('ntf_hint')}</span><button class="btn" id="pNtf">${G.ntf===0?T('ntf_off'):T('ntf_on')}</button></div></div>`;
  h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button><button class="btn" id="pTut">${T('tut_restart')}</button></div>`;
  el.innerHTML=h;
  $('pTut').onclick=tutRestart;
+ $('pNtf').onclick=()=>act('notify',{on:G.ntf===0},()=>{dirty.prof=1});
  $('cpId').onclick=e=>{e.preventDefault();copyText(String(P.id))};
  $('pInv').onclick=invite;$('pCopy').onclick=()=>copyText(link);
  $('pRef').onclick=()=>{profData=null;adminData=null;renderProfile()};
@@ -722,10 +726,12 @@ function renderArena(){
  <div class="row" style="margin:0 0 8px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('arena_w_l',{w:A.w,l:A.l})}</span><button class="btn" id="aRef">🔄 ${T('refresh')}</button></div>`;
  A.opps.forEach((o,i)=>{const c=o.power>H.power*1.05?'#e0484e':o.power<H.power*0.95?'#56c271':'#f2c14e';
   h+=`<div class="item" style="border-left-color:${c}"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(o.name)}</div><div class="sub">${T('lvl',{n:o.lvl})} · 🏆 ${o.rating}</div><div class="st" style="color:${c}">${T('power',{n:fmt(o.power)})}</div></div><div class="acts"><button class="btn pri" data-af="${i}" ${A.left&&!busy?'':'disabled'}>${T('to_fight')}</button></div></div>`});
- h+=`<div class="card"><h4>🎖️ ${T('arena_shop')}</h4>`+Object.entries(A.shop).map(([k,v])=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('shop_'+k)}</span><button class="btn" data-ab="${k}" ${A.pts>=v.pts?'':'disabled'}>🎖️ ${v.pts}</button></div>`).join('')+'</div>';
+ h+=`<div class="card"><h4>🎖️ ${T('arena_shop')}</h4><div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">🎟️ ${T('ticket')}<br><span class="hint" style="margin:0">${T('ticket_hint')}</span></span><button class="btn" id="aTk" ${G.ash>=A.ticket&&!busy?'':'disabled'}>⚱️ ${A.ticket}</button></div>`+Object.entries(A.shop).map(([k,v])=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('shop_'+k)}</span><button class="btn" data-ab="${k}" ${A.pts>=v.pts?'':'disabled'}>🎖️ ${v.pts}</button></div>`).join('')+'</div>';
+ h+=`<div class="card"><h4>🗓️ ${T('season')}</h4><p class="hint" style="margin:0">${T('season_hint',{t:tLeft(A.seasonEnd-Date.now())})}</p></div>`;
  h+=`<p class="hint">${T('arena_hint',{n:A.daily,w:A.win,l:A.lose})}</p>`;
  el.innerHTML=h;
  $('aRef').onclick=()=>act('arenaRefresh',{},r=>{arenaInfo=r.out});
+ $('aTk').onclick=()=>act('arenaTicket',{},r=>{toast('🎟️ +1 · ⚱️ −'+r.out.price);haptic('light')});
  el.querySelectorAll('[data-af]').forEach(b=>b.onclick=()=>act('arenaFight',{i:+b.dataset.af},r=>pvpResult(r.out)));
  el.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>act('arenaShop',{item:b.dataset.ab},r=>{toast('✓ '+T('shop_'+b.dataset.ab)+(r.out&&r.out.got?' '+r.out.got.map(k=>gemIc(k)).join(''):''));haptic('light')}));
 }
@@ -902,15 +908,86 @@ async function start(){
  try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r)}
  catch(e){boot(errT(e),true)}
 }
+// ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
+function tLeft(ms){ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);return d?T('t_dh',{d,h}):h?T('t_hm',{h,m}):T('t_m',{m})}
+function rwTxt(x){const a=[];if(x.gold)a.push('💰'+fmt(x.gold));if(x.shards)a.push('🔩'+fmt(x.shards));if(x.matN)a.push('⛏️'+MATN[x.mat]+'×'+x.matN);if(x.ash)a.push('⚱️'+x.ash);if(x.ch)a.push(chestIc(x.ch[0])+'×'+x.ch[1]);if(x.gem)a.push('💠'+MATN[x.gem-1]);if(x.cat)a.push('💎'+x.cat);if(x.egg)a.push(eggIc(x.egg));return a.join(' ')}
+const qTxt=q=>T('q_'+q.k,{n:fmt(q.n)});
+function qRow(q,pts,rw){return `<div class="item" style="border-left-color:${q.ok?'#56c271':'#3a3340'}"><div class="ic">${q.ok?'✅':'📜'}</div><div class="info"><div class="nm">${qTxt(q)}</div><div class="bar"><i style="width:${Math.min(100,q.c/q.n*100)}%;background:${q.ok?'#56c271':'#f2c14e'}"></i></div><div class="sub">${fmt(Math.max(0,q.c))}/${fmt(q.n)} · +${pts} ${T('pass_pts_s')}${rw?' · '+rw:''}</div></div></div>`}
+function renderQuest(){
+ const P=V.pass,el=$('p-quest');if(!P){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
+ const can=P.lv>P.f.length||(P.prem&&P.lv>P.p.length),inLv=P.lv>=P.max?P.per:P.pts-P.lv*P.per;
+ let h=`<div class="card"><h4>🎟️ ${T('pass_title')} · ${T('pass_lv',{l:P.lv,m:P.max})}</h4><div class="bar" style="height:10px"><i style="width:${P.lv>=P.max?100:inLv/P.per*100}%;background:linear-gradient(90deg,#b98a3e,#f2c14e)"></i></div>
+ <div class="row" style="align-items:center;margin:6px 0 0"><span class="hint" style="flex:2;margin:0">${T('pass_pts',{p:P.pts})} · ${T('pass_end',{t:tLeft(P.end-Date.now())})}</span><button class="btn pri" id="qClaim" ${can&&!busy?'':'disabled'}>🎁 ${T('claim_all')}</button></div></div>`;
+ const dr=rwTxt(P.dqR);
+ h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,dr)).join('')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
+ h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+'</div>';
+ h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#</b><span>${T('pass_free')}</span><span>👑 ${T('pass_paid')}</span></div>`;
+ for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i);
+  h+=`<div class="${ok?'on':''}"><b>${i}</b><span>${f?'✓ ':''}${rwTxt(P.free[i-1])}</span><span class="${P.prem?'':'lock'}">${p?'✓ ':P.prem?'':'🔒 '}${rwTxt(P.paid[i-1])}</span></div>`}
+ h+=`</div><p class="hint">${P.prem?T('pass_prem_on'):T('pass_prem_soon')}</p></div>`;
+ const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?T('share_again'):T('share_btn')}</button></div>`;
+ h+=`<p class="hint">${T('pass_hint')}</p>`;
+ el.innerHTML=h;
+ $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
+ $('qShare').onclick=shareStory;
+}
+const SHARE_IMG=()=>new URL('assets/share.jpg',location.href).href;
+function shareStory(){
+ const w=window.Telegram&&Telegram.WebApp,link=inviteLink(),txt=T('share_txt'),S=V.share||{};
+ const done=()=>{if(!S.taken)setTimeout(()=>act('share',{},r=>toast('📣 +💰'+fmt(r.out.gold)+' +⚱️'+r.out.ash)),1200)};
+ try{if(w&&w.shareToStory&&w.isVersionAtLeast&&w.isVersionAtLeast('7.8')){const prem=w.initDataUnsafe&&w.initDataUnsafe.user&&w.initDataUnsafe.user.is_premium;
+  w.shareToStory(SHARE_IMG(),prem?{text:(txt+' '+link).slice(0,2000),widget_link:{url:link,name:'Grimtale'}}:{text:(txt+' '+link).slice(0,200)});done();return}}catch(e){}
+ if(w&&w.openTelegramLink){w.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(txt));done();return}
+ copyText(link);done();
+}
+function renderAch(){
+ const A=V.ach||[],el=$('p-ach'),can=A.some(x=>x.done>x.got);
+ let h=`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('ach_hint')}</span><button class="btn pri" id="achC" ${can&&!busy?'':'disabled'}>🎁 ${T('claim_all')}</button></div>`;
+ h+=A.map(x=>{const i=Math.min(x.done,x.t.length-1),nx=x.done<x.t.length?x.t[x.done]:x.t[x.t.length-1],full=x.done>=x.t.length;
+  return `<div class="item" style="border-left-color:${x.done>x.got?'#f2c14e':full?'#56c271':'#3a3340'}"><div class="ic">${T('achi_'+x.id)}</div><div class="info"><div class="nm">${T('ach_'+x.id,{n:fmt(nx)})} <span style="color:var(--mut)">${'★'.repeat(x.done)}${'☆'.repeat(x.t.length-x.done)}</span></div><div class="bar"><i style="width:${full?100:Math.min(100,x.v/nx*100)}%;background:#f2c14e"></i></div><div class="sub">${fmt(Math.min(x.v,nx))}/${fmt(nx)}${full?'':' · ⚱️'+x.a[x.done]}${x.done>x.got?' · <b style="color:var(--gold)">'+T('ach_ready',{n:x.done-x.got})+'</b>':''}</div></div></div>`}).join('');
+ el.innerHTML=h;
+ $('achC').onclick=()=>act('achClaim',{},r=>{toast('🏅 ×'+r.out.n+' +⚱️'+r.out.ash);haptic('medium')});
+}
+function renderColl(){
+ const C=V.coll,el=$('p-coll');if(!C){el.innerHTML='';return}
+ const rs=[1,2,3,4,5,6];
+ let h=`<div class="card"><h4>📚 ${T('coll')} · +${C.total}%</h4><p class="hint" style="margin:0 0 6px">${T('coll_hint')}</p><div class="coll"><div><b></b>${C.slots.map(s=>`<span>${SLOT[s].ic}</span>`).join('')}<i></i></div>`;
+ for(const r of rs){const row=C.slots.filter(s=>((C.m[s]||0)>>r)&1).length,full=row===C.slots.length;
+  h+=`<div><b style="color:${RAR[r].c}">${RAR[r].n}</b>${C.slots.map(s=>`<span>${((C.m[s]||0)>>r)&1?'<em style="background:'+RAR[r].c+'"></em>':'·'}</span>`).join('')}<i style="color:${full?'#56c271':'var(--mut)'}">${C.b[r]?(full?'✓ ':'')+'+'+C.b[r]+'%':''}</i></div>`}
+ h+='</div></div>';el.innerHTML=h;
+}
+let wbData=null,wbBusy=false;
+function renderWb(){
+ const W=V.wb,el=$('p-wboss');
+ if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('wb_unlock',{n:W?W.stage:15})}</div>`;return}
+ if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out}).catch(e=>toast(errT(e))).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ const D=wbData,B0=D.boss,free=W.left>0;
+ let h=`<div class="card wbc"><img class="wbimg" src="${IMG('boss8')}" alt=""><h4>${T('wb_name')} · ${T('lvl',{n:B0.lvl})}</h4><div class="bar" style="height:12px"><i style="width:${B0.hp/B0.hp_max*100}%;background:linear-gradient(90deg,#9b2c2c,#e0484e)"></i></div>
+ <div class="sub" style="text-align:center;margin-top:3px">❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)} · ${T('wb_killed',{n:B0.lvl-1})} · ${T('pass_end',{t:tLeft(D.end-Date.now())})}</div>
+ <div class="row" style="margin-top:8px"><button class="btn pri" id="wbHit" ${busy||(!free&&G.ash<W.price)?'disabled':''}>⚔️ ${free?T('wb_hit',{n:W.left,m:W.free}):T('wb_hit_pay',{p:W.price})}</button><button class="btn" id="wbRef">🔄</button></div></div>`;
+ h+=`<div class="card"><h4>🏆 ${T('wb_top')}</h4>${D.me?`<p class="hint" style="margin:0 0 6px">${T('wb_me',{p:D.me.place,d:fmt(D.me.dmg),h:D.me.hits})}</p>`:''}<div class="rank">`+(D.top.length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('wb_empty')}</span></div>`)+'</div>';
+ if(D.clans.length)h+=`<h4 style="margin-top:10px">🏰 ${T('wb_clans')}</h4><div class="rank">`+D.clans.map(x=>`<div><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join('')+'</div>';
+ h+=`</div><p class="hint">${T('wb_hint',{p:D.prizes.map(x=>(x.from===x.to?x.from:x.from+'–'+x.to)+': '+x.ash).join(', '),b:D.part.base,l:D.part.perLvl,c:D.clanPrizes.join('/')})}</p>`;
+ el.innerHTML=h;
+ $('wbRef').onclick=()=>{wbData=null;dirty.wboss=1;flush()};
+ $('wbHit').onclick=()=>act('wbAttack',{pay:!free},r=>{const o=r.out;wbResult(o);if(o.boss){wbData.boss={lvl:o.boss.lvl,hp:o.boss.hp,hp_max:o.boss.hp_max,kills:0}}setTimeout(()=>{wbData=null;dirty.wboss=1;flush()},2500)});
+}
+function wbResult(o){
+ modal(`<div class="big">👹</div><h3>${T('wb_res',{d:fmt(o.dmg)})}</h3><div class="pvp"><div><span>${esc(T('hero_name'))}</span><div class="hpb"><i id="wA" style="width:100%;background:linear-gradient(90deg,#2f9a52,#5fd07c)"></i></div></div></div>
+ <p>${o.died?T('wb_died',{t:Math.round(o.t)}):T('wb_alive')}${o.boss&&o.boss.killed?' · <b style="color:var(--gold)">'+T('wb_down',{n:o.boss.killed})+'</b>':''}</p>${o.paid?`<p class="hint">⚱️ −${o.paid}</p>`:''}`,T('ok'));
+ let hp=o.heroHp;const step=Math.min(90,2400/Math.max(1,o.ev.length));
+ o.ev.forEach((e,i)=>setTimeout(()=>{if(e[1]===1){hp-=e[2]}else if(e[1]===5){hp=e[2]}const a=$('wA');if(a)a.style.width=Math.max(0,hp/o.heroHp*100)+'%'},250+i*step));
+ haptic('heavy');
+}
 // головні вкладки й підвкладки
-const lastSub={hero:'hero',arena:'arena',bag:'bag'};
-const groupOf=t=>['hero','pet','train','log','prof'].includes(t)?'hero':t==='top'?'arena':t==='market'?'bag':t;
+const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'quest'};
+const groupOf=t=>['hero','pet','train','log','prof'].includes(t)?'hero':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'?'quest':t==='market'?'bag':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?[['hero','sub_eq'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['top','sub_top']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
+ const items=g==='hero'?[['hero','sub_eq'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:tab;e.style.display='flex';
  e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');

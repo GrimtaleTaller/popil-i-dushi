@@ -115,9 +115,16 @@ export type State = {
   rv?: number;                                            // версія множників рідкості (1 — прадавні ×9, вічні ×14; старі речі перераховано)
   tut?: string[];                                         // навчання: ключі пройдених кроків ("old" — гравець до навчання, "off" — вимкнув)
   nws?: number;                                           // остання побачена новина (id з таблиці news)
+  cnt?: Record<string, number>;                           // лічильники дій для завдань пропуску (chests, daily, feed, dis, finds, up)
+  pass?: PassState;                                       // тижневий пропуск (02.11)
+  ach?: Record<string, number>;                           // досягнення: id -> скільки ступенів забрано
+  coll?: Record<string, number>;                          // колекція спорядження: слот -> бітова маска рідкостей, що були в гравця
+  wb?: { day: string; used: number; paid: number };       // світовий бос: спроби сьогодні
+  shr?: string;                                           // день, коли востаннє взято нагороду за «Поділитися»
+  ntf?: 0 | 1;                                            // 0 — гравець вимкнув нагадування від бота
 };
 export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
-export type ArenaState = { day: string; used: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
+export type ArenaState = { day: string; used: number; bt?: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
 
 export function fresh(now: number): State {
   return {
@@ -165,7 +172,7 @@ export function heroCtx(G: State) {
     if (it) { const v = itemRaw(it, em); a += v.a; h += v.h; d += v.d; c += v.c; eqs[s] = v; }
   }
   const cm = 1 + (G.cb?.atk || 0) / 100; // Казарма клану
-  const sp = 1 + setInfo(G).pow / 100; // повний сет прадавніх / вічних
+  const sp = (1 + setInfo(G).pow / 100) * (1 + collBonus(G) / 100); // повний сет прадавніх / вічних; колекція спорядження
   const pg = pgearSum(G);
   const ma = (1 + petB(G, "atk") / 100) * (1 + pg.atk / 100) * cm * sp; // Вовк, спорядження пітомця
   const mh = (1 + pg.hp / 100) * cm * sp;
@@ -413,6 +420,7 @@ export function actUpgrade(G: State, k: string, n = 1) {
     G.gold -= c; G.up[key]++; spent += c; done++;
     if (gc) break;
   }
+  bump(G, "up", done);
   if (gate) log(G, "gate", [k, G.up[key]]);
   return { n: done, cost: spent, gate };
 }
@@ -438,7 +446,7 @@ export function actSell(G: State, ids: number[]) {
   const ok = noGems(G, ids); if (ids.length && !ok.length) fail("has_gems");
   const set = new Set(ok); let g = 0, n = 0;
   G.inv = G.inv.filter((i) => { if (set.has(i.id)) { g += sellPrice(i); n++; return false; } return true; });
-  G.gold += g;
+  G.gold += g; bump(G, "dis", n);
   return { gold: g, n };
 }
 export function actStage(G: State, s: number) {
@@ -479,7 +487,7 @@ export function actDaily(G: State, now: number) {
   G.gold += d!.gold; G.ash += d!.ash; G.daily = { date: dayStr(now), streak: d!.streak };
   let item: Item | undefined;
   if (d!.epic) { item = makeItem(G, G.maxStage, 3, 1, MOB_MAX_R); addItem(G, item, true); }
-  log(G, "daily", [d!.streak]);
+  log(G, "daily", [d!.streak]); bump(G, "daily");
   return { ...d!, item };
 }
 
@@ -502,6 +510,7 @@ export function actDismantle(G: State, ids: number[], mode: string) {
   let xp = 0, shards = 0;
   for (const it of takeItems(G, ids)) { const r = disOne(G, it, m); xp += r.xp; shards += r.shards; }
   if (shards || xp) log(G, "dis", [ids.length, m === "xp" ? xp : shards, m]);
+  bump(G, "dis", ids.length);
   return { n: ids.length, xp, shards };
 }
 // предмети, які гра вважає непотрібними: гірші за надіте, не легендарні й не міфічні
@@ -725,6 +734,7 @@ export function actDungeonBatch(G: State, t: number, now: number, d = 1, n = 10)
 export const CHEST_LVL = { up: 0.5, max: 3 };
 export const chestItemLvl = (G: State) => Math.max(1, G.lvl) + (Math.random() < CHEST_LVL.up ? 1 + Math.floor(Math.random() * CHEST_LVL.max) : 0);
 export function actOpenChests(G: State, max = 100) {
+  const leg0 = G.cnt?.leg || 0;
   const free = Math.max(0, invMax(G) - G.inv.length);
   if (!free) fail("bag_full");
   let n = 0; const got: Item[] = [];
@@ -735,10 +745,12 @@ export function actOpenChests(G: State, max = 100) {
     while (G.chests[il] > 0 && n < free && n < max) {
       G.chests[il]--; const it = makeItem(G, chestItemLvl(G), c.g, CHEST_LW[c.g] ?? 1); G.inv.unshift(it); got.push(it); n++;
       if (it.r >= 3) log(G, "loot", [it.r, it.slot, it.nm, it.il]);
+      if (it.r >= 4) bump(G, "leg");
     }
     if (!G.chests[il]) delete G.chests[il];
   }
   if (!n) fail("no_chests");
+  bump(G, "chests", n);
   return { n, best: Math.max(...got.map((i) => i.r)) };
 }
 // ---------- астрал ----------
@@ -766,12 +778,20 @@ export function actAstral(G: State, id: number) {
 }
 
 // ---------- арена ----------
-export const ARENA = { stage: 10, daily: 5, win: 10, lose: 3, time: 30 };
+export const ARENA = { stage: 10, daily: 5, win: 10, lose: 3, time: 30, ticket: 5, ticketGrow: 1.25 };
 export const ARENA_SHOP: Record<string, { pts: number }> = { chest: { pts: 60 }, gem: { pts: 150 }, stone: { pts: 40 }, egg: { pts: 200 } }; // stone — випадковий камінь 1 рівня, egg — звичайне яйце пітомця
 const BOT_NAMES = ["Morwen", "Kairos", "Valdis", "Ingrid", "Torvald", "Seraphine", "Bram", "Elric", "Isolde", "Ragnar", "Vesna", "Dorian"];
 export function arenaDay(G: State, now: number) {
   const d = dayStr(now);
-  if (G.arena.day !== d) { G.arena.day = d; G.arena.used = 0; }
+  if (G.arena.day !== d) { G.arena.day = d; G.arena.used = 0; G.arena.bt = 0; }
+}
+// квитки арени (02.11): додатковий бій за Попіл, ціна ×1,25 за кожен куплений сьогодні; без денної стелі
+export const arenaLimit = (G: State) => ARENA.daily + (G.arena.bt || 0);
+export const ticketPrice = (G: State) => Math.ceil(ARENA.ticket * Math.pow(ARENA.ticketGrow, G.arena.bt || 0));
+export function actArenaTicket(G: State, now: number) {
+  if (G.maxStage < ARENA.stage) fail("arena_locked");
+  arenaDay(G, now); const p = ticketPrice(G); if (G.ash < p) fail("no_ash");
+  G.ash -= p; G.arena.bt = (G.arena.bt || 0) + 1; return { price: p, next: ticketPrice(G) };
 }
 export const heroSnap = (G: State) => { const H = hero(G); return { atk: Math.round(H.atk), hp: Math.round(H.hp), def: Math.round(H.def), crit: Math.round(H.crit * 10) / 10 }; };
 // суперник-бот: сила близька до гравця, коли живих суперників замало
@@ -977,6 +997,7 @@ export function actPetFeed(G: State, n = 1) {
     takeMats(G, c.mat, c.matN); G.shards -= c.shards; G.cat -= c.cat; p.l++; done++;
     if (c.cat) { log(G, "petEvo", [act, petEvo(p.l)]); break; }
   }
+  bump(G, "feed", done);
   return { sp: act, l: p.l, n: done };
 }
 export function actPetHatch(G: State, e: string, now: number) {
@@ -1015,7 +1036,7 @@ export function actPetFind(G: State, now: number) {
     else if (r < 0.9) { const n = 5 + Math.floor(Math.random() * 11); G.ash += n; got.push({ k: "ash", n }); }
     else { const n = 50 + S * 3; G.shards += n; got.push({ k: "shards", n }); }
   }
-  P.fn = 0; P.ft = now;
+  bump(G, "finds", P.fn); P.fn = 0; P.ft = now;
   return { got };
 }
 export function petInfo(G: State, now: number) {
@@ -1160,3 +1181,182 @@ export const marketNet = (gross: number) => Math.floor(gross * (1 - MARKET.fee))
 export const CLAN_MODES = ["open", "apply", "closed"] as const;
 export const CLAN_APPS_MAX = 5; // скільки заявок гравець може мати одночасно
 
+
+// ---------- тижневий пропуск (рішення Влада 02.11) ----------
+// Завдання дня (щоденна нагорода + 3 випадкові) і тижня (6) дають очки; очки відкривають рівні 1–20.
+// Безкоштовна стежка — для всіх, платна — після купівлі на тиждень (оплата Stars підключається окремо, після «так» Влада).
+// Прогрес завдань рахується з лічильників: база запам'ятовується на початку дня/тижня, прогрес = зараз − база.
+export const bump = (G: State, k: string, n = 1) => { if (!n) return; G.cnt = G.cnt || {}; G.cnt[k] = (G.cnt[k] || 0) + n; };
+export type PassQ = { k: string; n: number; b: number; ok?: 1 };
+export type PassState = { wk: string; pts: number; f: number[]; p: number[]; prem?: 1; db?: 1; day: string; dq: PassQ[]; wq: PassQ[] };
+export const PASS = { lv: 20, per: 30, dPts: 15, wPts: 50, dN: 3, wN: 6, dqG: 25, dqSh: 20, allCh: 1, allAsh: 5 };
+export const passDqR = (G: State) => ({ gold: Math.round(mobGold(G.maxStage) * PASS.dqG), shards: Math.round(PASS.dqSh * (1 + G.maxStage / 10)) });
+export const passWeek = (ms: number) => { const d = new Date(ms); const w = (d.getUTCDay() + 6) % 7; return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - w)).toISOString().slice(0, 10); };
+function passCnt(G: State): Record<string, number> {
+  const c = G.cnt || {};
+  return { kills: G.tot.kills, dng: G.dng?.runs || 0, arena: (G.arena?.w || 0) + (G.arena?.l || 0), chests: c.chests || 0, daily: c.daily || 0, feed: c.feed || 0, dis: c.dis || 0, finds: c.finds || 0, up: c.up || 0 };
+}
+type QDef = { k: string; n: number; ok?: (G: State) => boolean };
+const qDng = (G: State) => G.maxStage >= DNG_UNLOCK_STAGE, qArena = (G: State) => G.maxStage >= ARENA.stage, qPet = (G: State) => !!G.pet?.act;
+export const PASS_DQ: QDef[] = [{ k: "kills", n: 300 }, { k: "dng", n: 3, ok: qDng }, { k: "arena", n: 3, ok: qArena }, { k: "chests", n: 15, ok: qDng }, { k: "dis", n: 20 }, { k: "feed", n: 2, ok: qPet }, { k: "up", n: 10 }];
+export const PASS_WQ: QDef[] = [{ k: "daily", n: 5 }, { k: "kills", n: 3000 }, { k: "dng", n: 20, ok: qDng }, { k: "arena", n: 15, ok: qArena }, { k: "chests", n: 100, ok: qDng }, { k: "dis", n: 150 }, { k: "finds", n: 5, ok: qPet }, { k: "up", n: 60 }];
+// однаковий для всіх набір на день: перемішування за датою, далі відсіюються недоступні гравцю
+function seeded(key: string) { let h = 2166136261; for (const ch of key) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; }; }
+function pickQ(G: State, pool: QDef[], n: number, key: string): PassQ[] {
+  const r = seeded(key), a = pool.map((q) => ({ q, r: r() })).sort((x, y) => x.r - y.r).map((x) => x.q).filter((q) => !q.ok || q.ok(G));
+  const c = passCnt(G); return a.slice(0, n).map((q) => ({ k: q.k, n: q.n, b: c[q.k] || 0 }));
+}
+// нагороди рівнів: g — Золото в «здобичі з ворога» поточного етапу, sh — уламки × (1 + етап/10), m — матеріали вищого відкритого виду,
+// a — Попіл, ch — [вид скрині, кількість], gem — камінь рівня N, cat — Самоцвіти, egg — яйце
+export type PassR = { g?: number; sh?: number; m?: number; a?: number; ch?: [number, number]; gem?: number; cat?: number; egg?: "c" | "r" };
+export const PASS_F: PassR[] = [
+  { g: 40 }, { sh: 30 }, { m: 10 }, { g: 60 }, { a: 10 }, { sh: 50 }, { ch: [2, 2] }, { g: 90 }, { m: 20 }, { a: 15, ch: [3, 1] },
+  { sh: 70 }, { g: 120 }, { m: 30 }, { gem: 1 }, { a: 20 }, { sh: 100 }, { g: 160 }, { ch: [2, 3] }, { m: 40 }, { a: 25, ch: [3, 2] },
+];
+export const PASS_P: PassR[] = [
+  { a: 15 }, { a: 15 }, { a: 10, gem: 1 }, { a: 15 }, { a: 20, cat: 1 }, { a: 15 }, { a: 10, ch: [3, 2] }, { a: 15 }, { a: 15 }, { a: 20, egg: "c" },
+  { a: 15 }, { a: 10, gem: 2 }, { a: 15 }, { a: 15, ch: [3, 2] }, { a: 20, cat: 2 }, { a: 15 }, { a: 15 }, { a: 10, gem: 2 }, { a: 15 }, { a: 50, egg: "r" },
+];
+const passMat = (G: State) => Math.min(3, Math.floor(Math.max(0, (G.dng?.max || 1) - 1) / 2.5));
+// конкретні числа для показу й видачі (рахуються від поточного прогресу гравця)
+export function passRes(G: State, r: PassR) {
+  return { gold: r.g ? Math.round(mobGold(G.maxStage) * r.g) : 0, shards: r.sh ? Math.round(r.sh * (1 + G.maxStage / 10)) : 0, mat: r.m ? passMat(G) : -1, matN: r.m || 0,
+    ash: r.a || 0, ch: r.ch || null, gem: r.gem || 0, cat: r.cat || 0, egg: r.egg || "" };
+}
+function passGive(G: State, r: PassR) {
+  const x = passRes(G, r);
+  G.gold += x.gold; G.shards += x.shards; if (x.matN) G.mats[x.mat] += x.matN; G.ash += x.ash; G.cat += x.cat;
+  if (x.ch) addChests(G, G.maxStage, x.ch[1], x.ch[0]);
+  if (x.gem) addGem(G, gemKey(pick(GEM_TYPES), x.gem));
+  if (x.egg) addEgg(G, x.egg);
+  return x;
+}
+export const passLv = (P: PassState) => Math.min(PASS.lv, Math.floor(P.pts / PASS.per));
+function passCredit(G: State) {
+  const P = G.pass!, c = passCnt(G);
+  for (const q of P.dq) if (!q.ok && (c[q.k] || 0) - q.b >= q.n) { q.ok = 1; P.pts += PASS.dPts; const r = passDqR(G); G.gold += r.gold; G.shards += r.shards; } // щоденний квест: своя нагорода + очки
+  if (!P.db && P.dq.length && P.dq.every((q) => q.ok)) { P.db = 1; addChests(G, G.maxStage, PASS.allCh, 2); G.ash += PASS.allAsh; log(G, "dqAll", [PASS.allAsh]); } // усі квести дня: рідкісна скриня + Попіл
+  for (const q of P.wq) if (!q.ok && (c[q.k] || 0) - q.b >= q.n) { q.ok = 1; P.pts += PASS.wPts; }
+}
+// забрати всі відкриті нагороди (безкоштовні; платні — якщо пропуск куплено)
+function passClaimAll(G: State) {
+  const P = G.pass!, L = passLv(P), got: ReturnType<typeof passRes>[] = [];
+  for (let i = 1; i <= L; i++) {
+    if (!P.f.includes(i)) { P.f.push(i); got.push(passGive(G, PASS_F[i - 1])); }
+    if (P.prem && !P.p.includes(i)) { P.p.push(i); got.push(passGive(G, PASS_P[i - 1])); }
+  }
+  return got;
+}
+// викликається на кожен запит: зараховує виконані завдання, міняє завдання дня й тижня; невзяті нагороди минулого тижня видаються автоматично
+export function passTick(G: State, now: number) {
+  const wk = passWeek(now), day = dayStr(now);
+  if (G.pass) passCredit(G);
+  if (G.pass && G.pass.wk !== wk) { const n = passClaimAll(G).length; if (n) log(G, "passAuto", [n]); }
+  if (!G.pass || G.pass.wk !== wk) G.pass = { wk, pts: 0, f: [], p: [], day: "", dq: [], wq: pickQ(G, PASS_WQ, PASS.wN, "w" + wk) };
+  const P = G.pass;
+  if (P.day !== day) { P.day = day; P.db = undefined; P.dq = [{ k: "daily", n: 1, b: passCnt(G).daily }, ...pickQ(G, PASS_DQ, PASS.dN, "d" + day)]; }
+  // гравець відкрив нову частину гри (арену, підземелля, пітомця) — недоступні завдання тижня замінюються
+  if (P.wq.length < PASS.wN) { const have = new Set(P.wq.map((q) => q.k)); for (const q of pickQ(G, PASS_WQ, PASS.wN + 3, "w" + wk)) if (P.wq.length < PASS.wN && !have.has(q.k)) P.wq.push(q); }
+  passCredit(G);
+}
+export function actPassClaim(G: State, now: number) {
+  passTick(G, now); const got = passClaimAll(G); if (!got.length) fail("nothing");
+  const sum = { gold: 0, shards: 0, matN: 0, mat: passMat(G), ash: 0, chests: 0, gems: 0, cat: 0, eggs: 0 };
+  for (const x of got) { sum.gold += x.gold; sum.shards += x.shards; sum.matN += x.matN; sum.ash += x.ash; sum.chests += x.ch ? x.ch[1] : 0; sum.gems += x.gem ? 1 : 0; sum.cat += x.cat; sum.eggs += x.egg ? 1 : 0; }
+  log(G, "pass", [got.length]);
+  return sum;
+}
+// купівля платної стежки: викликає лише сервер після підтвердженої оплати (ще не підключено)
+export function passPremium(G: State, now: number) { passTick(G, now); G.pass!.prem = 1; }
+export function passInfo(G: State, now: number) {
+  const P = G.pass!, c = passCnt(G), q = (x: PassQ) => ({ k: x.k, n: x.n, c: Math.min(x.n, (c[x.k] || 0) - x.b), ok: x.ok ? 1 : 0 });
+  return { wk: P.wk, end: Date.parse(P.wk + "T00:00:00Z") + 7 * 864e5, pts: P.pts, lv: passLv(P), per: PASS.per, max: PASS.lv, dPts: PASS.dPts, wPts: PASS.wPts,
+    f: P.f, p: P.p, prem: P.prem ? 1 : 0, db: P.db ? 1 : 0, dqR: passDqR(G), allCh: PASS.allCh, allAsh: PASS.allAsh, dq: P.dq.map(q), wq: P.wq.map(q), free: PASS_F.map((r) => passRes(G, r)), paid: PASS_P.map((r) => passRes(G, r)) };
+}
+
+// ---------- колекція спорядження героя (02.11) ----------
+// Кожна річ, що побувала в гравця, позначається за слотом і рідкістю. Повний ряд рідкості (усі слоти) дає постійний бонус до атаки, здоров'я й захисту.
+export const COLL_B: Record<number, number> = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 }; // рідкісна … вічна, %
+export function collTick(G: State) {
+  const c = G.coll = G.coll || {};
+  for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it) c[it.slot] = (c[it.slot] || 0) | (1 << it.r);
+}
+export const collRow = (G: State, r: number) => SLOTS.filter((s) => ((G.coll?.[s] || 0) >> r) & 1).length;
+export function collBonus(G: State) { let b = 0; for (const r in COLL_B) if (collRow(G, +r) === SLOTS.length) b += COLL_B[+r]; return b; }
+export function collInfo(G: State) { return { slots: SLOTS, m: G.coll || {}, b: COLL_B, total: collBonus(G) }; }
+
+// ---------- досягнення (02.11) ----------
+// Ступені за лічильниками; нагорода — Попіл. Забираються кнопкою «Забрати все».
+export const ACH: { id: string; t: number[]; a: number[] }[] = [
+  { id: "kills", t: [1e3, 1e4, 1e5, 1e6, 1e7], a: [5, 10, 20, 40, 80] },
+  { id: "stage", t: [10, 20, 30, 40, 50, 60, 70, 80], a: [5, 10, 15, 20, 30, 40, 60, 100] },
+  { id: "lvl", t: [10, 25, 40, 55, 70], a: [5, 10, 20, 40, 80] },
+  { id: "bosses", t: [10, 50, 150, 400], a: [5, 15, 30, 60] },
+  { id: "dng", t: [10, 100, 500, 2000], a: [5, 15, 40, 80] },
+  { id: "arena", t: [10, 50, 200, 1000], a: [5, 15, 40, 80] },
+  { id: "chests", t: [100, 1000, 5000, 20000], a: [5, 15, 40, 80] },
+  { id: "leg", t: [1, 10, 50, 200], a: [10, 20, 40, 80] },
+  { id: "pets", t: [2, 4, 6], a: [10, 25, 60] },
+  { id: "coll", t: [1, 2, 3, 4, 5], a: [10, 20, 40, 80, 150] },
+  { id: "wb", t: [1, 20, 100], a: [5, 20, 50] },
+];
+function achVal(G: State, id: string) {
+  const c = G.cnt || {};
+  switch (id) {
+    case "kills": return G.tot.kills; case "stage": return G.maxStage; case "lvl": return G.lvl; case "bosses": return G.tot.bosses;
+    case "dng": return G.dng?.runs || 0; case "arena": return G.arena?.w || 0; case "chests": return c.chests || 0; case "leg": return c.leg || 0;
+    case "pets": return Object.keys(G.pet?.list || {}).length; case "coll": return Object.keys(COLL_B).filter((r) => collRow(G, +r) === SLOTS.length).length;
+    case "wb": return c.wb || 0;
+  }
+  return 0;
+}
+export function achInfo(G: State) {
+  return ACH.map((a) => { const v = achVal(G, a.id), got = G.ach?.[a.id] || 0, done = a.t.filter((x) => v >= x).length; return { id: a.id, v, got, done, t: a.t, a: a.a }; });
+}
+export function actAchClaim(G: State) {
+  G.ach = G.ach || {}; let ash = 0, n = 0;
+  for (const x of achInfo(G)) for (let i = x.got; i < x.done; i++) { ash += x.a[i]; n++; G.ach[x.id] = i + 1; }
+  if (!n) fail("nothing");
+  G.ash += ash; log(G, "ach", [n, ash]); return { n, ash };
+}
+
+// ---------- «Поділитися» в Stories (02.11): нагорода раз на день ----------
+export const SHARE = { ash: 5, gold: 20 };
+export function actShare(G: State, now: number) {
+  const d = dayStr(now); if (G.shr === d) fail("share_taken");
+  G.shr = d; const gold = Math.round(mobGold(G.maxStage) * SHARE.gold); G.gold += gold; G.ash += SHARE.ash; bump(G, "share");
+  return { gold, ash: SHARE.ash };
+}
+
+// ---------- світовий бос (02.11) ----------
+// Один бос на тиждень для всіх; здоров'я спільне (у базі, wboss_hit). Бій 30 с: герой б'є щосекунди, бос відповідає атакою етапу гравця ×1,4,
+// тож важать і атака, і живучість. 3 спроби на день безкоштовно, далі — за Попіл (10 × 1,25^n), без стелі.
+export const WB = { stage: 15, free: 3, time: 30, price: 10, grow: 1.25 };
+export const wbPrice = (G: State) => Math.ceil(WB.price * Math.pow(WB.grow, G.wb?.paid || 0));
+export function wbDay(G: State, now: number) { const d = dayStr(now); if (!G.wb || G.wb.day !== d) G.wb = { day: d, used: 0, paid: 0 }; return G.wb; }
+export function wbFight(G: State) {
+  const H = hero(G), A = fightAb(G), batk = mobAtk(G.maxStage) * 1.4;
+  let hp = H.hp, dmg = 0, ht = 0, mt = 0.6, t = 0; const ev: BossEv[] = [];
+  while (true) {
+    const nh = ht + 1, nm = mt + 1.4, next = Math.min(nh, nm); if (next > WB.time) break; t = next;
+    if (nh <= nm) {
+      ht = nh; const cr = Math.random() * 100 < H.crit, d = H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1); dmg += d; ev.push([r2(t), 0, Math.round(d), cr ? 1 : 0]);
+      if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; dmg += b; ev.push([r2(t), 2, Math.round(b), 0]); }
+      hp = Math.min(H.hp, hp + H.hp * 0.02);
+    } else {
+      mt = nm;
+      if (A.skinLeft > 0) { A.skinLeft--; ev.push([r2(t), 4, 0, 0]); continue; }
+      if (A.dodge && Math.random() * 100 < A.dodge) { ev.push([r2(t), 3, 0, 0]); continue; }
+      const d = dmgTaken(batk * rnd(0.92, 1.08), H.def); hp -= d; ev.push([r2(t), 1, Math.round(d), 0]);
+      if (hp <= 0 && A.rebirth && !A.reborn) { A.reborn = true; hp = H.hp * A.rebirth / 100; ev.push([r2(t), 5, Math.round(hp), 0]); }
+      if (hp <= 0) break;
+    }
+  }
+  return { dmg: Math.round(dmg), t: r2(t), died: hp <= 0, ev, heroHp: Math.round(H.hp) };
+}
+export function actWbAttack(G: State, now: number, pay: boolean) {
+  if (G.maxStage < WB.stage) fail("wb_locked");
+  const w = wbDay(G, now); let paid = 0;
+  if (w.used >= WB.free) { if (!pay) fail("wb_limit"); paid = wbPrice(G); if (G.ash < paid) fail("no_ash"); G.ash -= paid; w.paid++; } else w.used++;
+  const f = wbFight(G); bump(G, "wb"); return { ...f, paid };
+}

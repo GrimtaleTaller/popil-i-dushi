@@ -68,11 +68,15 @@ function view(G: L.State, now: number, uid = 0) {
   const H = L.hero(G);
   return {
     s: G, hero: { ...H, power: L.powerG(G) }, sc: (({ eqs, ...x }) => ({ ...x, eqs }))(L.heroCtx(G)), daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
+    pass: G.pass ? L.passInfo(G, now) : null,
+    ach: L.achInfo(G), coll: L.collInfo(G), share: { ...L.SHARE, gold: Math.round(L.mobGold(G.maxStage) * L.SHARE.gold), taken: G.shr === new Date(now).toISOString().slice(0, 10) },
+    wb: { stage: L.WB.stage, free: L.WB.free, left: G.wb?.day === new Date(now).toISOString().slice(0, 10) ? Math.max(0, L.WB.free - G.wb.used) : L.WB.free, price: G.wb?.day === new Date(now).toISOString().slice(0, 10) ? L.wbPrice(G) : L.WB.price, week: L.passWeek(now) },
     pet: { defs: L.PETS, cfg: L.PET, info: L.petInfo(G, now), gear: L.petGearInfo(G) },
     gem: { sockets: L.SOCKETS, out: L.GEM_OUT, m: L.GEM_M, crit: L.GEM_CRIT, max: L.GEM_MAX, pts: L.ARENA_SHOP.stone.pts },
     forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G), set: L.setInfo(G), setCfg: L.SET },
     arena: {
-      stage: L.ARENA.stage, daily: L.ARENA.daily, left: Math.max(0, L.ARENA.daily - (G.arena.day === new Date(now).toISOString().slice(0, 10) ? G.arena.used : 0)),
+      stage: L.ARENA.stage, daily: L.ARENA.daily, left: Math.max(0, (G.arena.day === new Date(now).toISOString().slice(0, 10) ? L.arenaLimit(G) - G.arena.used : L.ARENA.daily)),
+      ticket: G.arena.day === new Date(now).toISOString().slice(0, 10) ? L.ticketPrice(G) : L.ARENA.ticket, seasonEnd: seasonEnd(now),
       pts: G.arena.pts, rating: G.arena.rating, w: G.arena.w, l: G.arena.l, win: L.ARENA.win, lose: L.ARENA.lose, shop: L.ARENA_SHOP,
       opps: G.arena.opps.map((o) => ({ name: o.name, lvl: o.lvl, power: o.power, rating: o.rating })),
     },
@@ -121,7 +125,15 @@ const PRIZES = [{ from: 1, to: 1, ash: 300 }, { from: 2, to: 3, ash: 200 }, { fr
 const CLAN_PRIZES = [{ from: 1, to: 1, ash: 1000 }, { from: 2, to: 3, ash: 600 }, { from: 4, to: 10, ash: 300 }];
 const PRIZE_KINDS = ["power", "stage", "rating"];
 const weekStart = (now: number) => { const d = new Date(now); const w = (d.getUTCDay() + 6) % 7; return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - w)).toISOString().slice(0, 10); };
-let settledWeek = "";
+let settledWeek = "", settledMonth = "";
+const monthStart = (now: number) => new Date(now).toISOString().slice(0, 7) + "-01";
+const seasonEnd = (now: number) => { const d = new Date(now); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); };
+// сезон арени = календарний місяць; підсумок попереднього — при першому запиті нового місяця (рішення Влада 02.11)
+async function settleSeason(now: number) {
+  const m = monthStart(now); if (m === settledMonth) return;
+  const { error } = await SB.rpc("arena_season_settle", { p_month: m }); if (error) { console.error("season", error); return; }
+  settledMonth = m;
+}
 async function settleWeek(now: number) {
   const wk = weekStart(now); if (wk === settledWeek) return;
   const { error } = await SB.rpc("rating_settle", { p_week: wk }); if (error) { console.error("settle", error); return; }
@@ -163,6 +175,24 @@ async function arenaDivision(rating: number) {
   const { count: above } = await SB.from("stats").select("player_id", { count: "exact", head: true }).gt("rating", rating).or("wins.gt.0,losses.gt.0");
   const t = total || 0, top = t ? (above || 0) / t : 1;
   return { top: Math.round(top * 1000) / 10, div: top <= 0.03 ? 4 : top <= 0.1 ? 3 : top <= 0.3 ? 2 : top <= 0.6 ? 1 : 0, total: t };
+}
+
+// світовий бос: стан тижня, топ-20 за уроном, моє місце, топ кланів
+async function wbInfo(id: number, now: number) {
+  const wk = L.passWeek(now);
+  const { data: b } = await SB.from("wboss").select("lvl,hp,hp_max,kills").eq("week", wk).maybeSingle();
+  const { data: top } = await SB.from("wboss_hits").select("player_id,name,dmg,hits").eq("week", wk).order("dmg", { ascending: false }).limit(20);
+  const { data: me } = await SB.from("wboss_hits").select("dmg,hits").eq("week", wk).eq("player_id", id).maybeSingle();
+  let place = 0; if (me) { const { count } = await SB.from("wboss_hits").select("player_id", { count: "exact", head: true }).eq("week", wk).gt("dmg", me.dmg); place = (count || 0) + 1; }
+  const { data: all } = await SB.from("wboss_hits").select("clan_id,dmg").eq("week", wk).not("clan_id", "is", null);
+  const cs: Record<string, number> = {}; for (const r of all || []) cs[r.clan_id] = (cs[r.clan_id] || 0) + Number(r.dmg);
+  const cids = Object.entries(cs).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const { data: cn } = cids.length ? await SB.from("clans").select("id,name").in("id", cids.map((x) => Number(x[0]))) : { data: [] };
+  const hp0 = 2e6;
+  return { boss: b || { lvl: 1, hp: hp0, hp_max: hp0, kills: 0 }, end: Date.parse(wk + "T00:00:00Z") + 7 * 864e5,
+    top: (top || []).map((x, i) => ({ place: i + 1, name: String(x.name || "Hero").slice(0, 24), dmg: Number(x.dmg), me: x.player_id === id })),
+    me: me ? { place, dmg: Number(me.dmg), hits: me.hits } : null, clans: cids.map(([k, v], i) => ({ place: i + 1, name: String((cn || []).find((c) => String(c.id) === k)?.name || "?"), dmg: v })),
+    prizes: [{ from: 1, to: 1, ash: 300 }, { from: 2, to: 3, ash: 200 }, { from: 4, to: 10, ash: 100 }, { from: 11, to: 50, ash: 40 }], part: { base: 10, perLvl: 3, cap: 30 }, clanPrizes: [800, 500, 300] };
 }
 
 // ---------- профіль, клани, адмін: дії з базою, що виконуються один раз до запису стану ----------
@@ -466,7 +496,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
 async function handle(user: TgUser, start: string | undefined, action: string, args: Record<string, unknown>) {
   const pre: Pre | null = PRE.has(action) ? await preAction(user, start, action, args) : null;
   const giveTo = action === "clanGive" || action === "clanGiveRes" || action === "clanGiveAsh" ? await clanOf(user.id) : null;
-  await settleWeek(Date.now());
+  await settleWeek(Date.now()); await settleSeason(Date.now());
   // нагороди тижневих рейтингів забираємо лише на sync: він не кидає ігрових помилок, тож нагорода не загубиться
   const reward = action === "sync" ? Number((await SB.rpc("reward_claim", { p_player: user.id })).data || 0) : 0;
   const nw = action === "sync" ? await latestNews() : null;
@@ -477,9 +507,10 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     const G = state;
     G.cb = cb;
     const prog = L.progress(G, now);
+    L.collTick(G); L.passTick(G, now); // тижневий пропуск: нові завдання дня/тижня до дії, щоб дія зарахувалась
     let out: unknown = null;
     let pvp: { def: number | null; oppRating: number; win: boolean } | null = null;
-    let give = 0, giveAsh = 0;
+    let give = 0, giveAsh = 0, wbHit = -1;
     let sellLot: { it?: L.Item; mat?: L.MatLot; price: number; cur: L.MCur } | null = null;
     let giveRes: { k: string; n: number } | null = null;
     const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat, ess: G.ess };
@@ -533,7 +564,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "arenaFight": {
         if (G.maxStage < L.ARENA.stage) throw new L.GameError("arena_locked");
         L.arenaDay(G, now);
-        if (G.arena.used >= L.ARENA.daily) throw new L.GameError("arena_limit");
+        if (G.arena.used >= L.arenaLimit(G)) throw new L.GameError("arena_limit");
         const o = G.arena.opps[Number(args.i)]; if (!o) throw new L.GameError("bad_opp");
         G.arena.rating = await myRating(user.id);
         const f = L.pvpFight(L.heroSnap(G), o.st);
@@ -575,8 +606,16 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       }
       case "arenaShop": out = L.actArenaShop(G, String(args.item)); break;
       case "top": out = await topList(String(args.kind), user.id); break;
+      case "passClaim": out = L.actPassClaim(G, now); break;
+      case "arenaTicket": out = L.actArenaTicket(G, now); break;
+      case "achClaim": out = L.actAchClaim(G); break;
+      case "share": out = L.actShare(G, now); break;
+      case "notify": { G.ntf = args.on ? 1 : 0; await SB.from("players").update({ notify: !!args.on }).eq("tg_id", user.id); out = { on: G.ntf }; break; }
+      case "wbAttack": { out = L.actWbAttack(G, now, !!args.pay); wbHit = (out as { dmg: number }).dmg; break; }
+      case "wbInfo": out = await wbInfo(user.id, now); break;
       default: throw new L.GameError("bad_action");
     }
+    L.collTick(G); L.passTick(G, now);
     const { data, error } = await SB.from("game_state")
       .update({ state: G, version: version + 1, updated_at: new Date(now).toISOString() })
       .eq("player_id", user.id).eq("version", version).select("version");
@@ -586,6 +625,11 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     if (pvp) {
       const { data: rr, error: re } = await SB.rpc("arena_result", { p_att: user.id, p_def: pvp.def, p_win: pvp.win, p_opp_rating: pvp.oppRating });
       if (re) console.error(re); else if (rr && rr[0]) { (out as Record<string, unknown>).delta = rr[0].delta; (out as Record<string, unknown>).rating = rr[0].new_rating; }
+    }
+    if (wbHit >= 0) {
+      const cl = await clanOf(user.id);
+      const { data: wr, error: we } = await SB.rpc("wboss_hit", { p_week: L.passWeek(now), p_player: user.id, p_name: uname(user), p_clan: cl?.clan_id ?? null, p_dmg: wbHit });
+      if (we) console.error("wboss", we); else if (wr && wr[0]) Object.assign(out as Record<string, unknown>, { boss: wr[0] });
     }
     if (give && giveTo) {
       const { error: ge } = await SB.rpc("clan_bank_give", { p_clan: giveTo.clan_id, p_player: user.id, p_amt: give }); if (ge) console.error(ge);
