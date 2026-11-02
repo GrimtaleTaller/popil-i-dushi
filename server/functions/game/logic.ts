@@ -20,7 +20,7 @@ export const RAR = [
   { m: 3.2, w: 3 },
   { m: 5, w: 0.5 },
   { m: 9, w: 0 }, // міфічний (прадавній) — лише крафт; було 7,5 (рішення Влада 30.10: прадавня завжди сильніша за свіжі легендарки)
-  { m: 14, w: 0 }, // астральний (вічний) — лише крафт з міфічного; було 11
+  { m: 83, w: 0 }, // астральний (вічний) — лише крафт з міфічного; 02.11 (рішення Влада): ×83 = прадавня +15 рівнів (9 × 1,16^15); було 14, ще раніше 11
 ];
 export const DROP_RAR = 5; // скільки рідкостей може випасти
 export const UPG: Record<string, { val: (l: number) => number; cost: (l: number) => number; max?: number }> = {
@@ -57,7 +57,7 @@ export function setInfo(G: State) {
 }
 export const mythicCount = (G: State) => SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 5).length + SLOTS.filter((s) => (G.eq[s]?.r ?? 0) >= 6).length;
 export const catChance = (s: number) => (s % 10 === 0 ? 1 : 0.2); // каталізатор з боса; регіональний бос — завжди
-export const disXp = (it: Item) => Math.round(mobXp(it.il) * 3 * RAR[it.r].m);
+export const disXp = (it: Item) => Math.round(mobXp(it.il) * 3 * Math.min(14, RAR[it.r].m));
 export const disShards = (it: Item) => Math.round((it.r + 1) * (it.r + 1) * (1 + it.il / 10));
 export const enchCost = (G: State) => ({ shards: 40 * (G.ench + 1), gold: Math.round(mobGold(G.maxStage) * 40 * (G.ench + 1)), legendary: 1 });
 export const mythSouls = (il: number) => Math.round(150 + il * 5);
@@ -150,6 +150,10 @@ export function migrate(G: State): State {
     for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it && k[it.r]) for (const s of ["atk", "hp", "def"] as const) if (it.st[s]) it.st[s] = Math.round(it.st[s]! * k[it.r]);
     G.rv = 1;
   }
+  if ((G.rv || 0) < 2) { // 02.11: вічні ×14→×83 — перераховуємо вже скуті вічні речі
+    for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it && it.r === 6) for (const s of ["atk", "hp", "def"] as const) if (it.st[s]) it.st[s] = Math.round(it.st[s]! * 83 / 14);
+    G.rv = 2;
+  }
   if (!G.pet && G.maxStage > 10) { const n = Math.floor((G.maxStage - 1) / 10), r = Math.floor((G.maxStage - 1) / 40); G.pet = { list: {}, act: null, eggs: { c: n - r, r }, inc: null, ft: 0, fn: 0 }; } // яйця за вже пройдених регіональних босів (30.10)
   for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay", "ckey"]) if (g[k] === undefined) g[k] = d[k];
   return G;
@@ -207,7 +211,7 @@ export function itemScore(G: State, it: Item, x = heroCtx(G)) {
   const k = (1 + setPowWith(G, it.slot, it.r) / 100) / (1 + setInfo(G).pow / 100); // зміна бонусу сету від заміни
   return power({ atk: (x.a - o.a + v.a) * x.ma * k, hp: (x.h - o.h + v.h) * x.mh * k, def: (x.d - o.d + v.d) * x.md * k, crit: Math.min(60, x.c - o.c + v.c) });
 }
-export const sellPrice = (it: Item) => Math.max(1, Math.round(mobGold(it.il) * 2 * Math.pow(RAR[it.r].m, 1.5)));
+export const sellPrice = (it: Item) => Math.max(1, Math.round(mobGold(it.il) * 2 * Math.pow(Math.min(14, RAR[it.r].m), 1.5)));
 
 function log(G: State, k: string, a?: (string | number)[]) {
   G.log.unshift({ t: Date.now(), k, a });
@@ -231,7 +235,7 @@ export function buildItem(G: State, ilvl: number, r: number, slot: Slot): Item {
   const def = SLOT[slot], sc = gearScale(ilvl) * RAR[r].m * rnd(0.9, 1.1), st: Stats = {};
   for (const k in def.st) {
     const key = k as keyof Stats, base = def.st[key]!;
-    st[key] = key === "crit" ? Math.round(base * RAR[r].m * 10) / 10 : Math.max(1, Math.round(base * sc));
+    st[key] = key === "crit" ? Math.round(base * Math.min(14, RAR[r].m) * 10) / 10 /* крит не росте з ×83 вічних (02.11) */ : Math.max(1, Math.round(base * sc));
   }
   if (r >= 2) {
     const pool = (["atk", "hp", "def"] as const).filter((k) => !(k in st));

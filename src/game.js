@@ -47,7 +47,7 @@ const SLOT={
  ring:{n:'Перстень',ic:SVG_RING,names:['Мідний перстень','Перстень крові','Перстень вовка','Печатка мертвих']},
  amulet:{n:'Амулет',ic:SVG_AMULET,names:['Амулет з ікла','Оберіг відьми','Око безодні','Серце попелу']}
 };
-const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:9},{n:'Астральний',c:'#3fd0d4',m:14}];
+const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:9},{n:'Астральний',c:'#3fd0d4',m:83}];
 const STATN={atk:'Атака',hp:'Здоров’я',def:'Захист',crit:'Крит'};
 const UPG=[
  {k:'atk',n:'Сила удару',ic:'⚔️',d:'+атака',val:l=>3*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l)},
@@ -60,7 +60,7 @@ const mobHp=s=>s<=50?25*Math.pow(1.25,s-1):25*Math.pow(1.25,49)*Math.pow(1.18,s-
 const xpNeed=l=>V&&V.xp?V.xp.need:Math.floor(3000*Math.pow(1.12,l-1)); // точні значення дає сервер
 function region(s){const i=Math.floor((s-1)/10);return{r:REGIONS[i%REGIONS.length],tier:Math.floor(i/REGIONS.length)}}
 const itemName=it=>SLOT[it.slot].names[Math.min(it.nm,SLOT[it.slot].names.length-1)];
-const sellPrice=it=>Math.max(1,Math.round(mobGold(it.il)*2*Math.pow(RAR[it.r].m,1.5)));
+const sellPrice=it=>Math.max(1,Math.round(mobGold(it.il)*2*Math.pow(Math.min(14,RAR[it.r].m),1.5)));
 
 // ---------- стан ----------
 let G=null,H=null,V=null;     // стан із сервера, характеристики героя, решта view
@@ -395,7 +395,7 @@ function renderForge(){
   ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${SLOT[it.slot].ic}<b>${fmt(itemVal(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
-   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*14/9))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
+   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*RAR[6].m/RAR[5].m))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
    <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.souls,aSo,'🔥')} · ${resC(G.cat,A.cat,'💎')} · ${resC(G.ess||0,A.ess,'✦')}</span></div></div>
   <p class="hint">${T('ast_keep')}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
