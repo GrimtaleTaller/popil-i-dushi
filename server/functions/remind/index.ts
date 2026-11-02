@@ -1,11 +1,11 @@
 // Grimtale: нагадування гравцям від @Grimtalebot (02.11, рішення Влада). Запускає pg_cron щогодини.
 // Не більше одного повідомлення за запуск і двох на добу на гравця; кожен вид — не частіше, ніж зазначено в GAP.
+// Виклик: pg_cron «grimtale-remind» щогодини, заголовок x-remind-key = vault remind_key.
 // Гравець вимикає нагадування в грі (Профіль → Нагадування) — players.notify = false.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SB = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
-const KEY = Deno.env.get("REMIND_KEY") ?? "";
 const BOT = "Grimtalebot";
 const H = 3600e3;
 const OFFLINE_MAX = 8 * H;
@@ -61,8 +61,10 @@ function pick(G: any, now: number, last: Record<string, number>): { k: string; n
 }
 
 Deno.serve(async (req) => {
-  if (!KEY || req.headers.get("x-remind-key") !== KEY) return new Response("forbidden", { status: 403 });
-  const now = Date.now();
+  // ключ лежить у Vault бази (remind_key), pg_cron передає його в заголовку; функція звіряє через remind_key_ok
+  const k = req.headers.get("x-remind-key") || ""; const { data: ok } = k ? await SB.rpc("remind_key_ok", { k }) : { data: false };
+  if (!ok) return new Response("forbidden", { status: 403 });
+  const now = Date.now(), dry = new URL(req.url).searchParams.get("dry") === "1"; const plan: unknown[] = []; // dry=1 — лише показати, кому що пішло б
   const { data: ps, error } = await SB.from("players").select("tg_id,lang,last_seen").eq("banned", false).eq("bot_blocked", false).eq("notify", true)
     .lt("last_seen", new Date(now - 3 * H).toISOString()).gt("last_seen", new Date(now - 14 * 24 * H).toISOString()).limit(3000);
   if (error) { console.error(error); return new Response("err", { status: 500 }); }
@@ -81,6 +83,7 @@ Deno.serve(async (req) => {
     if (today >= 2) continue;
     const r = pick(G, now, ls); if (!r) continue;
     const l = langOf(p.lang as string), T = TXT[l];
+    if (dry) { plan.push({ id: p.tg_id, k: r.k, l }); continue; }
     const res = await tg("sendMessage", { chat_id: p.tg_id, text: T[r.k].replace("{n}", String(r.n ?? "")) + "\n\n<i>" + T.off_hint + "</i>", parse_mode: "HTML",
       reply_markup: { inline_keyboard: [[{ text: T.play, url: `https://t.me/${BOT}?startapp=remind` }]] } });
     if (res?.ok) { sent++; await SB.from("reminders").upsert({ player_id: p.tg_id, kind: r.k, sent_at: new Date(now).toISOString() }); }
@@ -88,5 +91,5 @@ Deno.serve(async (req) => {
     await new Promise((x) => setTimeout(x, 40));
   }
   if (blocked.length) await SB.from("players").update({ bot_blocked: true }).in("tg_id", blocked);
-  return new Response(JSON.stringify({ sent, checked: ids.length }));
+  return new Response(JSON.stringify({ sent, checked: ids.length, plan }));
 });

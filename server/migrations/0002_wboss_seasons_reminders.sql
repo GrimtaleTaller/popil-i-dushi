@@ -1,3 +1,5 @@
+-- Застосовано 02.11.2026 частинами (wboss_tables, season_cols_reminders, arena_result_season, arena_season_settle, rating_settle_wboss,
+-- wboss_season_grants, enable_pg_cron, remind_key, cron_grimtale_remind): єдиний великий виклик клієнт скасовував.
 -- 02.11.2026: світовий бос, сезони арени, нагадування від бота
 
 -- світовий бос
@@ -55,7 +57,7 @@ begin
     select player_id, name, rating, case when pr <= 0.03 then 4 when pr <= 0.1 then 3 when pr <= 0.3 then 2 when pr <= 0.6 then 1 else 0 end div from (
       select player_id, name, rating, (row_number() over (order by rating desc, updated_at) - 1)::float8 / count(*) over () pr from stats where s_w + s_l >= 10) t) x;
   update players p set reward_ash = reward_ash + r.ash from rating_rewards r where r.week = p_month and r.kind = 'season' and r.player_id = p.tg_id;
-  update stats set rating = 1000 + (rating - 1000) / 2, s_w = 0, s_l = 0;
+  update stats set rating = 1000 + (rating - 1000) / 2, s_w = 0, s_l = 0 where rating <> 1000 or s_w + s_l > 0;
   return 1;
 end $f$;
 revoke execute on function arena_season_settle(date) from public, anon, authenticated;
@@ -96,3 +98,15 @@ alter table players add column if not exists notify boolean not null default tru
 create table if not exists reminders (player_id bigint not null, kind text not null, sent_at timestamptz not null default now(), primary key (player_id, kind));
 alter table reminders enable row level security;
 create extension if not exists pg_cron;
+revoke execute on function wboss_hpmax(int) from public, anon, authenticated;
+revoke execute on function wboss_place_ash(int) from public, anon, authenticated;
+-- ключ виклику remind: лише у Vault, функція звіряє через remind_key_ok
+select vault.create_secret(encode(extensions.gen_random_bytes(24), 'hex'), 'remind_key', 'ключ виклику функції remind з pg_cron') where not exists (select 1 from vault.secrets where name = 'remind_key');
+create or replace function remind_key_ok(k text) returns boolean language sql security definer set search_path to 'public' as $$
+  select exists (select 1 from vault.decrypted_secrets where name = 'remind_key' and decrypted_secret = k) $$;
+revoke execute on function remind_key_ok(text) from public, anon, authenticated;
+select cron.schedule('grimtale-remind', '7 * * * *', $c$
+  select net.http_post('https://fatpfzstkjtfcunlwnvx.supabase.co/functions/v1/remind', '{}'::jsonb,
+    headers => jsonb_build_object('content-type', 'application/json', 'x-remind-key', (select decrypted_secret from vault.decrypted_secrets where name = 'remind_key')),
+    timeout_milliseconds => 60000);
+$c$);
