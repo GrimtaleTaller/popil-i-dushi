@@ -26,6 +26,7 @@ revoke execute on function wboss_hit(date, bigint, text, bigint, numeric) from p
 alter table stats add column if not exists s_w int not null default 0, add column if not exists s_l int not null default 0;
 create table if not exists arena_seasons (month date primary key, settled_at timestamptz default now());
 alter table arena_seasons enable row level security;
+insert into arena_seasons(month) values (date_trunc('month', now())::date) on conflict do nothing; -- поточний місяць не підсумовувати одразу
 create or replace function arena_result(p_att bigint, p_def bigint, p_win boolean, p_opp_rating integer)
  returns table(new_rating integer, delta integer) language plpgsql security definer set search_path to 'public' as $function$
 declare ra int; rd int; e float8; d int;
@@ -78,10 +79,10 @@ begin
     select id, name, power, row_number() over (order by power desc, id) rn from clan_view where members > 0) t where rn <= 10;
   -- світовий бос: місце за уроном + участь (10 Попелу + 3 за кожен рівень боса, вбитий за тиждень, до 30)
   insert into rating_rewards(week, kind, place, player_id, name, value, ash)
-  select p_week, 'wboss', rn, player_id, name, dmg, wboss_place_ash(rn::int) + 10 + 3 * least(30, coalesce((select lvl - 1 from wboss where week = pw), 0)) from (
+  select p_week, 'wboss', rn, player_id, name, dmg, wboss_place_ash(rn::int) + 10 + 3 * least(30, coalesce((select w.lvl - 1 from wboss w where w.week = pw), 0)) from (
     select player_id, name, dmg, row_number() over (order by dmg desc) rn from wboss_hits where week = pw and hits > 0) t;
   insert into rating_rewards(week, kind, place, clan_id, name, value, ash)
-  select p_week, 'wbclan', rn, clan_id, (select c.name from clans c where c.id = t.clan_id), d, case rn when 1 then 800 when 2 then 500 else 300 end from (
+  select p_week, 'wbclan', rn, t.clan_id, (select c.name from clans c where c.id = t.clan_id), d, case rn when 1 then 800 when 2 then 500 else 300 end from (
     select clan_id, sum(dmg) d, row_number() over (order by sum(dmg) desc) rn from wboss_hits where week = pw and clan_id is not null group by clan_id) t where rn <= 3;
   update players p set reward_ash = reward_ash + x.a
   from (select player_id, sum(ash) a from rating_rewards where week = p_week and player_id is not null group by player_id) x where p.tg_id = x.player_id;
@@ -94,3 +95,4 @@ end $function$;
 alter table players add column if not exists notify boolean not null default true;
 create table if not exists reminders (player_id bigint not null, kind text not null, sent_at timestamptz not null default now(), primary key (player_id, kind));
 alter table reminders enable row level security;
+create extension if not exists pg_cron;

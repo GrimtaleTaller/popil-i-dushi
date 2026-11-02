@@ -131,7 +131,7 @@ const seasonEnd = (now: number) => { const d = new Date(now); return Date.UTC(d.
 // сезон арени = календарний місяць; підсумок попереднього — при першому запиті нового місяця (рішення Влада 02.11)
 async function settleSeason(now: number) {
   const m = monthStart(now); if (m === settledMonth) return;
-  const { error } = await SB.rpc("arena_season_settle", { p_month: m }); if (error) { console.error("season", error); return; }
+  const { error } = await SB.rpc("arena_season_settle", { p_month: m }); if (error) { console.error("season", error.message); settledMonth = m; return; } // без міграції — не повторюємо на кожен запит
   settledMonth = m;
 }
 async function settleWeek(now: number) {
@@ -177,9 +177,12 @@ async function arenaDivision(rating: number) {
   return { top: Math.round(top * 1000) / 10, div: top <= 0.03 ? 4 : top <= 0.1 ? 3 : top <= 0.3 ? 2 : top <= 0.6 ? 1 : 0, total: t };
 }
 
+// чи є в базі таблиці світового боса (міграція 0002); кеш на 5 хв
+let wbOk = { at: 0, ok: false };
+async function wbReady() { if (Date.now() - wbOk.at < 3e5) return wbOk.ok; const { error } = await SB.from("wboss").select("week").limit(1); wbOk = { at: Date.now(), ok: !error }; return wbOk.ok; }
 // світовий бос: стан тижня, топ-20 за уроном, моє місце, топ кланів
 async function wbInfo(id: number, now: number) {
-  const wk = L.passWeek(now);
+  const wk = L.passWeek(now); const ready = await wbReady();
   const { data: b } = await SB.from("wboss").select("lvl,hp,hp_max,kills").eq("week", wk).maybeSingle();
   const { data: top } = await SB.from("wboss_hits").select("player_id,name,dmg,hits").eq("week", wk).order("dmg", { ascending: false }).limit(20);
   const { data: me } = await SB.from("wboss_hits").select("dmg,hits").eq("week", wk).eq("player_id", id).maybeSingle();
@@ -189,7 +192,7 @@ async function wbInfo(id: number, now: number) {
   const cids = Object.entries(cs).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const { data: cn } = cids.length ? await SB.from("clans").select("id,name").in("id", cids.map((x) => Number(x[0]))) : { data: [] };
   const hp0 = 2e6;
-  return { boss: b || { lvl: 1, hp: hp0, hp_max: hp0, kills: 0 }, end: Date.parse(wk + "T00:00:00Z") + 7 * 864e5,
+  return { ready, boss: b || { lvl: 1, hp: hp0, hp_max: hp0, kills: 0 }, end: Date.parse(wk + "T00:00:00Z") + 7 * 864e5,
     top: (top || []).map((x, i) => ({ place: i + 1, name: String(x.name || "Hero").slice(0, 24), dmg: Number(x.dmg), me: x.player_id === id })),
     me: me ? { place, dmg: Number(me.dmg), hits: me.hits } : null, clans: cids.map(([k, v], i) => ({ place: i + 1, name: String((cn || []).find((c) => String(c.id) === k)?.name || "?"), dmg: v })),
     prizes: [{ from: 1, to: 1, ash: 300 }, { from: 2, to: 3, ash: 200 }, { from: 4, to: 10, ash: 100 }, { from: 11, to: 50, ash: 40 }], part: { base: 10, perLvl: 3, cap: 30 }, clanPrizes: [800, 500, 300] };
@@ -611,7 +614,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "achClaim": out = L.actAchClaim(G); break;
       case "share": out = L.actShare(G, now); break;
       case "notify": { G.ntf = args.on ? 1 : 0; await SB.from("players").update({ notify: !!args.on }).eq("tg_id", user.id); out = { on: G.ntf }; break; }
-      case "wbAttack": { out = L.actWbAttack(G, now, !!args.pay); wbHit = (out as { dmg: number }).dmg; break; }
+      case "wbAttack": { if (!(await wbReady())) throw new L.GameError("wb_soon"); out = L.actWbAttack(G, now, !!args.pay); wbHit = (out as { dmg: number }).dmg; break; }
       case "wbInfo": out = await wbInfo(user.id, now); break;
       default: throw new L.GameError("bad_action");
     }

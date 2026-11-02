@@ -962,6 +962,7 @@ function renderWb(){
  if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('wb_unlock',{n:W?W.stage:15})}</div>`;return}
  if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out}).catch(e=>toast(errT(e))).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
  const D=wbData,B0=D.boss,free=W.left>0;
+ if(D.ready===false){el.innerHTML=`<div class="empty">👹 ${T('wb_soon')}</div>`;return}
  let h=`<div class="card wbc"><img class="wbimg" src="${IMG('boss8')}" alt=""><h4>${T('wb_name')} · ${T('lvl',{n:B0.lvl})}</h4><div class="bar" style="height:12px"><i style="width:${B0.hp/B0.hp_max*100}%;background:linear-gradient(90deg,#9b2c2c,#e0484e)"></i></div>
  <div class="sub" style="text-align:center;margin-top:3px">❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)} · ${T('wb_killed',{n:B0.lvl-1})} · ${T('pass_end',{t:tLeft(D.end-Date.now())})}</div>
  <div class="row" style="margin-top:8px"><button class="btn pri" id="wbHit" ${busy||(!free&&G.ash<W.price)?'disabled':''}>⚔️ ${free?T('wb_hit',{n:W.left,m:W.free}):T('wb_hit_pay',{p:W.price})}</button><button class="btn" id="wbRef">🔄</button></div></div>`;
