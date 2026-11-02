@@ -408,7 +408,7 @@ function renderForge(){
  if($('astGo'))$('astGo').onclick=()=>{if(aIt)act('astral',{id:aIt.id},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else toast(T('ast_fail',{c:r.out.chance}))})};
  if($('myth'))$('myth').onclick=()=>{const ids=LGs.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
 }
-const DNG=[{n:'Нора щурів',bg:'dbg1'},{n:'Вовче лігво',bg:'dbg2'},{n:'Склеп короля',bg:'dbg3'},{n:'Болотне капище',bg:'dbg4'},{n:'Вогняна кузня',bg:'dbg5'},{n:'Крижана печера',bg:'dbg6'},{n:'Затонулий храм',bg:'dbg7'},{n:'Зала дзеркал',bg:'dbg8'},{n:'Серце безодні',bg:'dbg9'},{n:'Трон попелу',bg:'dbg10'}]; // власні фони підземель (31.10)
+const DNG=[{n:'Нора щурів',bg:'dbg1',reg:1},{n:'Вовче лігво',bg:'dbg2',reg:1},{n:'Склеп короля',bg:'dbg3',reg:2},{n:'Болотне капище',bg:'dbg4',reg:3},{n:'Вогняна кузня',bg:'dbg5',reg:4},{n:'Крижана печера',bg:'dbg6',reg:5},{n:'Затонулий храм',bg:'dbg7',reg:6},{n:'Зала дзеркал',bg:'dbg8',reg:7},{n:'Серце безодні',bg:'dbg9',reg:8},{n:'Трон попелу',bg:'dbg10',reg:8}]; // власні фони підземель (31.10)
 const MATN=['I','II','III','IV'];
 const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');return d.toDateString()===n.toDateString()?p(d.getHours())+':'+p(d.getMinutes()):p(d.getDate())+'.'+p(d.getMonth()+1)};
 const dngD={}; // вибрана складність для кожного тиру
@@ -438,7 +438,7 @@ function renderDng(){
 // ---------- підземелля на весь екран: відтворення бою, порахованого сервером ----------
 function dngPlay(o){
  if(!o.rooms||!o.rooms[0]||!o.rooms[0].ev){dngResult(o);return}
- const d=DNG[o.t-1],R=REGIONS[(d.bg-1)%REGIONS.length],timers=[];let done=false;
+ const d=DNG[o.t-1],R=REGIONS[(d.reg-1)%REGIONS.length],timers=[];let done=false;
  const el=document.createElement('div');el.className='dngv';el.id='dngv';
  el.innerHTML=`<div class="dv-bg" style="background-image:url(${IMG(d.bg)})"></div>
   <div class="dv-top"><div><b>${esc(d.n)} · ${T('tier',{n:o.t})}${o.d>1?' · '+T('diff_'+o.d):''}</b><span id="dvRoom"></span></div><button class="btn" id="dvSkip">${T('skip')} ⏭</button></div>
