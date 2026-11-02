@@ -173,6 +173,7 @@ const power=h=>h.power;
 const GEMC={a:'#e0475a',h:'#3f86e8',d:'#a15be0',c:'#2fb36b'},GEMS=['a','h','d','c'],ROM=['I','II','III','IV','V'];
 const gemP=k=>({t:k[0],l:+k[1]}),gemCfg=()=>V.gem||{sockets:[0,0,0,1,2,3,3],out:[2,5,12,25,50],m:[0.5,1.2,2.5,5,9],crit:[0.5,1,2,3.5,5],max:5,pts:40};
 function gemStat(k,il){const g=gemP(k),C=gemCfg(),v=Math.pow(1.16,il-1)*C.m[g.l-1],o={};if(g.t==='a')o.atk=3*v;else if(g.t==='h')o.hp=14*v;else if(g.t==='d')o.def=2*v;else o.crit=C.crit[g.l-1];return o}
+function fullSt(it){const g=gemSum(it),o={};for(const k of ['atk','hp','def','crit'])if((it.st[k]||0)+g[k])o[k]=(it.st[k]||0)+g[k];return o}
 function gemSum(it){const o={atk:0,hp:0,def:0,crit:0};for(const k of it.gm||[]){const s=gemStat(k,it.il);for(const x in s)o[x]+=s[x]}return o}
 const gemIc=(k,big)=>{const g=gemP(k);return `<span class="gem${big?' big':''}" style="--gc:${GEMC[g.t]}">◆<i>${ROM[g.l-1]}</i></span>`};
 const gemName=k=>{const g=gemP(k);return T('gem_'+g.t)+' '+ROM[g.l-1]};
@@ -182,7 +183,10 @@ function sockView(it){const n=sockN(it);if(!n)return '';const gm=it.gm||[];let h
 // оцінка речі = Сила героя, якщо надіти її (як itemScore на сервері; V.sc — сирі суми й множники героя)
 function itemScore(it){const x=V&&V.sc,g=gemSum(it);if(!x)return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5;
  const o=x.eqs[it.slot]||{a:0,h:0,d:0,c:0},va=(it.st.atk||0)*x.em+g.atk,vh=(it.st.hp||0)*x.em+g.hp,vd=(it.st.def||0)*x.em+g.def,vc=(it.st.crit||0)+g.crit;
- const atk=(x.a-o.a+va)*x.ma,crit=Math.min(60,x.c-o.c+vc);return Math.round(atk*(1+crit/100)*2+(x.h-o.h+vh)*x.mh*0.25+(x.d-o.d+vd)*x.md*1.5)}
+ const k=setK(it),atk=(x.a-o.a+va)*x.ma*k,crit=Math.min(60,x.c-o.c+vc);return Math.round(atk*(1+crit/100)*2+(x.h-o.h+vh)*x.mh*k*0.25+(x.d-o.d+vd)*x.md*k*1.5)}
+// як зміниться бонус повного сету, якщо надіти цю річ (сервер: setPowWith)
+function setPowWith(slot,r){const S=(V.forge&&V.forge.setCfg)||{anc:{pow:0},eter:{pow:0}};let a=0,e=0;for(const s of SLOTS){const rr=s===slot?r:((G.eq[s]||{}).r||0);if(rr===5)a++;else if(rr>=6)e++}return e===SLOTS.length?S.eter.pow:a+e===SLOTS.length?S.anc.pow:0}
+function setK(it){if(it.r==null)return 1;const cur=setPowWith(null,-1);return(1+setPowWith(it.slot,it.r)/100)/(1+cur/100)}
 // внесок речі в Силу (скільки Сили додає річ порівняно з порожнім слотом) — для показу в Кузні
 function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore(it)-itemScore({slot:it.slot,st:{},il:it.il,gm:[]})}
 function renderTop(){
@@ -209,10 +213,11 @@ function renderBoss(){
  else{b.textContent=T('boss_prog',{k,n:WAVES});b.disabled=true;b.classList.remove('ready')}
  const a=$('autoBtn');a.textContent=T('auto_boss',{s:T(G.autoBoss?'on':'off')});a.classList.toggle('on',G.autoBoss);
 }
-function statLine(st,cmp){
+// g — камені речі: показується базове значення, а різниця рахується з каменями (02.11: раніше камені надітої речі не враховувались)
+function statLine(st,cmp,g){
  return Object.keys(STATN).filter(k=>st[k]||(cmp&&cmp[k])).map(k=>{
   const v=st[k]||0,o=cmp?(cmp[k]||0):null,f=k==='crit'?v.toFixed(1)+'%':fmt(v);
-  let dlt='';if(cmp){const df=v-o;if(Math.abs(df)>0.001)dlt=` <span class="${df>0?'up':'dn'}">${df>0?'▲':'▼'}${k==='crit'?Math.abs(df).toFixed(1):fmt(Math.abs(df))}</span>`}
+  let dlt='';if(cmp){const df=v+((g&&g[k])||0)-o;if(Math.abs(df)>0.001)dlt=` <span class="${df>0?'up':'dn'}">${df>0?'▲':'▼'}${k==='crit'?Math.abs(df).toFixed(1):fmt(Math.abs(df))}</span>`}
   return `${STATN[k]} ${f}${dlt}`}).join(' · ')
 }
 const BOT='Grimtalebot';
@@ -257,7 +262,7 @@ function renderBag(){
  for(const it of list){const eq=G.eq[it.slot],better=!eq||itemScore(it)>itemScore(eq);
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
-   <div class="st">${statLine(it.st,eq?eq.st:{})}</div>${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
+   <div class="st">${statLine(it.st,eq?fullSt(eq):{},gemSum(it))}</div>${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
    <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
@@ -288,7 +293,7 @@ function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const
 function lotView(l){const it=l.item||{};
  if(it.kind==='mat')return {c:'#8a7a5a',ic:'⛏️',nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
- return {c:RAR[it.r].c,ic:SLOT[it.slot].ic,nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il}),st:statLine(it.st,eq?eq.st:{})}}
+ return {c:RAR[it.r].c,ic:SLOT[it.slot].ic,nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il}),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
 function renderMarket(){
  const el=$('p-market');
  if(!mktData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;mktLoad();return}

@@ -197,9 +197,15 @@ export const powerAb = (h: { atk: number; hp: number; def: number; crit: number 
 export const powerG = (G: State) => powerAb(hero(G), fightAb(G));
 // оцінка речі = Сила героя, якщо надіти її у свій слот (з рунами, межею криту 60%, бонусами клану, пітомця й сету).
 // Раніше крит рахувався без межі й без рун — прадавня річ з +1% криту «перемагала» сильнішу легендарку (01.11)
+// бонус повного сету, якщо в слот поставити річ рідкості r (02.11: раніше порівняння не враховувало, що епічна річ розбиває сет прадавніх)
+export function setPowWith(G: State, slot: Slot, r: number) {
+  let a = 0, e = 0; for (const s of SLOTS) { const rr = s === slot ? r : (G.eq[s]?.r ?? 0); if (rr === 5) a++; else if (rr >= 6) e++; }
+  return e === SLOTS.length ? SET.eter.pow : a + e === SLOTS.length ? SET.anc.pow : 0;
+}
 export function itemScore(G: State, it: Item, x = heroCtx(G)) {
   const o = x.eqs[it.slot] || { a: 0, h: 0, d: 0, c: 0 }, v = itemRaw(it, x.em);
-  return power({ atk: (x.a - o.a + v.a) * x.ma, hp: (x.h - o.h + v.h) * x.mh, def: (x.d - o.d + v.d) * x.md, crit: Math.min(60, x.c - o.c + v.c) });
+  const k = (1 + setPowWith(G, it.slot, it.r) / 100) / (1 + setInfo(G).pow / 100); // зміна бонусу сету від заміни
+  return power({ atk: (x.a - o.a + v.a) * x.ma * k, hp: (x.h - o.h + v.h) * x.mh * k, def: (x.d - o.d + v.d) * x.md * k, crit: Math.min(60, x.c - o.c + v.c) });
 }
 export const sellPrice = (it: Item) => Math.max(1, Math.round(mobGold(it.il) * 2 * Math.pow(RAR[it.r].m, 1.5)));
 
