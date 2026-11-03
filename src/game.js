@@ -181,14 +181,15 @@ const gemTxt=(k,il)=>{const s=gemStat(k,il),x=Object.keys(s)[0];return '+'+(x===
 const sockN=it=>gemCfg().sockets[it.r]||0;
 function sockView(it){const n=sockN(it);if(!n)return '';const gm=it.gm||[];let h='';for(let i=0;i<n;i++)h+=gm[i]?gemIc(gm[i]):'<span class="gem empty">◇</span>';return `<span class="socks">${h}</span>`}
 // оцінка речі = Сила героя, якщо надіти її (як itemScore на сервері; V.sc — сирі суми й множники героя)
-function itemScore(it){const x=V&&V.sc,g=gemSum(it);if(!x)return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5;
+function itemScore(it,noSet){const x=V&&V.sc,g=gemSum(it);if(!x)return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5;
  const o=x.eqs[it.slot]||{a:0,h:0,d:0,c:0},va=(it.st.atk||0)*x.em+g.atk,vh=(it.st.hp||0)*x.em+g.hp,vd=(it.st.def||0)*x.em+g.def,vc=(it.st.crit||0)+g.crit;
- const k=setK(it),atk=(x.a-o.a+va)*x.ma*k,crit=Math.min(60,x.c-o.c+vc);return Math.round(atk*(1+crit/100)*2+(x.h-o.h+vh)*x.mh*k*0.25+(x.d-o.d+vd)*x.md*k*1.5)}
+ const k=noSet?1:setK(it),atk=(x.a-o.a+va)*x.ma*k,crit=Math.min(60,x.c-o.c+vc);return Math.round(atk*(1+crit/100)*2+(x.h-o.h+vh)*x.mh*k*0.25+(x.d-o.d+vd)*x.md*k*1.5)}
 // як зміниться бонус повного сету, якщо надіти цю річ (сервер: setPowWith)
 function setPowWith(slot,r){const S=(V.forge&&V.forge.setCfg)||{anc:{pow:0},eter:{pow:0}};let a=0,e=0;for(const s of SLOTS){const rr=s===slot?r:((G.eq[s]||{}).r||0);if(rr===5)a++;else if(rr>=6)e++}return e===SLOTS.length?S.eter.pow:a+e===SLOTS.length?S.anc.pow:0}
 function setK(it){if(it.r==null)return 1;const cur=setPowWith(null,-1);return(1+setPowWith(it.slot,it.r)/100)/(1+cur/100)}
 // внесок речі в Силу (скільки Сили додає річ порівняно з порожнім слотом) — для показу в Кузні
-function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore(it)-itemScore({slot:it.slot,st:{},il:it.il,gm:[]})}
+// внесок самої речі без впливу на сет (02.11: інакше легендарки на ковадлі показували мінус — «розбили б» сет прадавніх)
+function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore(it,1)-itemScore({slot:it.slot,st:{},il:it.il,gm:[]},1)}
 function renderTop(){
  if(!G)return;
  const gold=G.gold+pend.gold;let xp=G.xp+pend.xp;
