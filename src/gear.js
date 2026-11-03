@@ -127,8 +127,8 @@
     if (r < 4) return '';
     return `<defs><radialGradient id="g${id}"><stop offset="0" stop-color="${P.ac}" stop-opacity="${r >= 5 ? .55 : .4}"/><stop offset="1" stop-color="${P.ac}" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="31" fill="url(#g${id})"/>`;
   }
-  function front(P, r) {
-    if (r === 5) return `<g fill="${P.ac}">${[[8, 50, 1.6], [56, 14, 1.3], [52, 54, 1.8], [10, 16, 1.2]].map(([x, y, s]) => `<circle cx="${x}" cy="${y}" r="${s}"/>`).join('')}</g><path d="M20 30l4 3-2 4 4 3" stroke="${P.ac}" stroke-width="1.4" fill="none" opacity=".9"/>`;
+  function front(P, r, img) {
+    if (r === 5) return `<g fill="${P.ac}">${[[8, 50, 1.6], [56, 14, 1.3], [52, 54, 1.8], [10, 16, 1.2]].map(([x, y, s]) => `<circle cx="${x}" cy="${y}" r="${s}"/>`).join('')}</g>${img ? '' : `<path d="M20 30l4 3-2 4 4 3" stroke="${P.ac}" stroke-width="1.4" fill="none" opacity=".9"/>`}`;
     if (r === 6) { const star = (x, y, s) => `<path d="M${x} ${y - s}L${x + s * .3} ${y - s * .3}L${x + s} ${y}L${x + s * .3} ${y + s * .3}L${x} ${y + s}L${x - s * .3} ${y + s * .3}L${x - s} ${y}L${x - s * .3} ${y - s * .3}z" fill="#fff"/>`; return star(9, 12, 4) + star(55, 50, 3.5) + star(54, 10, 2.5) + star(10, 52, 2.2); }
     return '';
   }
@@ -137,6 +137,13 @@
     const P = PAL[Math.max(0, Math.min(6, r || 0))], sh = SH[slot] || W, f = sh[(nm || 0) % sh.length], id = ++uid;
     return `<svg class="gsv" viewBox="0 0 64 64">${back(P, r, id)}${f(P, r)}${front(P, r)}</svg>`;
   };
+  // намальовані картинки (03.11, Higgsfield): assets/items/<слот><назва>_<рідкість>.webp; поверх — світіння й іскри рідкості з SVG
+  const CNT = { weapon: 5, helmet: 4, armor: 4, boots: 4, ring: 4, amulet: 4 };
+  window.gearArt = function (slot, r, nm) {
+    r = Math.max(0, Math.min(6, r || 0)); const P = PAL[r], id = ++uid, n = (nm || 0) % (CNT[slot] || 4);
+    const b = back(P, r, id), f = front(P, r, 1);
+    return `<span class="gart">${b ? `<svg class="gfx gb" viewBox="0 0 64 64">${b}</svg>` : ''}<img src="assets/items/${slot}${n}_${r}.webp" alt="" loading="lazy" onerror="this.outerHTML=gearSvg('${slot}',${r},${n})">${f ? `<svg class="gfx gf" viewBox="0 0 64 64">${f}</svg>` : ''}</span>`;
+  };
   // значок речі в рамці кольору рідкості
-  window.gearIc = function (it, big) { return `<span class="gic r${it.r}${big ? ' big' : ''}">${window.gearSvg(it.slot, it.r, it.nm)}</span>`; };
+  window.gearIc = function (it, big) { return `<span class="gic r${it.r}${big ? ' big' : ''}">${window.gearArt(it.slot, it.r, it.nm)}</span>`; };
 })();

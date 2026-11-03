@@ -373,7 +373,7 @@ function renderForge(){
  const ST=F.set||{a:0,e:0,n:6},SC=F.setCfg||{anc:{each:6,souls:40,pow:15},eter:{each:16,souls:60,pow:30}};
  const setBan=(k,c,ic)=>{const x=SC[k],have=k==='anc'?ST.a+ST.e:ST.e,on=k==='anc'?ST.fullA&&!ST.fullE:ST.fullE;return `<div class="setban" style="border-color:${c}55"><span style="color:${c}">${ic}</span><div>${T(k==='anc'?'set_anc':'set_eter',{e:x.each,s:x.souls,p:x.pow})}<div class="sub">${T('set_have',{n:have,m:ST.n})}${k==='anc'&&ST.e?' '+T('set_incl_e',{a:ST.a,e:ST.e}):''}${on?' · <b style="color:var(--green)">'+T('set_on')+'</b>':''}</div></div></div>`};
  const slotG=(cnt,sel,attr,need)=>`<div class="slotg">${SLOTS.map(s=>{const n=cnt(s);return `<button ${attr}="${s}" class="${s===sel?'act':''}"><i class="${n>=need?'ok':''}">${n}</i>${SLOT[s].ic}<span>${SLOT[s].n}</span></button>`}).join('')}</div>`;
- const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${gearSvg(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`;
+ const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`;
  const resC=(have,need,ic)=>`<span style="color:${have>=need?'inherit':'var(--red)'}">${ic}${fmt(have)}/${fmt(need)}</span>`;
  const maxExtra=Math.max(0,Math.ceil((F.myth.cap-F.myth.base-F.myth.fail*fails)/F.myth.extra));
  const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?Math.round(itemVal(onA[0])*1.8):0;
@@ -393,7 +393,7 @@ function renderForge(){
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aOk=aIt&&G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=aSo,eqA=G.eq[aSlot];
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
-  ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearSvg(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
+  ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*RAR[6].m/RAR[5].m))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
