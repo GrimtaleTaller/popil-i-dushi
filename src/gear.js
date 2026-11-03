@@ -138,7 +138,7 @@
     return `<svg class="gsv" viewBox="0 0 64 64">${back(P, r, id)}${f(P, r)}${front(P, r)}</svg>`;
   };
   // намальовані картинки (03.11, Higgsfield): assets/items/<слот><назва>_<рідкість>.webp; поверх — світіння й іскри рідкості з SVG
-  const CNT = { weapon: 5, helmet: 4, armor: 4, boots: 4, ring: 4, amulet: 4 };
+  const CNT = { weapon: 5, helmet: 4, armor: 4, boots: 4, ring: 4, amulet: 4, saddle: 1, parmor: 1, phelmet: 1 };
   window.gearArt = function (slot, r, nm) {
     r = Math.max(0, Math.min(6, r || 0)); const P = PAL[r], id = ++uid, n = (nm || 0) % (CNT[slot] || 4);
     const b = back(P, r, id), f = front(P, r, 1);
