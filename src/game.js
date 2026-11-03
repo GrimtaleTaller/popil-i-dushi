@@ -233,7 +233,7 @@ function invite(){
 function renderHero(){
  let h=`<div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
  for(const s of SLOTS){const it=G.eq[s];
-  h+=`<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
+  h+=`<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
    (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
  h+=`</div><div class="stats">
   <div><span>${STATN.atk}</span><b>${fmt(H.atk)}</b></div><div><span>${STATN.hp}</span><b>${fmt(H.hp)}</b></div>
@@ -261,7 +261,7 @@ function renderBag(){
  const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
  for(const it of list){const eq=G.eq[it.slot],better=!eq||itemScore(it)>itemScore(eq);
-  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info">
+  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
    <div class="st">${statLine(it.st,eq?fullSt(eq):{},gemSum(it))}</div>${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
    <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}</div></div>`}
@@ -294,7 +294,7 @@ function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const
 function lotView(l){const it=l.item||{};
  if(it.kind==='mat')return {c:'#8a7a5a',ic:'⛏️',nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
- return {c:RAR[it.r].c,ic:SLOT[it.slot].ic,nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il}),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
+ return {c:RAR[it.r].c,ic:gearIc(it),nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il}),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
 function renderMarket(){
  const el=$('p-market');
  if(!mktData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;mktLoad();return}
@@ -334,7 +334,7 @@ function gemPane(){const C=gemCfg(),GM=G.gems||{};
  h+=`<div class="card"><h4>${T('gem_items')}</h4><p class="hint">${T('gem_items_hint',{o:C.out.join(' / ')})}</p>`;
  if(!all.length)h+=`<p class="hint">${T('gem_no_items')}</p>`;
  for(const it of all){const eqd=SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id),n=sockN(it),gm=it.gm||[];
-  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${SLOT[it.slot].ic}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${eqd?' · '+T('equipped'):''}</div><div class="socrow">`+
+  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${eqd?' · '+T('equipped'):''}</div><div class="socrow">`+
    Array.from({length:n},(_,i)=>gm[i]?`<button class="sock full" data-gr="${it.id}:${i}">${gemIc(gm[i],1)}<small>${gemTxt(gm[i],it.il)}</small><small class="out">✕ ⚱️${C.out[gemP(gm[i]).l-1]}</small></button>`:`<button class="sock" data-gi="${it.id}">◇<small>${T('gem_put')}</small></button>`).join('')+'</div></div></div>'}
  return h+'</div>'}
 function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.id===id);if(!it)return;const GM=G.gems||{};
@@ -373,7 +373,7 @@ function renderForge(){
  const ST=F.set||{a:0,e:0,n:6},SC=F.setCfg||{anc:{each:6,souls:40,pow:15},eter:{each:16,souls:60,pow:30}};
  const setBan=(k,c,ic)=>{const x=SC[k],have=k==='anc'?ST.a+ST.e:ST.e,on=k==='anc'?ST.fullA&&!ST.fullE:ST.fullE;return `<div class="setban" style="border-color:${c}55"><span style="color:${c}">${ic}</span><div>${T(k==='anc'?'set_anc':'set_eter',{e:x.each,s:x.souls,p:x.pow})}<div class="sub">${T('set_have',{n:have,m:ST.n})}${k==='anc'&&ST.e?' '+T('set_incl_e',{a:ST.a,e:ST.e}):''}${on?' · <b style="color:var(--green)">'+T('set_on')+'</b>':''}</div></div></div>`};
  const slotG=(cnt,sel,attr,need)=>`<div class="slotg">${SLOTS.map(s=>{const n=cnt(s);return `<button ${attr}="${s}" class="${s===sel?'act':''}"><i class="${n>=need?'ok':''}">${n}</i>${SLOT[s].ic}<span>${SLOT[s].n}</span></button>`}).join('')}</div>`;
- const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${SLOT[it.slot].ic}<b>${fmt(itemVal(it))}</b></div>`;
+ const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${gearSvg(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`;
  const resC=(have,need,ic)=>`<span style="color:${have>=need?'inherit':'var(--red)'}">${ic}${fmt(have)}/${fmt(need)}</span>`;
  const maxExtra=Math.max(0,Math.ceil((F.myth.cap-F.myth.base-F.myth.fail*fails)/F.myth.extra));
  const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?Math.round(itemVal(onA[0])*1.8):0;
@@ -393,7 +393,7 @@ function renderForge(){
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aOk=aIt&&G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=aSo,eqA=G.eq[aSlot];
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
-  ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${SLOT[it.slot].ic}<b>${fmt(itemVal(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
+  ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearSvg(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*RAR[6].m/RAR[5].m))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
