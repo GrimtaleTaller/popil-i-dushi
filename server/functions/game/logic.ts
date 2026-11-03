@@ -528,6 +528,24 @@ export function junkIds(G: State) {
   const x = heroCtx(G), cur: Record<string, number> = {}; for (const s of SLOTS) if (G.eq[s]) cur[s] = itemScore(G, G.eq[s]!, x);
   return G.inv.filter((i) => i.r < 4 && !i.gm?.length && G.eq[i.slot] && itemScore(G, i, x) <= cur[i.slot]).map((i) => i.id);
 }
+// розбір прадавніх і вічних на Попіл (рішення Влада 03.11): лише з сумки, без каменів. Попелу менше, ніж коштує кування, тож петлі «Попіл → ключі → скрині → Попіл» немає
+export const RELIC_ASH: Record<number, number> = { 5: 5, 6: 15 };
+export function relicJunkIds(G: State) { // прадавні/вічні в сумці, гірші за надіте в тому ж слоті
+  const x = heroCtx(G), cur: Record<string, number> = {}; for (const s of SLOTS) if (G.eq[s]) cur[s] = itemScore(G, G.eq[s]!, x);
+  return G.inv.filter((i) => i.r >= 5 && !i.gm?.length && G.eq[i.slot] && itemScore(G, i, x) <= cur[i.slot]).map((i) => i.id);
+}
+export function actRelicAsh(G: State, ids: number[] | "junk") {
+  if (ids === "junk") ids = relicJunkIds(G);
+  if (!Array.isArray(ids) || !ids.length || ids.length > invMax(G)) fail("no_junk");
+  const set = new Set(ids.map(Number)), got = G.inv.filter((i) => set.has(i.id));
+  if (got.length !== set.size) fail("no_item");
+  if (got.some((i) => i.r < 5)) fail("not_mythic");
+  if (got.some((i) => i.gm?.length)) fail("has_gems");
+  const ash = got.reduce((a, i) => a + (RELIC_ASH[i.r] || 0), 0);
+  G.inv = G.inv.filter((i) => !set.has(i.id)); G.ash += ash; bump(G, "dis", got.length);
+  log(G, "relic", [got.length, ash]);
+  return { n: got.length, ash };
+}
 export function actDismantleJunk(G: State, mode: string) {
   const ids = junkIds(G); if (!ids.length) fail("no_junk");
   return actDismantle(G, ids, mode);

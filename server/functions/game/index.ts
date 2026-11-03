@@ -73,7 +73,7 @@ function view(G: L.State, now: number, uid = 0) {
     wb: { stage: L.WB.stage, free: L.WB.free, left: G.wb?.day === new Date(now).toISOString().slice(0, 10) ? Math.max(0, L.WB.free - G.wb.used) : L.WB.free, price: G.wb?.day === new Date(now).toISOString().slice(0, 10) ? L.wbPrice(G) : L.WB.price, week: L.passWeek(now) },
     pet: { defs: L.PETS, cfg: L.PET, info: L.petInfo(G, now), gear: L.petGearInfo(G) },
     gem: { sockets: L.SOCKETS, out: L.GEM_OUT, m: L.GEM_M, crit: L.GEM_CRIT, max: L.GEM_MAX, pts: L.ARENA_SHOP.stone.pts },
-    forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, ast: L.AST, astChance: L.astChance(G), set: L.setInfo(G), setCfg: L.SET },
+    forge: { soulsPerHour: L.soulsPerHour(G), ench: L.enchCost(G), enchMax: L.ENCH_MAX, enchStep: L.ENCH_STEP, myth: L.MYTH, junk: L.junkIds(G).length, relic: L.relicJunkIds(G).length, relicAsh: L.RELIC_ASH, ast: L.AST, astChance: L.astChance(G), set: L.setInfo(G), setCfg: L.SET },
     arena: {
       stage: L.ARENA.stage, daily: L.ARENA.daily, left: Math.max(0, (G.arena.day === new Date(now).toISOString().slice(0, 10) ? L.arenaLimit(G) - G.arena.used : L.ARENA.daily)),
       ticket: G.arena.day === new Date(now).toISOString().slice(0, 10) ? L.ticketPrice(G) : L.ARENA.ticket, seasonEnd: seasonEnd(now),
@@ -612,6 +612,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "passClaim": out = L.actPassClaim(G, now); break;
       case "arenaTicket": out = L.actArenaTicket(G, now); break;
       case "achClaim": out = L.actAchClaim(G); break;
+      case "relicAsh": out = L.actRelicAsh(G, args.ids === "junk" ? "junk" : (args.ids as number[])); break;
       case "share": out = L.actShare(G, now); break;
       case "notify": { G.ntf = args.on ? 1 : 0; await SB.from("players").update({ notify: !!args.on }).eq("tg_id", user.id); out = { on: G.ntf }; break; }
       case "wbAttack": { if (!(await wbReady())) throw new L.GameError("wb_soon"); out = L.actWbAttack(G, now, !!args.pay); wbHit = (out as { dmg: number }).dmg; break; }

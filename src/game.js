@@ -257,7 +257,7 @@ function renderBag(){
  let h=(ov.v||ov.d?`<div class="card ovf"><b>⚠️ ${T('bag_full_title')}</b><p class="hint">${T('ovf_txt',{v:ov.v,d:ov.d,s:fmt(ov.sh),p:Math.round((V.inv&&V.inv.rate||0.5)*100)})}</p><div class="row"><button class="btn" id="ovfOk">${T('ok')}</button></div></div>`:'')
  +(vlt?`<div class="chestbar vault">📦<span>${T('vault',{n:vlt,m:V.inv&&V.inv.vaultMax||100})}</span><button class="btn pri" id="vTake">${T('take')}</button></div>`:'')
  +(cc?`<div class="chestbar"><span>${(()=>{const cg=chestGroups();return [3,2,1].filter(g=>cg[g]).map(g=>`<span class="chg" style="color:${RAR[g].c}">${chestIc(g)} ${T('chest_'+g)} ×${cg[g]}</span>`).join('')})()}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
- <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="sellC">${T('sell_common')}</button><button class="btn" id="sellW">${T('sell_worse')}</button><button class="btn ${G.autoSell?'pri':''}" id="autoS">${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button></div>
+ <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="sellC">${T('sell_common')}</button><button class="btn" id="sellW">${T('sell_worse')}</button><button class="btn ${G.autoSell?'pri':''}" id="autoS">${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button></div>${V.forge&&V.forge.relic?`<div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="relJ">⚱️ ${T('relic_junk',{n:V.forge.relic})}</button></div>`:''}
  <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · 🔥${fmt(V.inv.cost)}</button>`:''}</div>`;
  const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
@@ -265,7 +265,7 @@ function renderBag(){
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
    <div class="st">${statLine(it.st,eq?fullSt(eq):{},gemSum(it))}</div>${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
-   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}</div></div>`}
+   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('vTake'))$('vTake').onclick=()=>act('vault',{},r=>toast(T('vault_took',{n:r.out.n})));
@@ -276,6 +276,8 @@ function renderBag(){
  $('p-bag').querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>act('equip',{id:+b.dataset.eq},()=>haptic('light')));
  $('p-bag').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell([+b.dataset.sell]));
  $('p-bag').querySelectorAll('[data-dis]').forEach(b=>b.onclick=()=>dismantle([+b.dataset.dis]));
+ $('p-bag').querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>{const it=G.inv.find(i=>i.id===+b.dataset.rel);if(!it)return;modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p>${T('relic_ask',{a:(V.forge.relicAsh||{})[it.r]||0})}</p>`,T('relic_btn'),()=>act('relicAsh',{ids:[it.id]},r=>toast('⚱️ +'+r.out.ash)))});
+ if($('relJ'))$('relJ').onclick=()=>modal(`<div class="big">⚱️</div><p>${T('relic_junk_ask',{n:V.forge.relic})}</p>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
  $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
  $('sellC').onclick=()=>sell(G.inv.filter(i=>i.r===0).map(i=>i.id));
@@ -524,7 +526,7 @@ const LOGT={
  bossDeath:a=>T('log_bossDeath',{s:a[0]}),
  bossTimeout:a=>T('log_bossTimeout',{s:a[0]}),
  daily:a=>T('log_daily',{n:a[0]}),
- reward:a=>T('log_reward',{a:fmt(a[0])}),
+ reward:a=>T('log_reward',{a:fmt(a[0])}),relic:a=>T('relic_done',{n:a[0],a:a[1]}),
  pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
