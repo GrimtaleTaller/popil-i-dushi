@@ -96,3 +96,29 @@ html,body{font-size:13.5px}
 @keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── 04.11: дії-текст отримали м'яку «таблетку», щоб не зливались з написами ── */
+.btn:not(.pri){background:#e2b97a12;border:1px solid #e2b97a2e;border-radius:999px;padding:4px 11px}
+.btn:not(.pri):active{background:#e2b97a26}
+.row .btn:not(.pri){padding:6px 12px}
+.item .acts .btn:not(.pri){padding:2px 9px;margin-top:3px}
+.ubtns .btn:not(.pri){padding:6px 12px}
+.btn:not(.pri):disabled{border-color:#ffffff10;background:none}
+.row{gap:6px}
+
+/* ── вікно «Герой» (шторка знизу) ── */
+#lvl,#hs{cursor:pointer}
+#hsheet{position:fixed;inset:0;z-index:15;pointer-events:none}
+#hsheet .hs-bg{position:absolute;inset:0;background:#0508;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);opacity:0;transition:opacity .25s}
+#hsheet .hs-box{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;height:88vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#1c171f,#0f0c11 30%);border:1px solid #ffffff14;border-bottom:none;border-radius:20px 20px 0 0;box-shadow:0 -18px 50px #000c,0 0 0 1px #c0563a1c;transform:translateY(105%);transition:transform .34s var(--ease)}
+#hsheet .hs-box::before{content:"";position:absolute;left:18%;right:18%;top:-1px;height:1px;background:linear-gradient(90deg,transparent,#e07a52,transparent)}
+#hsheet.open{pointer-events:auto}
+#hsheet.open .hs-bg{opacity:1}
+#hsheet.open .hs-box{transform:none}
+.hs-head{position:relative;display:flex;align-items:center;gap:10px;padding:14px 46px 6px 14px;touch-action:none}
+.hs-grip{position:absolute;top:6px;left:50%;width:38px;height:4px;margin-left:-19px;border-radius:4px;background:#ffffff26}
+.hs-t b{display:block;font-size:16px;color:var(--gl2)}.hs-t span{font-size:11.5px;color:var(--mut)}
+.hs-head .mx{top:10px;right:10px}
+.hs-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.hs-body .subtabs{position:sticky;top:0;z-index:2;display:flex}
+body.hs-open{overflow:hidden}

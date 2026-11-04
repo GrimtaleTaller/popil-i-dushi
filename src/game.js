@@ -167,7 +167,7 @@ function replayTick(dt){
 
 // ---------- UI ----------
 const dirty={quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1,market:1};
-let tab='hero';
+let tab='bag'; // 04.11: «Герой» — окреме вікно (шторка), тож стартуємо з Сумки
 let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?span[ >])/g,'&lt;');e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
 // ---------- камені: a Рубін (атака), h Сапфір (здоров'я), d Аметист (захист), c Смарагд (крит) ----------
@@ -916,7 +916,7 @@ function tutCheck(){
  if(tutCur){if(tutCur.still&&!tutCur.still())tutHide();else{tutPlace();return}}
  const old=tutHas('old');
  if(!old&&!tutHas('intro')){
-  if(tab!=='hero'&&groupOf(tab)!=='hero')return;
+  if(groupOf(tab)==='hero')return; // вступ показуємо на головному екрані, не в шторці героя
   const [txt,sel]=TUT_INTRO[introI]||TUT_INTRO[0];
   tutShow({txt,sel,block:1,skip:1,i:introI+1,n:TUT_INTRO.length,ok:()=>{introI++;if(introI>=TUT_INTRO.length){introI=0;tutMark('intro')}}});return;
  }
@@ -1036,7 +1036,33 @@ function wbResult(o){
 const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'quest'};
 const groupOf=t=>['hero','pet','train','log','prof'].includes(t)?'hero':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'?'quest':t==='market'?'bag':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
-function showPane(){document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
+function showPane(){if(groupOf(tab)!=='hero')prevTab=tab;heroSheet(groupOf(tab)==='hero');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
+// «Герой» (Спорядження / Пітомець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
+// Підвкладки й панелі героя переносяться в шторку й повертаються назад при закритті. Закрити: ✕, тап по затемненню, свайп униз по шапці.
+let prevTab='bag';const HERO_PANES=['hero','pet','train','log','prof'];
+function heroSheet(open){
+ let sh=$('hsheet');
+ if(!sh){sh=document.createElement('div');sh.id='hsheet';sh.innerHTML=`<div class="hs-bg"></div><div class="hs-box"><div class="hs-head"><i class="hs-grip"></i><div class="hs-t"><b id="hsTitle"></b><span id="hsSub"></span></div><button class="mx" id="hsX">✕</button></div><div class="hs-body" id="hsBody"></div></div>`;document.body.appendChild(sh);
+  const close=()=>{const b=document.querySelector(tabBtn(groupOf(prevTab)));if(b)b.click()};
+  sh.querySelector('.hs-bg').onclick=close;$('hsX').onclick=close;
+  let y0=null;const hd=sh.querySelector('.hs-head'),bx=sh.querySelector('.hs-box');
+  hd.addEventListener('touchstart',e=>{y0=e.touches[0].clientY},{passive:true});
+  hd.addEventListener('touchmove',e=>{if(y0==null)return;const d=Math.max(0,e.touches[0].clientY-y0);bx.style.transform=`translateY(${d}px)`},{passive:true});
+  hd.addEventListener('touchend',e=>{if(y0==null)return;const d=e.changedTouches[0].clientY-y0;y0=null;bx.style.transform='';if(d>90)close()});
+ }
+ const body=$('hsBody'),home=$('p-bag').parentNode,st=$('subtabs');
+ if(open){
+  if(st.parentNode!==body)body.appendChild(st);
+  for(const k of HERO_PANES){const p=$('p-'+k);if(p.parentNode!==body)body.appendChild(p)}
+  $('hsTitle').textContent='🧙 '+T('tab_hero');$('hsSub').textContent=G?T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)}):'';
+  if(!sh.classList.contains('open')){sh.classList.add('open');document.body.classList.add('hs-open');body.scrollTop=0}
+ }else{
+  if(!sh.classList.contains('open'))return;
+  document.querySelector('.tabsw').appendChild(st);
+  for(const k of HERO_PANES){const p=$('p-'+k);home.insertBefore(p,$('p-bag'))}
+  sh.classList.remove('open');document.body.classList.remove('hs-open');
+ }
+}
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
@@ -1047,6 +1073,7 @@ function renderSub(){
  e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else{tab=k;lastSub[g]=k}showPane()});
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
+$('lvl').onclick=$('hs').onclick=()=>document.querySelector(tabBtn('hero')).click(); // рівень і фігурка героя відкривають вікно героя
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
 $('next').onclick=()=>{if(G.stage<G.maxStage)act('stage',{s:G.stage+1},()=>{B.m=null;B.resp=0.1})};
 $('bossBtn').onclick=()=>{if(G.kills>=WAVES&&!B.rep){
