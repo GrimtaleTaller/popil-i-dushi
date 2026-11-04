@@ -810,7 +810,9 @@ async function act(a,args,ok){
 // ---------- модалки ----------
 const queue=[];
 function modal(html,btn,cb){queue.push({html,btn,cb});if(queue.length===1)showModal()}
-function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}$('mbox').innerHTML=q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{q.cb&&q.cb();queue.shift();showModal()}}
+// вікно з дією (cb) завжди можна закрити без дії: кнопка «Закрити» або тап поза вікном (04.11 — вікно вдосконалення не закривалось)
+function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb;$('mbox').innerHTML=q.html+(q.btn?`<div class="row">${cl?`<button class="btn" id="mcl">${T('m_close')}</button>`:''}<button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{q.cb&&q.cb();queue.shift();showModal()};
+ const close=()=>{queue.shift();showModal()};if(cl)$('mcl').onclick=close;$('modal').onclick=e=>{if(cl&&e.target===$('modal'))close()}}
 let dailyShown='';
 function afterSync(r){
  const p=r.prog;
