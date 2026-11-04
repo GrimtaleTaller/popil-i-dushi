@@ -269,9 +269,21 @@ function keyGiveDlg(){
  const go=()=>{const C=clanData;if(!C||!C.clan){toast(T('key_no_clan'));return}
   const K=G.keys||{},ts=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b),ms=(C.members||[]).filter(m=>!m.me);
   if(!ms.length){toast(T('key_no_mates'));return}
-  modal(`<div class="big">🗝️</div><h3>${T('key_gift_t')}</h3><p class="hint">${T('key_gift_hint')}</p><div class="row"><select id="kfP" class="inp">${ms.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></div><div class="row"><select id="kfT" class="inp">${ts.map(t=>`<option value="${t}">${T('tier',{n:t})} (${K[t]})</option>`).join('')}</select><input id="kfN" class="inp" type="number" min="1" value="1" inputmode="numeric" style="flex:0 0 72px"></div>`,T('key_give'),()=>{
-   const pid=+$('kfP').value,t=+$('kfT').value,n=Math.floor(+$('kfN').value||0),nm=($('kfP').selectedOptions[0]||{}).textContent||'';if(!(n>=1)){toast(T('bad_amount'));return}
-   act('keyGive',{pid,t,n},r=>{haptic('light');clanData=null;toast(r.out.ok===false?T('key_to_clan'):T('key_sent',{n,t,who:nm}))})})};
+  // отримувача обирають самі з випадного списку — нікого не підставляємо (04.11: автоматично стояв лідер)
+  let pid=0,pnm='',tsel=+ts[0];
+  const rl=m=>m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤';
+  modal(`<div class="big">🗝️</div><h3>${T('key_gift_t')}</h3><p class="hint">${T('key_gift_hint')}</p>
+   <div class="pick"><button class="pickb" id="kfPick"><span>${T('key_pick')}</span><i>▾</i></button><div class="plist" id="kfList">${ms.map(m=>`<button data-kp="${m.id}">${rl(m)} <b>${esc(m.name)}</b><small>${T('lvl',{n:m.lvl||'—'})}</small></button>`).join('')}</div></div>
+   <div class="chips" id="kfT">${ts.map(t=>`<button data-kt="${t}" class="${+t===tsel?'act':''}">${T('tier',{n:t})} ×${K[t]}</button>`).join('')}</div>
+   <div class="row" style="align-items:center;justify-content:center"><span class="hint" style="margin:0">${T('key_qty')}</span><input id="kfN" class="inp" type="number" min="1" value="1" inputmode="numeric" style="flex:0 0 80px"></div>`,T('key_give'),()=>{
+   const n=Math.floor(+$('kfN').value||0);if(!pid){toast(T('key_pick_err'));$('kfPick').classList.add('shake');setTimeout(()=>$('kfPick')&&$('kfPick').classList.remove('shake'),400);return false}
+   if(!(n>=1)){toast(T('bad_amount'));return false}
+   const t=tsel;act('keyGive',{pid,t,n},r=>{haptic('light');clanData=null;toast(r.out.ok===false?T('key_to_clan'):T('key_sent',{n,t,who:pnm}))})});
+  setTimeout(()=>{const pb=$('kfPick'),pl=$('kfList');if(!pb)return;
+   pb.onclick=()=>pl.classList.toggle('open');
+   pl.querySelectorAll('[data-kp]').forEach(b=>b.onclick=()=>{pid=+b.dataset.kp;pnm=b.querySelector('b').textContent;pb.querySelector('span').innerHTML=b.innerHTML.replace(/<small>.*<\/small>/,'');pb.classList.add('set');pl.classList.remove('open');pl.querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b))});
+   $('kfT').querySelectorAll('[data-kt]').forEach(b=>b.onclick=()=>{tsel=+b.dataset.kt;$('kfT').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b))});
+  },0)};
  if(clanData)go();else api('clan').then(r=>{clanData=r.out;go()}).catch(e=>toast(errT(e)));
 }
 let bagFilter='all';
@@ -811,7 +823,7 @@ async function act(a,args,ok){
 const queue=[];
 function modal(html,btn,cb){queue.push({html,btn,cb});if(queue.length===1)showModal()}
 // вікно з дією (cb) завжди можна закрити без дії: червоний ✕ у куті або тап поза вікном (04.11)
-function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb;$('mbox').innerHTML=(cl?`<button class="mx" id="mcl" aria-label="${T('m_close')}">✕</button>`:'')+q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{q.cb&&q.cb();queue.shift();showModal()};
+function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb;$('mbox').innerHTML=(cl?`<button class="mx" id="mcl" aria-label="${T('m_close')}">✕</button>`:'')+q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{if(q.cb&&q.cb()===false)return;queue.shift();showModal()}; // cb може повернути false — вікно лишається (напр., не обрано отримувача)
  const close=()=>{queue.shift();showModal()};if(cl)$('mcl').onclick=close;$('modal').onclick=e=>{if(cl&&e.target===$('modal'))close()}}
 let dailyShown='';
 function afterSync(r){

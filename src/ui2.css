@@ -1,0 +1,98 @@
+/* Grimtale UI v2 (04.11, рішення Влада): варіант B «тихі кнопки» + компактніше + анімації.
+   Підключається після основних стилів; відкат — прибрати <link> на цей файл в index.html. */
+:root{--bg:#0b090d;--panel:#16131a;--panel2:#1d1922;--line:#2c2633;--glass:linear-gradient(180deg,#1b171f 0%,#141117 100%);--gl:#e2b97a;--gl2:#f5d9a6;--ease:cubic-bezier(.2,.8,.2,1)}
+body{background:radial-gradient(120% 60% at 50% -10%,#2a1a1e 0%,#0b090d 55%) fixed}
+html,body{font-size:13.5px}
+
+/* ── верхня панель ── */
+.top{padding:7px 10px;gap:8px;background:linear-gradient(180deg,#1a1519ee,#120f14ee);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid #ffffff0d}
+.lvl{width:34px;height:34px;border-radius:9px;font-size:14px;box-shadow:0 0 0 1px #c0563a55,0 0 12px #c0563a33;border:none}
+.bar{height:5px;background:#ffffff0d}.bar>i{transition:width .4s var(--ease);box-shadow:0 0 8px currentColor}
+.gold{font-size:14px;text-shadow:0 0 10px #f2c14e44}
+
+/* ── вкладки ── */
+.tabs{background:#120f14;border-bottom:1px solid #ffffff0a}
+.tabs button{padding:9px 1px 8px;font-size:11px;letter-spacing:.1px;transition:color .2s}
+.tabs button.act{color:var(--gl2);border-image:linear-gradient(90deg,transparent,#e07a52,transparent) 1;text-shadow:0 0 12px #e07a5266}
+.subtabs{gap:0;padding:0 8px;background:#0e0c10;border-bottom:1px solid #ffffff0a}
+.subtabs button{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 9px 7px;flex:0 0 auto;font-size:12px;transition:color .2s,border-color .2s}
+.subtabs button.act{background:none;color:#fff;border-bottom-color:#e07a52}
+
+/* ── панелі та поява ── */
+.pane{padding:10px}
+.pane.act{animation:paneIn .28s var(--ease)}
+@keyframes paneIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card,.stats,.upg,.slot,.item,.chbox{background:var(--glass);border:1px solid #ffffff0c;box-shadow:inset 0 1px 0 #ffffff08,0 6px 18px #0006}
+.card{border-radius:14px;padding:9px 10px;margin-bottom:8px}
+.card h4{font-size:13px;letter-spacing:.2px;color:var(--gl2)}
+.hint{font-size:11.5px;line-height:1.4}
+
+/* ── кнопки: тихі (B) ── */
+.btn{padding:5px 8px;border-radius:8px;font-size:12.5px;background:none;border:none;color:var(--gl);font-weight:650;min-height:0;transition:transform .12s var(--ease),background .2s,opacity .2s}
+.btn:active{transform:scale(.95);background:#ffffff10}
+.btn:disabled{opacity:.35}
+.btn.pri{position:relative;overflow:hidden;background:linear-gradient(135deg,#b54b31,#6b2516);color:#fff;padding:7px 14px;border-radius:9px;box-shadow:inset 0 1px 0 #ffffff30,0 3px 10px #a8452e44}
+.btn.pri::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,#ffffff2a 50%,transparent 70%);transform:translateX(-120%);animation:sheen 4.5s ease-in-out infinite}
+.btn.pri:disabled::after{display:none}
+@keyframes sheen{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+.row{gap:2px;margin-top:8px;flex-wrap:wrap;align-items:center}.row .btn{flex:0 1 auto}.row .btn.pri{flex:1 1 auto}
+.ubtns{justify-content:flex-start;gap:2px}.ubtns .btn,.ubtns .btn.pri{flex:0 0 auto;font-size:12px}
+.upg>.btn{min-width:0}
+.btn.big{padding:9px 14px;font-size:14px}
+
+/* ── фільтри, чипи ── */
+.filter{gap:0;margin-bottom:6px}
+.filter button,.chips button{background:none!important;border:none!important;border-bottom:2px solid transparent!important;border-radius:0!important;padding:6px 8px!important;color:var(--mut);transition:color .2s,border-color .2s}
+.filter button.act,.chips button.act{border-bottom-color:#e07a52!important;color:#fff}
+
+/* ── спорядження ── */
+.slots{gap:6px}
+.slot{border-radius:13px;padding:6px 4px;min-height:0;transition:transform .15s var(--ease)}
+.slot:active{transform:scale(.97)}
+.slot .it{font-size:10.5px;line-height:1.2}
+.slot .sn.ref{font-size:10px;color:#e2b97a}
+.stats{margin-top:8px;padding:8px 10px;gap:4px 12px;font-size:12.5px;border-radius:14px}
+
+/* ── сумка, речі ── */
+.item{padding:6px 8px;gap:8px;margin-bottom:6px;border-radius:12px;border-left-width:3px}
+.item .ic{width:44px;flex:0 0 44px}
+.item .nm{font-size:12.5px}.item .sub{font-size:10.5px}.item .st{font-size:11.5px}
+.item .acts{gap:0}.item .acts .btn{padding:3px 6px;font-size:11.5px}.item .acts .btn.pri{padding:5px 10px;margin-bottom:2px}
+.chestbar{padding:6px 8px;border-radius:12px;margin-bottom:8px;gap:8px}
+.gic{transition:transform .2s var(--ease)}
+
+/* ── тренування ── */
+.upg{padding:8px 10px;gap:8px;border-radius:13px;margin-bottom:6px}
+.upg .ic{font-size:24px}
+.upg .info b{font-size:13px}
+.gate{padding:5px 8px}
+
+/* ── вікна ── */
+.modal{background:#05030799;backdrop-filter:blur(6px) saturate(.8);-webkit-backdrop-filter:blur(6px) saturate(.8);padding:16px}
+.modal.show{animation:fadeIn .2s ease-out}
+.modal.show .mbox{animation:popIn .32s var(--ease)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+.mbox{padding:14px 14px 12px;border-radius:18px;background:linear-gradient(180deg,#201a24,#141117);border:1px solid #ffffff14;box-shadow:0 0 0 1px #c0563a22,0 20px 50px #000c,inset 0 1px 0 #ffffff10;max-width:340px}
+.mbox::before{content:"";position:absolute;left:20%;right:20%;top:-1px;height:1px;background:linear-gradient(90deg,transparent,#e07a52,transparent)}
+.mbox h3{font-size:16px}.mbox p{font-size:12.5px}.mbox .big{font-size:38px;line-height:1.1}
+.mx{top:7px;right:7px;width:26px;height:26px;font-size:13px;transition:transform .15s}
+.mx:active{transform:scale(.88) rotate(90deg)}
+
+/* ── підказки ── */
+.toast{border-radius:999px;padding:7px 14px;font-size:12.5px;background:linear-gradient(180deg,#2b2232,#1d1722);box-shadow:0 8px 24px #000a;transform:translate(-50%,-8px);transition:opacity .25s,transform .3s var(--ease)}
+.toast.show{transform:translate(-50%,0)}
+
+/* ── випадний список (передача ключів) ── */
+.pick{position:relative;margin:8px 0 4px;text-align:left}
+.pickb{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-radius:10px;background:#0f0d12;border:1px solid #ffffff1a;color:var(--mut);font-weight:600;transition:border-color .2s}
+.pickb.set{color:#fff;border-color:#e07a5288}.pickb i{font-style:normal;transition:transform .2s}
+.plist{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;max-height:210px;overflow:auto;background:#1a161e;border:1px solid #ffffff1a;border-radius:12px;box-shadow:0 14px 30px #000c;padding:4px}
+.plist.open{display:block;animation:popIn .2s var(--ease)}
+.plist button{display:flex;width:100%;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;background:none;text-align:left}
+.plist button small{margin-left:auto;color:var(--mut);font-size:11px}
+.plist button:active,.plist button.act{background:#e07a5222}
+.shake{animation:shake .35s}
+@keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
