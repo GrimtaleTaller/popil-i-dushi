@@ -550,7 +550,7 @@ export function relicJunkIds(G: State) { // прадавні/вічні в су�
 export const REFINE = { g: 300, sh: 1, minR: 3, gap: 15, m: [0, 0, 0, 1, 2, 5, 15] }; // gap: річ можна тягнути лише до (найвищий етап − gap), щоб не обганяти звичайний лут/крафт
 const refK = (r: number) => REFINE.m[r] || 1;
 export const refineCost = (it: Item) => ({ gold: Math.round(mobGold(it.il) * REFINE.g * refK(it.r)), shards: Math.round(REFINE.sh * it.il * refK(it.r)) });
-export const refineCap = (G: State) => G.maxStage - REFINE.gap;
+export const refineCap = (G: State) => Math.min(G.lvl, G.maxStage - REFINE.gap); // 04.11 (рішення Влада): не вище рівня героя
 export function actRefine(G: State, id: number, n = 1) {
   id = Number(id);
   const it = Object.values(G.eq).find((x) => x?.id === id) || G.inv.find((x) => x.id === id) || G.vault?.find((x) => x.id === id);

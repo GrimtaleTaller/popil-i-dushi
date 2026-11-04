@@ -123,3 +123,23 @@ html,body{font-size:13.5px}
 .hs-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .hs-body .subtabs{position:sticky;top:0;z-index:2;display:flex}
 body.hs-open{overflow:hidden}
+
+/* ── 04.11: компактна кнопка боса, без авто-боса й лічильника ── */
+.bossrow{justify-content:center;bottom:8px}
+.bbtn{flex:0 0 auto;padding:6px 16px;border-radius:999px;font-size:12.5px;background:#2a1414cc;border:1px solid #6b2a2a;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.bbtn.ready{box-shadow:0 0 14px #ff6a4a66}
+.bbtn.wait{visibility:hidden}
+#autoBtn{display:none!important}
+
+/* ── вікно героя на весь екран, закриття лише ✕ ── */
+#hsheet .hs-box{top:0;height:auto;border-radius:0;border:none;max-width:520px}
+#hsheet .hs-box::before{display:none}
+.hs-head{padding:12px 50px 8px 14px;border-bottom:1px solid #ffffff0d;background:linear-gradient(180deg,#221a26,#16121a)}
+.hs-head .mx{top:10px;right:12px;width:32px;height:32px;font-size:15px}
+#hsheet .hs-bg{backdrop-filter:none;background:#0b090d}
+
+/* ── швидкі кнопки у Спорядженні ── */
+.qrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 8px}
+.qb{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 7px;border-radius:12px;background:var(--glass);border:1px solid #e2b97a2a;color:#e8d6b0;font-size:11.5px;font-weight:650;box-shadow:inset 0 1px 0 #ffffff08;transition:transform .12s}
+.qb span{font-size:20px;line-height:1}.qb:active{transform:scale(.95)}
+.qdot{position:absolute;top:6px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)}

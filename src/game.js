@@ -167,7 +167,7 @@ function replayTick(dt){
 
 // ---------- UI ----------
 const dirty={quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1,market:1};
-let tab='bag'; // 04.11: «Герой» — окреме вікно (шторка), тож стартуємо з Сумки
+let tab='hero';
 let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?span[ >])/g,'&lt;');e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
 // ---------- камені: a Рубін (атака), h Сапфір (здоров'я), d Аметист (захист), c Смарагд (крит) ----------
@@ -206,6 +206,7 @@ function renderTop(){
  if(tab==='train')renderTrainBtns();
 }
 // поки сервер не підтвердив 10 перемог, показуємо не більше 9
+let autoOffSent=false;
 const waveKills=()=>G.stage===G.maxStage?(G.kills>=WAVES?WAVES:Math.min(WAVES-1,G.kills+pend.kills)):0;
 function renderBoss(){
  if(!G)return;const b=$('bossBtn'),atTop=G.stage===G.maxStage,k=waveKills();
@@ -213,8 +214,9 @@ function renderBoss(){
  else if(!atTop){b.textContent=T('stage_done');b.disabled=true;b.classList.remove('ready')}
  else if(G.kills>=WAVES){b.textContent=T('call_boss');b.disabled=busy;b.classList.add('ready')}
  else if(!V.canFarm){b.textContent=T('too_hard');b.disabled=true;b.classList.remove('ready')}
- else{b.textContent=T('boss_prog',{k,n:WAVES});b.disabled=true;b.classList.remove('ready')}
- const a=$('autoBtn');a.textContent=T('auto_boss',{s:T(G.autoBoss?'on':'off')});a.classList.toggle('on',G.autoBoss);
+ else{b.textContent=T('call_boss');b.disabled=true;b.classList.remove('ready')}
+ b.classList.toggle('wait',!B.rep&&atTop&&G.kills<WAVES&&!!V.canFarm); // лічильник боса не показуємо (04.11): кнопка з'являється, коли бос готовий
+ if(G.autoBoss&&!autoOffSent&&!busy){autoOffSent=true;api('settings',{autoBoss:false}).catch(()=>{})} // авто-бос прибрано (рішення Влада 04.11)
 }
 // g — камені речі: показується базове значення, а різниця рахується з каменями (02.11: раніше камені надітої речі не враховувались)
 function statLine(st,cmp,g){
@@ -233,7 +235,7 @@ function invite(){
  try{navigator.clipboard.writeText(link);toast(T('link_copied'))}catch(e){toast(link)}
 }
 function renderHero(){
- let h=`<div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
+ let h=`<div class="qrow">${[['bag','🎒',T('sub_bag')],['pet','🐾',T('sub_pet')],['train','💪',T('sub_train')],['market','⚖️',T('sub_market')]].map(([k,i,n])=>`<button class="qb" data-hq="${k}"><span>${i}</span>${n}${k==='bag'&&G.inv.some(x=>x.nw)?'<i class="qdot"></i>':''}</button>`).join('')}</div><div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
  for(const s of SLOTS){const it=G.eq[s];
   h+=`<div class="slot" ${it?`data-rf="${it.id}" style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
    (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>${refOk(it)?`<div class="sn ref">⬆️ ${T('ref_btn')}</div>`:''}`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
@@ -249,6 +251,7 @@ function renderHero(){
  $('p-hero').innerHTML=h;$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best')));
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
  $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
+ $('p-hero').querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{lastSub.bag=b.dataset.hq;document.querySelector(tabBtn('bag')).click()});
 }
 // Вдосконалення речі (04.11): +1 рівень предмета за золото й уламки, до (найвищий етап − 15)
 const refK=r=>((V.refine&&V.refine.m)||[0,0,0,1,2,5,15])[r]||1; // множник ціни за рідкістю (04.11: вічна в 7,5 раза дорожча за легендарку)
@@ -678,7 +681,7 @@ function adminHtml(){
   <div class="rank">${A.top.map((t,i)=>`<div><b>${i+1}</b><span>${esc(t.name)}</span><i>${T('stage',{n:t.stage})}</i></div>`).join('')}</div></div>`;
 }
 // ---------- клан ----------
-let clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
+let csub='main',clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
 const roleT=r=>T('role_'+r);
 function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
 function clanAct(a,args){act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null})}
@@ -696,17 +699,18 @@ function renderClan(){
    const mine=apps.includes(c.id),full=c.members>=(c.max||C.max),reqs=(c.min_stage?`${T('stage',{n:c.min_stage})}`:'')+(c.min_power?`${c.min_stage?' · ':''}💪 ${fmt(c.min_power)}`:'');
    const btn=mine?`<button class="btn" data-cu="${c.id}">${T('app_cancel')}</button>`:c.join_mode==='closed'?`<button class="btn" disabled>🔒 ${T('clan_mode_closed')}</button>`:`<button class="btn pri" data-cj="${c.id}" ${!full&&c.ok?'':'disabled'}>${c.join_mode==='apply'?T('apply'):T('join')}</button>`;
    return `<div class="item" style="border-left-color:#7a5a26"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${c.max||C.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${reqs?`<div class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</div>`:''}${mine?`<div class="st up">${T('app_sent')}</div>`:''}</div><div class="acts">${btn}</div></div>`}).join(''):`<p class="hint">${T(C.q?'clan_nothing':'clan_none_yet')}</p>`)+'</div>';
-  el.innerHTML=h;
+  el.innerHTML=h;renderSub();
   const srch=()=>{clanBusy=true;api('clan',{q:$('cQ').value.trim()}).then(r=>{clanData=r.out}).catch(e=>toast(errT(e))).finally(()=>{clanBusy=false;dirty.clan=1})};
   $('cQgo').onclick=srch;$('cQ').onkeydown=e=>{if(e.key==='Enter')srch()};
   el.querySelectorAll('[data-cu]').forEach(b=>b.onclick=()=>clanAct('clanUnapply',{id:+b.dataset.cu}));
   $('cMake').onclick=()=>{const n=$('cName').value.trim();if(n.length<3){toast(ERR.clan_name_bad);return}clanAct('clanCreate',{name:n})};
   el.querySelectorAll('[data-cj]').forEach(b=>b.onclick=()=>act('clanJoin',{id:+b.dataset.cj},r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(r.out&&r.out.applied)toast(T('app_sent'))}));
   return}
+ const S={main:'',keys:'',castle:'',members:'',log:''}; // розділи клану (04.11): кожен — окрема підвкладка
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
  h+=`<div class="card arenah"><div><b>🏰 ${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.clan.max||C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
  const bank=C.clan.bank||0;
- h+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
+ S.main+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
   <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div>
   <h4 style="margin-top:12px">⚱️ ${T('clan_ash')}: <span style="color:var(--gold)">${fmt(C.clan.ash||0)}</span></h4>
   <div class="row" style="align-items:center"><input id="cAsh" class="inp" type="number" min="1" inputmode="numeric" placeholder="⚱️ ${fmt(G.ash||0)}"><button class="btn" id="cAshAll">${T('give_all')}</button><button class="btn pri" id="cAshGo">${T('give')}</button></div>
@@ -714,55 +718,56 @@ function renderClan(){
   <div class="chips" style="margin-top:8px">${['m0','m1','m2','m3','sh'].map(k=>`<button data-rk="${k}" class="${resK===k?'act':''}">${k==='sh'?'🔩 '+fmt(G.shards||0):'⛏️'+MATN[+k[1]]+' '+fmt((G.mats||[])[+k[1]]||0)}</button>`).join('')}</div>
   <div class="row" style="align-items:center"><input id="cRes" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cResAll">${T('give_all')}</button><button class="btn pri" id="cResGo">${T('give')}</button></div></div>`;
  const tiers=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);
- h+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint')}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:1.4">${T('tier',{n:t})}: <b>${K[t]}</b></span><input class="inp" data-ktq="${t}" type="number" min="1" max="${K[t]}" value="1" inputmode="numeric" style="width:64px;flex:0 0 64px"><button class="btn pri" data-ct="${t}">${T('take')}</button>${K[t]>1?`<button class="btn" data-cta="${t}">${T('take_all',{n:K[t]})}</button>`:''}</div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)
-  +(lead&&tiers.length?`<h4 style="margin-top:12px">🤝 ${T('key_give_t')}</h4><div class="row" style="align-items:center"><select id="kgP" class="inp">${(C.members||[]).map(m=>`<option value="${m.id}">${esc(m.name)}${m.me?' ('+T('you')+')':''}</option>`).join('')}</select><select id="kgT" class="inp" style="flex:0 0 120px">${tiers.map(t=>`<option value="${t}">${T('tier',{n:t})} (${K[t]})</option>`).join('')}</select></div><div class="row" style="align-items:center"><input id="kgN" class="inp" type="number" min="1" value="1" inputmode="numeric" placeholder="${T('key_qty')}"><button class="btn pri" id="kgGo">${T('key_give')}</button></div>`:'')+'</div>';
+ S.keys+=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint')}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:1.4">${T('tier',{n:t})}: <b>${K[t]}</b></span><input class="inp" data-ktq="${t}" type="number" min="1" max="${K[t]}" value="1" inputmode="numeric" style="width:64px;flex:0 0 64px"><button class="btn pri" data-ct="${t}">${T('take')}</button>${K[t]>1?`<button class="btn" data-cta="${t}">${T('take_all',{n:K[t]})}</button>`:''}</div>`).join(''):`<p class="hint">${T('clan_keys_empty')}</p>`)
+  +(lead&&tiers.length?`<h4 style="margin-top:12px">🤝 ${T('key_give_t')}</h4><div class="row" style="align-items:center"><select id="kgP" class="inp"><option value="" disabled selected>${T('key_pick')}</option>${(C.members||[]).map(m=>`<option value="${m.id}">${esc(m.name)}${m.me?' ('+T('you')+')':''}</option>`).join('')}</select><select id="kgT" class="inp" style="flex:0 0 120px">${tiers.map(t=>`<option value="${t}">${T('tier',{n:t})} (${K[t]})</option>`).join('')}</select></div><div class="row" style="align-items:center"><input id="kgN" class="inp" type="number" min="1" value="1" inputmode="numeric" placeholder="${T('key_qty')}"><button class="btn pri" id="kgGo">${T('key_give')}</button></div>`:'')+'</div>';
  if(lead){const opts=C.craft.filter(x=>x.can);if(!opts.some(x=>x.t===craftT)&&opts.length)craftT=opts[opts.length-1].t;
   const cur=C.craft.find(x=>x.t===craftT);
-  h+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${C.craft.map(x=>x.can?`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`:`<button disabled title="${esc(T('craft_lock',{n:x.t-1}))}">🔒 ${T('tier',{n:x.t})}</button>`).join('')}</div>${C.craft.some(x=>!x.can)?`<p class="hint">${T('craft_lock',{n:C.craft.find(x=>!x.can).t-1})}</p>`:''}
+  S.keys+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${C.craft.map(x=>x.can?`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`:`<button disabled title="${esc(T('craft_lock',{n:x.t-1}))}">🔒 ${T('tier',{n:x.t})}</button>`).join('')}</div>${C.craft.some(x=>!x.can)?`<p class="hint">${T('craft_lock',{n:C.craft.find(x=>!x.can).t-1})}</p>`:''}
    <div class="row"><button class="btn pri" data-cn="1" ${(C.clan.ash||0)>=cur.ash?'':'disabled'}>×1 · ⚱️${fmt(cur.ash)}</button><button class="btn" data-cn="5" ${(C.clan.ash||0)>=cur.ash5?'':'disabled'}>×5 · ⚱️${fmt(cur.ash5)}</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
  const BL=C.builds||[],RS=C.clan.res||{m:[0,0,0,0],sh:0};
  const bldOk=c=>(C.clan.bank||0)>=c.gold&&(RS.m[c.mat]||0)>=c.matN&&(RS.sh||0)>=c.sh;
- if(BL.length)h+=`<div class="card"><h4>🏗️ ${T('clan_builds')}</h4><p class="hint">${T('clan_builds_hint')}</p>`+BL.map(b=>`<div class="item" style="border-left-color:#c0563a"><div class="ic">${{citadel:'🏰',forge:'⚒️',vault:'💰',barracks:'⚔️',library:'📚'}[b.k]}</div><div class="info"><div class="nm">${T('bld_'+b.k)} · ${T('lvl',{n:b.lvl})}/${b.max}</div><div class="sub">${T('bld_'+b.k+'_d',{n:b.step,t:b.step*b.lvl})}</div>${b.cost?`<div class="st">${T('bld_cost')}: 🏦${fmt(b.cost.gold)} · ⛏️${MATN[b.cost.mat]}×${fmt(b.cost.matN)} · 🔩${fmt(b.cost.sh)}</div>`:''}</div><div class="acts">${b.cost==null?`<span class="sub">${T('max_reached')}</span>`:lead?`<button class="btn pri" data-bk="${b.k}" ${bldOk(b.cost)?'':'disabled'}>⬆️</button>`:''}</div></div>`).join('')+'</div>';
+ if(BL.length)S.castle+=`<div class="card"><h4>🏗️ ${T('clan_builds')}</h4><p class="hint">${T('clan_builds_hint')}</p>`+BL.map(b=>`<div class="item" style="border-left-color:#c0563a"><div class="ic">${{citadel:'🏰',forge:'⚒️',vault:'💰',barracks:'⚔️',library:'📚'}[b.k]}</div><div class="info"><div class="nm">${T('bld_'+b.k)} · ${T('lvl',{n:b.lvl})}/${b.max}</div><div class="sub">${T('bld_'+b.k+'_d',{n:b.step,t:b.step*b.lvl})}</div>${b.cost?`<div class="st">${T('bld_cost')}: 🏦${fmt(b.cost.gold)} · ⛏️${MATN[b.cost.mat]}×${fmt(b.cost.matN)} · 🔩${fmt(b.cost.sh)}</div>`:''}</div><div class="acts">${b.cost==null?`<span class="sub">${T('max_reached')}</span>`:lead?`<button class="btn pri" data-bk="${b.k}" ${bldOk(b.cost)?'':'disabled'}>⬆️</button>`:''}</div></div>`).join('')+'</div>';
  const AP=C.apps||[];
- if(lead&&AP.length)h+=`<div class="card"><h4>📨 ${T('clan_apps')} (${AP.length})</h4>`+AP.map(a=>`<div class="item" style="border-left-color:#4f93f2"><div class="ic">👤</div><div class="info"><div class="nm">${esc(a.name)}</div><div class="sub">${T('lvl',{n:a.lvl})} · ${T('stage',{n:a.stage})} · ${T('power',{n:fmt(a.power)})}</div></div><div class="acts"><button class="btn pri" data-ay="${a.id}">✓</button><button class="btn" data-an="${a.id}">✖</button></div></div>`).join('')+'</div>';
+ if(lead&&AP.length)S.members+=`<div class="card"><h4>📨 ${T('clan_apps')} (${AP.length})</h4>`+AP.map(a=>`<div class="item" style="border-left-color:#4f93f2"><div class="ic">👤</div><div class="info"><div class="nm">${esc(a.name)}</div><div class="sub">${T('lvl',{n:a.lvl})} · ${T('stage',{n:a.stage})} · ${T('power',{n:fmt(a.power)})}</div></div><div class="acts"><button class="btn pri" data-ay="${a.id}">✓</button><button class="btn" data-an="${a.id}">✖</button></div></div>`).join('')+'</div>';
  const CL=C.clan;
- if(C.role==='leader')h+=`<div class="card"><h4>⚙️ ${T('clan_set')}</h4><div class="chips" id="cMode">${['open','apply','closed'].map(m=>`<button data-cm="${m}" class="${(clanModeSel||CL.mode)===m?'act':''}">${T('clan_mode_'+m)}</button>`).join('')}</div>
+ if(C.role==='leader')S.members+=`<div class="card"><h4>⚙️ ${T('clan_set')}</h4><div class="chips" id="cMode">${['open','apply','closed'].map(m=>`<button data-cm="${m}" class="${(clanModeSel||CL.mode)===m?'act':''}">${T('clan_mode_'+m)}</button>`).join('')}</div>
   <p class="hint">${T('clan_mode_hint_'+(clanModeSel||CL.mode))}</p>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_stage')}</span><input id="cMs" class="inp" type="number" min="0" max="80" inputmode="numeric" value="${CL.minStage||0}" style="flex:1"></div>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_power')}</span><input id="cMp" class="inp" type="number" min="0" inputmode="numeric" value="${CL.minPower||0}" style="flex:1"></div>
   <div class="row"><button class="btn pri" id="cSet">${T('save')}</button></div></div>`;
- else h+=`<p class="hint">${T('clan_mode_'+CL.mode)}${CL.minStage?' · '+T('stage',{n:CL.minStage}):''}${CL.minPower?' · 💪 '+fmt(CL.minPower):''}</p>`;
- h+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
+ else S.members+=`<p class="hint">${T('clan_mode_'+CL.mode)}${CL.minStage?' · '+T('stage',{n:CL.minStage}):''}${CL.minPower?' · 💪 '+fmt(CL.minPower):''}</p>`;
+ S.members+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
   const canKick=!m.me&&(C.role==='leader'&&m.role!=='leader'||C.role==='officer'&&m.role==='member'),canRole=!m.me&&C.role==='leader';
   return `<div class="item" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · ${T('given',{n:'💰'+fmt(m.given||0)+(m.givenAsh?' · ⚱️'+fmt(m.givenAsh):'')})}</div></div>
    <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
  const LG=C.log||[];
- h+=`<div class="card"><h4>📜 ${T('clan_log')}</h4>`+(LG.length?LG.map(x=>{const d=x.data||{};return `<div class="logl"><span>${logTime(x.at)}</span> ${esc(T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),a:d.ash!=null?'⚱️'+fmt(d.ash):'💰'+fmt(d.gold||0),t:d.t||d.place||'',c:d.n||1,k:d.k?(d.k==='sh'?'🔩':/^m\d$/.test(d.k)?'⛏️'+MATN[+d.k[1]]:T('bld_'+d.k)):'',l:d.l||'',x:fmt(d.n||0)}))}</div>`}).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
- h+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
- if(C.role==='leader')h+=`<p class="hint">${T('clan_leader_hint')}</p>`;
- el.innerHTML=h;
+ S.log+=`<div class="card"><h4>📜 ${T('clan_log')}</h4>`+(LG.length?LG.map(x=>{const d=x.data||{};return `<div class="logl"><span>${logTime(x.at)}</span> ${esc(T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),a:d.ash!=null?'⚱️'+fmt(d.ash):'💰'+fmt(d.gold||0),t:d.t||d.place||'',c:d.n||1,k:d.k?(d.k==='sh'?'🔩':/^m\d$/.test(d.k)?'⛏️'+MATN[+d.k[1]]:T('bld_'+d.k)):'',l:d.l||'',x:fmt(d.n||0)}))}</div>`}).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
+ S.main+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
+ if(C.role==='leader')S.main+=`<p class="hint">${T('clan_leader_hint')}</p>`;
+ if(!S[csub])csub='main';h+=S[csub];
+ el.innerHTML=h;renderSub();
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ct,q=el.querySelector(`[data-ktq="${t}"]`),n=Math.floor(+(q&&q.value)||1);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanTake',{t,n})});
- const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
+ const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{if(!$('kgP').value){toast(T('key_pick_err'));return}const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
  el.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.cta,all:1}));
  el.querySelectorAll('[data-bk]').forEach(b=>b.onclick=()=>clanAct('clanBuild',{k:b.dataset.bk},()=>{toast(T('bld_done'));haptic('medium')}));
  el.querySelectorAll('[data-ay]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.ay,ok:true}));
  el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.an,ok:false}));
  el.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{clanModeSel=b.dataset.cm;renderClan()});
  if($('cSet'))$('cSet').onclick=()=>{const m=clanModeSel||C.clan.mode;clanModeSel=null;clanAct('clanSettings',{mode:m,minStage:+$('cMs').value||0,minPower:+$('cMp').value||0});toast(T('saved'))};
- $('cGiveAll').onclick=()=>{$('cGive').value=Math.floor(G.gold)};
+ if($('cGiveAll'))$('cGiveAll').onclick=()=>{$('cGive').value=Math.floor(G.gold)};
  const haveRes=k=>k==='sh'?Math.floor(G.shards||0):Math.floor((G.mats||[])[+k[1]]||0);
  el.querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{resK=b.dataset.rk;renderClan()});
- $('cResAll').onclick=()=>{$('cRes').value=haveRes(resK)};
- $('cResGo').onclick=()=>{const n=Math.floor(+$('cRes').value||0);if(n<1)return;if(n>haveRes(resK)){toast(ERR.no_mats);return}clanAct('clanGiveRes',{k:resK,n},()=>toast(T('res_given')))};
- $('cAshAll').onclick=()=>{$('cAsh').value=Math.floor(G.ash||0)};
- $('cAshGo').onclick=()=>{const a=Math.floor(+$('cAsh').value||0);if(a<1)return;if(a>(G.ash||0)){toast(ERR.no_ash);return}clanAct('clanGiveAsh',{amt:a})};
- $('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
+ if($('cResAll'))$('cResAll').onclick=()=>{$('cRes').value=haveRes(resK)};
+ if($('cResGo'))$('cResGo').onclick=()=>{const n=Math.floor(+$('cRes').value||0);if(n<1)return;if(n>haveRes(resK)){toast(ERR.no_mats);return}clanAct('clanGiveRes',{k:resK,n},()=>toast(T('res_given')))};
+ if($('cAshAll'))$('cAshAll').onclick=()=>{$('cAsh').value=Math.floor(G.ash||0)};
+ if($('cAshGo'))$('cAshGo').onclick=()=>{const a=Math.floor(+$('cAsh').value||0);if(a<1)return;if(a>(G.ash||0)){toast(ERR.no_ash);return}clanAct('clanGiveAsh',{amt:a})};
+ if($('cGiveGo'))$('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
  el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>clanAct('clanCraft',{t:craftT,n:+b.dataset.cn}));
  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>clanAct('clanKick',{pid:+b.dataset.ck}));
  el.querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>clanAct('clanRole',{pid:+b.dataset.cr,role:b.dataset.r}));
- $('cRef').onclick=()=>{clanData=null;renderClan()};
- $('cLeave').onclick=()=>modal(`<div class="big">🚪</div><h3>${T('leave_q')}</h3><p class="hint">${T(C.role==='leader'?'leave_leader':'leave_hint')}</p><div class="row"><button class="btn" id="lvNo">${T('cancel')}</button></div>`,T('leave'),()=>clanAct('clanLeave',{}));
+ if($('cRef'))$('cRef').onclick=()=>{clanData=null;renderClan()};
+ if($('cLeave'))$('cLeave').onclick=()=>modal(`<div class="big">🚪</div><h3>${T('leave_q')}</h3><p class="hint">${T(C.role==='leader'?'leave_leader':'leave_hint')}</p><div class="row"><button class="btn" id="lvNo">${T('cancel')}</button></div>`,T('leave'),()=>clanAct('clanLeave',{}));
  setTimeout(()=>{const n=$('lvNo');if(n)n.onclick=()=>{queue.shift();showModal()}},0);
 }
 
@@ -869,20 +874,20 @@ const tutLocal=new Set();let tutCur=null,newsShown=0;
 const tutHas=k=>tutLocal.has(k)||((G&&G.tut)||[]).includes(k);
 const tutOff=()=>tutHas('off');
 function tutMark(k){if(tutHas(k))return;tutLocal.add(k);api('tut',{k}).catch(()=>{})}
-const TUT_INTRO=[['ti_1','#arena'],['ti_2','#bossBtn'],['ti_3','#autoBtn'],['ti_4','.cur'],['ti_5','.tabs']];
+const TUT_INTRO=[['ti_1','#arena'],['ti_2','#bossBtn'],['ti_4','.cur'],['ti_5','.tabs']];
 const TUT_PANES=['bag','market','train','pet','res','gem','ench','myth','ast','dng','arena','top','clan','prof'];
 const tabBtn=t=>'.tabs button[data-t="'+t+'"]';
 // вказівники: умова, куди показати, після якого пояснення розділу крок уже не потрібен; all — і для старих гравців (нові функції)
 const TUT_GOALS=[
  {k:'bag',tab:'bag',p:'bag',c:()=>G.inv.length>0},
- {k:'train',tab:'hero',p:'train',c:()=>G.maxStage>=2&&G.gold>=150},
+ {k:'train',tab:'bag',p:'train',c:()=>G.maxStage>=2&&G.gold>=150},
  {k:'forge',tab:'forge',p:'res',c:()=>G.maxStage>=4},
  {k:'dng',tab:'dng',p:'dng',c:()=>V.dng&&G.maxStage>=V.dng.unlockStage},
  {k:'arena',tab:'arena',p:'arena',c:()=>V.arena&&G.maxStage>=V.arena.stage},
  {k:'clan',tab:'clan',p:'clan',c:()=>G.maxStage>=(V.clanStage||5)},
- {k:'pet',tab:'hero',p:'pet',all:1,c:()=>{const P=G.pet;return !!P&&(P.eggs.c+P.eggs.r>0||!!P.inc||Object.keys(P.list).length>0)}},
+ {k:'pet',tab:'bag',p:'pet',all:1,c:()=>{const P=G.pet;return !!P&&(P.eggs.c+P.eggs.r>0||!!P.inc||Object.keys(P.list).length>0)}},
  {k:'gem',tab:'forge',p:'gem',all:1,c:()=>Object.values(G.gems||{}).some(n=>n>0)},
- {k:'pgear',tab:'hero',p:'pet',all:1,np:1,c:()=>{const P=G.pet;return !!P&&!!P.act&&!P.craft}},
+ {k:'pgear',tab:'bag',p:'pet',all:1,np:1,c:()=>{const P=G.pet;return !!P&&!!P.act&&!P.craft}},
 ];
 function tutEl(){let e=$('tut');if(!e){e=document.createElement('div');e.id='tut';e.innerHTML='<div class="tring" id="tring"></div><div class="tbub" id="tbub"></div>';document.body.appendChild(e)}return e}
 function tutHide(){tutCur=null;const e=$('tut');if(e)e.className=''}
@@ -917,7 +922,7 @@ function tutCheck(){
  if(tutCur){if(tutCur.still&&!tutCur.still())tutHide();else{tutPlace();return}}
  const old=tutHas('old');
  if(!old&&!tutHas('intro')){
-  if(groupOf(tab)==='hero')return; // вступ показуємо на головному екрані, не в шторці героя
+  if(groupOf(tab)==='bag')return; // вступ показуємо на головному екрані, не у вікні героя
   const [txt,sel]=TUT_INTRO[introI]||TUT_INTRO[0];
   tutShow({txt,sel,block:1,skip:1,i:introI+1,n:TUT_INTRO.length,ok:()=>{introI++;if(introI>=TUT_INTRO.length){introI=0;tutMark('intro')}}});return;
  }
@@ -1037,46 +1042,43 @@ function wbResult(o){
 }
 // головні вкладки й підвкладки
 const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'quest'};
-const groupOf=t=>['hero','pet','train','log','prof'].includes(t)?'hero':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'?'quest':t==='market'?'bag':t;
+// 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Пітомець, Тренування, Журнал, Профіль — у вікні героя на весь екран
+const groupOf=t=>['bag','market','pet','train','log','prof'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'?'quest':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
-function showPane(){if(groupOf(tab)!=='hero')prevTab=tab;heroSheet(groupOf(tab)==='hero');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
+function showPane(){if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 // «Герой» (Спорядження / Пітомець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
 // Підвкладки й панелі героя переносяться в шторку й повертаються назад при закритті. Закрити: ✕, тап по затемненню, свайп униз по шапці.
-let prevTab='bag';const HERO_PANES=['hero','pet','train','log','prof'];
+let prevTab='hero';const HERO_PANES=['bag','market','pet','train','log','prof'];
 function heroSheet(open){
  let sh=$('hsheet');
- if(!sh){sh=document.createElement('div');sh.id='hsheet';sh.innerHTML=`<div class="hs-bg"></div><div class="hs-box"><div class="hs-head"><i class="hs-grip"></i><div class="hs-t"><b id="hsTitle"></b><span id="hsSub"></span></div><div class="hs-cur" id="hsCur"></div><button class="mx" id="hsX">✕</button></div><div class="hs-body" id="hsBody"></div></div>`;document.body.appendChild(sh);
-  const close=()=>{const b=document.querySelector(tabBtn(groupOf(prevTab)));if(b)b.click()};
-  sh.querySelector('.hs-bg').onclick=close;$('hsX').onclick=close;
-  let y0=null;const hd=sh.querySelector('.hs-head'),bx=sh.querySelector('.hs-box');
-  hd.addEventListener('touchstart',e=>{y0=e.touches[0].clientY},{passive:true});
-  hd.addEventListener('touchmove',e=>{if(y0==null)return;const d=Math.max(0,e.touches[0].clientY-y0);bx.style.transform=`translateY(${d}px)`},{passive:true});
-  hd.addEventListener('touchend',e=>{if(y0==null)return;const d=e.changedTouches[0].clientY-y0;y0=null;bx.style.transform='';if(d>90)close()});
+ if(!sh){sh=document.createElement('div');sh.id='hsheet';sh.innerHTML=`<div class="hs-bg"></div><div class="hs-box"><div class="hs-head"><div class="hs-t"><b id="hsTitle"></b><span id="hsSub"></span></div><div class="hs-cur" id="hsCur"></div><button class="mx" id="hsX">✕</button></div><div class="hs-body" id="hsBody"></div></div>`;document.body.appendChild(sh);
+  // закрити — лише ✕ (рішення Влада 04.11)
+  $('hsX').onclick=()=>{const b=document.querySelector(tabBtn(groupOf(prevTab)));if(b)b.click()};
  }
- const body=$('hsBody'),home=$('p-bag').parentNode,st=$('subtabs');
+ const body=$('hsBody'),home=$('p-hero').parentNode,st=$('subtabs');
  if(open){
   if(st.parentNode!==body)body.appendChild(st);
   for(const k of HERO_PANES){const p=$('p-'+k);if(p.parentNode!==body)body.appendChild(p)}
-  $('hsTitle').textContent='🧙 '+T('tab_hero');$('hsSub').textContent=G?T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)}):'';
+  $('hsTitle').textContent='🧙 '+T('hs_title');$('hsSub').textContent=G?T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)}):'';
   if(!sh.classList.contains('open')){sh.classList.add('open');document.body.classList.add('hs-open');body.scrollTop=0};renderTop()
  }else{
   if(!sh.classList.contains('open'))return;
   document.querySelector('.tabsw').appendChild(st);
-  for(const k of HERO_PANES){const p=$('p-'+k);home.insertBefore(p,$('p-bag'))}
+  for(const k of HERO_PANES){const p=$('p-'+k);home.insertBefore(p,$('p-forge'))}
   sh.classList.remove('open');document.body.classList.remove('hs-open');
  }
 }
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?[['hero','sub_eq'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
- const cur=g==='forge'?fsub:tab;e.style.display='flex';
+ const cur=g==='forge'?fsub:g==='clan'?csub:tab;e.style.display='flex';
  e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');
- e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else{tab=k;lastSub[g]=k}showPane()});
+ e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
-$('lvl').onclick=$('hs').onclick=()=>document.querySelector(tabBtn('hero')).click(); // рівень і фігурка героя відкривають вікно героя
+$('lvl').onclick=$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click(); // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
 $('next').onclick=()=>{if(G.stage<G.maxStage)act('stage',{s:G.stage+1},()=>{B.m=null;B.resp=0.1})};
 $('bossBtn').onclick=()=>{if(G.kills>=WAVES&&!B.rep){
