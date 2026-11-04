@@ -142,7 +142,7 @@
   window.gearArt = function (slot, r, nm) {
     r = Math.max(0, Math.min(6, r || 0)); const P = PAL[r], id = ++uid, n = (nm || 0) % (CNT[slot] || 4);
     const b = back(P, r, id), f = front(P, r, 1);
-    return `<span class="gart">${b ? `<svg class="gfx gb" viewBox="0 0 64 64">${b}</svg>` : ''}<img src="assets/items/${slot}${n}_${r}.webp" alt="" loading="lazy" onerror="this.outerHTML=gearSvg('${slot}',${r},${n})">${f ? `<svg class="gfx gf" viewBox="0 0 64 64">${f}</svg>` : ''}</span>`;
+    return `<span class="gart">${b ? `<svg class="gfx gb" viewBox="0 0 64 64">${b}</svg>` : ''}<img src="assets/items/${slot}${n}_${r}.webp?v=2" alt="" loading="lazy" onerror="this.outerHTML=gearSvg('${slot}',${r},${n})">${f ? `<svg class="gfx gf" viewBox="0 0 64 64">${f}</svg>` : ''}</span>`;
   };
   // значок речі в рамці кольору рідкості
   window.gearIc = function (it, big) { return `<span class="gic r${it.r}${big ? ' big' : ''}">${window.gearArt(it.slot, it.r, it.nm)}</span>`; };
