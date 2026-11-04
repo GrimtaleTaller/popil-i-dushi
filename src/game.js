@@ -944,6 +944,8 @@ setInterval(tutCheck,500);addEventListener('resize',()=>tutPlace());addEventList
 
 // ---------- старт ----------
 function boot(msg,retry){
+ const S=window.Splash; // заставка «Книга» з index.html, поки вона на екрані
+ if(S&&$('boot')){if(!msg){S.done();return}if(msg===T('loading')){S.set(45);return}S.error(msg,retry?T('retry'):null,retry?start:null);return}
  let e=$('boot');if(!e){e=document.createElement('div');e.id='boot';e.className='modal show';document.body.appendChild(e)}
  if(!msg){e.remove();return}
  e.innerHTML=`<div class="mbox"><div class="big">🔥</div><h3>Grimtale</h3><p>${msg}</p>${retry?`<div class="row"><button class="btn pri" id="bootR">${T('retry')}</button></div>`:''}</div>`;
