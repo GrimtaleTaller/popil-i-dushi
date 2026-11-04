@@ -23,10 +23,13 @@ export const RAR = [
   { m: 83, w: 0 }, // астральний (вічний) — лише крафт з міфічного; 02.11 (рішення Влада): ×83 = прадавня +15 рівнів (9 × 1,16^15); було 14, ще раніше 11
 ];
 export const DROP_RAR = 5; // скільки рідкостей може випасти
-export const UPG: Record<string, { val: (l: number) => number; cost: (l: number) => number; max?: number }> = {
-  atk: { val: (l) => 3 * l * Math.pow(1.06, l), cost: (l) => 15 * Math.pow(1.15, l) },
-  hp: { val: (l) => 15 * l * Math.pow(1.06, l), cost: (l) => 15 * Math.pow(1.15, l) },
-  def: { val: (l) => 1.2 * l * Math.pow(1.06, l), cost: (l) => 25 * Math.pow(1.16, l) },
+// 04.11 (рішення Влада): тренування з межею, як у крита — 100 рівнів; кожен рівень дає ще й +0,3% до всього стату (з речами), макс. +30%.
+// Раніше давало лише пласке число: на 60+ етапі це було 1–5% героя, а захист — 0,6%.
+export const TRAIN_MAX = 100, TRAIN_PCT = 0.3;
+export const UPG: Record<string, { val: (l: number) => number; cost: (l: number) => number; max?: number; pct?: number }> = {
+  atk: { val: (l) => 3 * l * Math.pow(1.06, l), cost: (l) => 15 * Math.pow(1.15, l), max: TRAIN_MAX, pct: TRAIN_PCT },
+  hp: { val: (l) => 15 * l * Math.pow(1.06, l), cost: (l) => 15 * Math.pow(1.15, l), max: TRAIN_MAX, pct: TRAIN_PCT },
+  def: { val: (l) => 1.2 * l * Math.pow(1.06, l), cost: (l) => 25 * Math.pow(1.16, l), max: TRAIN_MAX, pct: TRAIN_PCT },
   crit: { val: (l) => 0.5 * Math.min(l, 50), cost: (l) => 40 * Math.pow(1.22, l), max: 50 },
 };
 export const WAVES = 10;
@@ -154,6 +157,10 @@ export function migrate(G: State): State {
     for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it && it.r === 6) for (const s of ["atk", "hp", "def"] as const) if (it.st[s]) it.st[s] = Math.round(it.st[s]! * 83 / 14);
     G.rv = 2;
   }
+  if ((G.rv || 0) < 3) { // 04.11: тренування з межею 100 рівнів — хто вище, отримує максимум
+    for (const k of ["atk", "hp", "def"] as const) if (G.up && G.up[k] > TRAIN_MAX) G.up[k] = TRAIN_MAX;
+    G.rv = 3;
+  }
   if (!G.pet && G.maxStage > 10) { const n = Math.floor((G.maxStage - 1) / 10), r = Math.floor((G.maxStage - 1) / 40); G.pet = { list: {}, act: null, eggs: { c: n - r, r }, inc: null, ft: 0, fn: 0 }; } // яйця за вже пройдених регіональних босів (30.10)
   for (const k of ["souls", "ash", "shards", "cat", "soulFrac", "ench", "mythFails", "dismode", "mats", "ess", "astFails", "chests", "keys", "dng", "arena", "act", "dngDay", "ckey"]) if (g[k] === undefined) g[k] = d[k];
   return G;
@@ -178,9 +185,10 @@ export function heroCtx(G: State) {
   const cm = 1 + (G.cb?.atk || 0) / 100; // Казарма клану
   const sp = (1 + setInfo(G).pow / 100) * (1 + collBonus(G) / 100); // повний сет прадавніх / вічних; колекція спорядження
   const pg = pgearSum(G);
-  const ma = (1 + petB(G, "atk") / 100) * (1 + pg.atk / 100) * cm * sp; // Вовк, спорядження пітомця
-  const mh = (1 + pg.hp / 100) * cm * sp;
-  const md = (1 + petB(G, "def") / 100) * (1 + pg.def / 100) * sp; // Голем
+  const tp = (k: "atk" | "hp" | "def") => 1 + Math.min(G.up[k], TRAIN_MAX) * TRAIN_PCT / 100; // відсоток тренування (04.11)
+  const ma = (1 + petB(G, "atk") / 100) * (1 + pg.atk / 100) * cm * sp * tp("atk"); // Вовк, спорядження пітомця
+  const mh = (1 + pg.hp / 100) * cm * sp * tp("hp");
+  const md = (1 + petB(G, "def") / 100) * (1 + pg.def / 100) * sp * tp("def"); // Голем
   c += pg.crit + abilV(G, "sight"); // спорядження пітомця, Прозріння Сови
   return { a, h, d, c, ma, mh, md, em, eqs };
 }
@@ -533,6 +541,33 @@ export const RELIC_ASH: Record<number, number> = { 5: 5, 6: 15 };
 export function relicJunkIds(G: State) { // прадавні/вічні в сумці, гірші за надіте в тому ж слоті
   const x = heroCtx(G), cur: Record<string, number> = {}; for (const s of SLOTS) if (G.eq[s]) cur[s] = itemScore(G, G.eq[s]!, x);
   return G.inv.filter((i) => i.r >= 5 && !i.gm?.length && G.eq[i.slot] && itemScore(G, i, x) <= cur[i.slot]).map((i) => i.id);
+}
+// Вдосконалення речі (04.11, рішення Влада): +1 рівень предмета за золото й уламки, до (найвищий етап − 15).
+// Симуляція 75 днів: межа «етап − 10» давала +12–15 етапів (розгін), «− 15» — +5–7, «− 20» — +2–4.
+// Нескінченний витратник золота й уламків; дає тягнути улюблену прадавню/вічну річ з каменями за собою.
+export const REFINE = { g: 500, sh: 2, minR: 3, gap: 15 }; // gap: річ можна тягнути лише до (найвищий етап − gap), щоб не обганяти звичайний лут/крафт
+const refK = (r: number) => Math.sqrt(Math.min(14, RAR[r].m));
+export const refineCost = (it: Item) => ({ gold: Math.round(mobGold(it.il) * REFINE.g * refK(it.r)), shards: Math.round(REFINE.sh * it.il * refK(it.r)) });
+export const refineCap = (G: State) => G.maxStage - REFINE.gap;
+export function actRefine(G: State, id: number, n = 1) {
+  id = Number(id);
+  const it = Object.values(G.eq).find((x) => x?.id === id) || G.inv.find((x) => x.id === id) || G.vault?.find((x) => x.id === id);
+  if (!it) fail("no_item");
+  if (it!.r < REFINE.minR) fail("ref_rar");
+  if (it!.il >= refineCap(G)) fail("ref_cap");
+  const want = n === 0 ? 1000 : Math.max(1, Math.min(100, Math.floor(Number(n) || 1)));
+  let done = 0, gold = 0, shards = 0;
+  while (done < want && it!.il < refineCap(G)) {
+    const c = refineCost(it!);
+    if (G.gold < c.gold || G.shards < c.shards) { if (!done) fail(G.gold < c.gold ? "no_gold" : "no_shards"); break; }
+    G.gold -= c.gold; G.shards -= c.shards; gold += c.gold; shards += c.shards;
+    const k = gearScale(it!.il + 1) / gearScale(it!.il);
+    for (const s of ["atk", "hp", "def"] as const) if (it!.st[s]) it!.st[s] = Math.round(it!.st[s]! * k);
+    it!.il++; done++;
+  }
+  bump(G, "up", done);
+  log(G, "refine", [it!.slot, it!.r, it!.il, done]);
+  return { n: done, gold, shards, il: it!.il };
 }
 export function actRelicAsh(G: State, ids: number[] | "junk") {
   if (ids === "junk") ids = relicJunkIds(G);

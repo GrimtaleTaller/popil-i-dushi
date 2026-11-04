@@ -51,9 +51,9 @@ const SLOT={
 const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:9},{n:'Астральний',c:'#3fd0d4',m:83}];
 const STATN={atk:'Атака',hp:'Здоров’я',def:'Захист',crit:'Крит'};
 const UPG=[
- {k:'atk',n:'Сила удару',ic:'⚔️',d:'+атака',val:l=>3*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l)},
- {k:'hp',n:'Витривалість',ic:'❤️',d:'+здоров’я',val:l=>15*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l)},
- {k:'def',n:'Загартування',ic:'🛡️',d:'+захист',val:l=>1.2*l*Math.pow(1.06,l),cost:l=>25*Math.pow(1.16,l)},
+ {k:'atk',n:'Сила удару',ic:'⚔️',d:'+атака',val:l=>3*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l),max:100,pct:1},
+ {k:'hp',n:'Витривалість',ic:'❤️',d:'+здоров’я',val:l=>15*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l),max:100,pct:1},
+ {k:'def',n:'Загартування',ic:'🛡️',d:'+захист',val:l=>1.2*l*Math.pow(1.06,l),cost:l=>25*Math.pow(1.16,l),max:100,pct:1},
  {k:'crit',n:'Холодний розрахунок',ic:'🎯',d:'+0,5% шанс криту (макс. 25%)',val:l=>0.5*Math.min(l,50),cost:l=>40*Math.pow(1.22,l),max:50}
 ];
 const WAVES=10,BOSS_TIME=30,INV_MAX=40;
@@ -234,8 +234,8 @@ function invite(){
 function renderHero(){
  let h=`<div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
  for(const s of SLOTS){const it=G.eq[s];
-  h+=`<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
-   (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
+  h+=`<div class="slot" ${it?`data-rf="${it.id}" style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
+   (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>${refOk(it)?`<div class="sn ref">⬆️ ${T('ref_btn')}</div>`:''}`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
  h+=`</div><div class="stats">
   <div><span>${STATN.atk}</span><b>${fmt(H.atk)}</b></div><div><span>${STATN.hp}</span><b>${fmt(H.hp)}</b></div>
   <div><span>${STATN.def}</span><b>${fmt(H.def)}</b></div><div><span>${T('crit_chance')}</span><b>${H.crit.toFixed(1)}%</b></div>
@@ -247,6 +247,32 @@ function renderHero(){
   <div class="card"><h4>🌐 ${T('lang')}</h4><div class="chips">${LANGS.map(l=>`<button data-lang="${l}" class="${l===LANG?'act':''}">${{uk:'Українська',en:'English',ru:'Русский'}[l]}</button>`).join('')}</div></div>`;
  $('p-hero').innerHTML=h;$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best')));
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+ $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
+}
+// Вдосконалення речі (04.11): +1 рівень предмета за золото й уламки, до (найвищий етап − 15)
+const refK=r=>Math.sqrt(Math.min(14,RAR[r].m));
+function refCost(it){const R=V.refine||{g:500,sh:2};return{gold:Math.round(mobGold(it.il)*R.g*refK(it.r)),shards:Math.round(R.sh*it.il*refK(it.r))}}
+function refOk(it){const R=V.refine;return !!(R&&it&&it.r>=R.minR&&it.il<R.cap)}
+function findItem(id){return Object.values(G.eq).find(x=>x&&x.id===id)||G.inv.find(x=>x.id===id)}
+function refineDlg(id){const it=findItem(id);if(!it)return;const R=V.refine||{};
+ let body;if(it.r<(R.minR||3))body=`<p class="hint">${T('ref_rar')}</p>`;
+ else if(it.il>=R.cap)body=`<p class="hint">${T('ref_cap_t',{n:R.cap})}</p>`;
+ else{const c=refCost(it),k=1.16,nx={...it.st};for(const s of ['atk','hp','def'])if(it.st[s])nx[s]=Math.round(it.st[s]*k);
+  body=`<p>${T('ref_txt',{n:R.cap})}</p><div class="st">${statLine(nx,it.st)}</div><p><b>${T('lvl',{n:it.il})} → ${it.il+1}</b> · 💰${fmt(c.gold)} · 🔩${fmt(c.shards)}</p><p class="hint">${T('ref_have',{g:fmt(G.gold),s:fmt(G.shards)})}</p><div class="row"><button class="btn" id="rfMax">${T('ref_max')}</button></div>`}
+ modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>${body}`,refOk(it)?'⬆️ '+T('ref_btn')+' +1':T('ok'),()=>{if(refOk(it))act('refine',{id:it.id,n:1},r=>{haptic('light');toast(T('ref_done',{n:r.out.il}))})});
+ setTimeout(()=>{const b=$('rfMax');if(b)b.onclick=()=>{queue.shift();showModal();act('refine',{id:it.id,n:0},r=>{haptic('heavy');toast(T('ref_done_n',{k:r.out.n,n:r.out.il,g:fmt(r.out.gold),s:fmt(r.out.shards)}))})}},0);
+}
+// Особисті ключі в сумці + передача соклановцю (04.11)
+function keysBar(){const K=G.keys||{},ts=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);if(!ts.length)return '';
+ return `<div class="chestbar keys">🗝️<span>${ts.map(t=>`<span class="chg">${T('tier',{n:t})} ×${K[t]}</span>`).join('')}</span><button class="btn" id="keyGv">🤝 ${T('key_give')}</button></div>`}
+function keyGiveDlg(){
+ const go=()=>{const C=clanData;if(!C||!C.clan){toast(T('key_no_clan'));return}
+  const K=G.keys||{},ts=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b),ms=(C.members||[]).filter(m=>!m.me);
+  if(!ms.length){toast(T('key_no_mates'));return}
+  modal(`<div class="big">🗝️</div><h3>${T('key_gift_t')}</h3><p class="hint">${T('key_gift_hint')}</p><div class="row"><select id="kfP" class="inp">${ms.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></div><div class="row"><select id="kfT" class="inp">${ts.map(t=>`<option value="${t}">${T('tier',{n:t})} (${K[t]})</option>`).join('')}</select><input id="kfN" class="inp" type="number" min="1" value="1" inputmode="numeric" style="flex:0 0 72px"></div>`,T('key_give'),()=>{
+   const pid=+$('kfP').value,t=+$('kfT').value,n=Math.floor(+$('kfN').value||0),nm=($('kfP').selectedOptions[0]||{}).textContent||'';if(!(n>=1)){toast(T('bad_amount'));return}
+   act('keyGive',{pid,t,n},r=>{haptic('light');clanData=null;toast(r.out.ok===false?T('key_to_clan'):T('key_sent',{n,t,who:nm}))})})};
+ if(clanData)go();else api('clan').then(r=>{clanData=r.out;go()}).catch(e=>toast(errT(e)));
 }
 let bagFilter='all';
 function chestIc(g){const c=RAR[g||1].c;return `<svg class="svi" viewBox="0 0 32 32"><path d="M4 13.5C4 8 8 5 16 5s12 3 12 8.5z" fill="#8a5a2b" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><rect x="4" y="13.5" width="24" height="14" rx="1.5" fill="#6e4521" stroke="#2b2f36" stroke-width="1.4"/><path d="M4 13.5h24M9 5.9v21.6M23 5.9v21.6" stroke="${c}" stroke-width="2.4" fill="none"/><rect x="13.5" y="11.5" width="5" height="6" rx="1" fill="${c}" stroke="#2b2f36" stroke-width="1.1"/></svg>`}
@@ -256,7 +282,7 @@ function renderBag(){
  const cc=chestCount(),vlt=(G.vault||[]).length,ov=G.ovf||{v:0,d:0,sh:0};
  let h=(ov.v||ov.d?`<div class="card ovf"><b>⚠️ ${T('bag_full_title')}</b><p class="hint">${T('ovf_txt',{v:ov.v,d:ov.d,s:fmt(ov.sh),p:Math.round((V.inv&&V.inv.rate||0.5)*100)})}</p><div class="row"><button class="btn" id="ovfOk">${T('ok')}</button></div></div>`:'')
  +(vlt?`<div class="chestbar vault">📦<span>${T('vault',{n:vlt,m:V.inv&&V.inv.vaultMax||100})}</span><button class="btn pri" id="vTake">${T('take')}</button></div>`:'')
- +(cc?`<div class="chestbar"><span>${(()=>{const cg=chestGroups();return [3,2,1].filter(g=>cg[g]).map(g=>`<span class="chg" style="color:${RAR[g].c}">${chestIc(g)} ${T('chest_'+g)} ×${cg[g]}</span>`).join('')})()}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
+ +keysBar()+(cc?`<div class="chestbar"><span>${(()=>{const cg=chestGroups();return [3,2,1].filter(g=>cg[g]).map(g=>`<span class="chg" style="color:${RAR[g].c}">${chestIc(g)} ${T('chest_'+g)} ×${cg[g]}</span>`).join('')})()}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
  <div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="sellC">${T('sell_common')}</button><button class="btn" id="sellW">${T('sell_worse')}</button><button class="btn ${G.autoSell?'pri':''}" id="autoS">${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button></div>${V.forge&&V.forge.relic?`<div class="row" style="margin-top:0;margin-bottom:10px"><button class="btn" id="relJ">⚱️ ${T('relic_junk',{n:V.forge.relic})}</button></div>`:''}
  <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · 🔥${fmt(V.inv.cost)}</button>`:''}</div>`;
  const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
@@ -265,9 +291,11 @@ function renderBag(){
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
    <div class="st">${statLine(it.st,eq?fullSt(eq):{},gemSum(it))}</div>${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
-   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}</div></div>`}
+   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)?`<button class="btn" data-rf="${it.id}">⬆️</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
+ if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
+ $('p-bag').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
  if($('vTake'))$('vTake').onclick=()=>act('vault',{},r=>toast(T('vault_took',{n:r.out.n})));
  if($('bagUp'))$('bagUp').onclick=()=>act('bag',{},r=>{toast(T('bag_up',{n:r.out.max}));haptic('light')});
  if(cc)$('openC').onclick=()=>act('openChests',{},r=>{toast(T('opened',{n:r.out.n})+(r.out.best>=3?' · '+RAR[r.out.best].n+'!':''));if(r.out.best>=3)haptic('heavy')});
@@ -506,12 +534,13 @@ function renderTrain(){
  const TG=(V.train&&V.train.gate)||{};
  let h='';for(const u of UPG){const l=G.up[u.k],mx=u.max&&l>=u.max,gc=TG[u.k];
   const vv=x=>u.k==='crit'?u.val(x).toFixed(1)+'%':fmt(u.val(x));
-  h+=`<div class="upg"><div class="ic">${u.ic}</div><div class="info"><b>${u.n} · ${T('lvl',{n:l})}</b><span>${u.d}: ${vv(l)}${mx?'':' → '+vv(l+1)}</span></div>`;
+  const pc=u.pct?(V.train&&V.train.pct||0.3):0,pv=x=>(Math.min(x,u.max)*pc).toFixed(1).replace(/\.0$/,'')+'%';
+  h+=`<div class="upg"><div class="ic">${u.ic}</div><div class="info"><b>${u.n} · ${T('lvl',{n:l})}${u.max&&u.pct?' / '+u.max:''}</b><span>${u.d}: ${vv(l)}${mx?'':' → '+vv(l+1)}</span>${pc?`<span class="tp">${T('train_pct',{s:STATN[u.k]})}: +${pv(l)}${mx?'':' → +'+pv(l+1)}</span>`:''}</div>`;
   if(mx)h+=`<button class="btn" disabled>${T('max')}</button>`;
   else if(gc)h+=`<div class="gate"><span>⛰️ ${T('gate')}: ${gateTxt(gc)} · 💰${fmt(u.cost(l))}</span><button class="btn pri" data-up="${u.k}" data-n="1" data-gate="1">${T('gate')}</button></div>`;
   else h+=`<div class="ubtns"><button class="btn pri" data-up="${u.k}" data-n="1">💰 ${fmt(u.cost(l))}</button><button class="btn" data-up="${u.k}" data-n="10">×10</button><button class="btn" data-up="${u.k}" data-n="0">${T('max_all')}</button></div>`;
   h+='</div>'}
- h+=`<p class="hint">${T('train_hint')} ${T('gate_hint')}</p>`;
+ h+=`<p class="hint">${T('train_hint')} ${T('train_cap_hint')} ${T('gate_hint')}</p>`;
  $('p-train').innerHTML=h;
  $('p-train').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>act('upgrade',{k:b.dataset.up,n:+b.dataset.n},r=>{haptic(r.out.gate?'heavy':'light');if(r.out.n>1)toast('+'+r.out.n+' · 💰'+fmt(r.out.cost))}));renderTrainBtns();
 }
@@ -526,7 +555,7 @@ const LOGT={
  bossDeath:a=>T('log_bossDeath',{s:a[0]}),
  bossTimeout:a=>T('log_bossTimeout',{s:a[0]}),
  daily:a=>T('log_daily',{n:a[0]}),
- reward:a=>T('log_reward',{a:fmt(a[0])}),relic:a=>T('relic_done',{n:a[0],a:a[1]}),
+ reward:a=>T('log_reward',{a:fmt(a[0])}),relic:a=>T('relic_done',{n:a[0],a:a[1]}),refine:a=>T('log_ref',{s:SLOT[a[0]]?SLOT[a[0]].n:a[0],n:a[2],k:a[3]}),
  pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),

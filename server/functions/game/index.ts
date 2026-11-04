@@ -84,7 +84,8 @@ function view(G: L.State, now: number, uid = 0) {
     cb: G.cb || { atk: 0, gold: 0, xp: 0 }, isAdmin: ADMINS.includes(uid), clanStage: L.CLAN.joinStage, clanCost: L.clanCreateCost(G),
     payout: { lvl: L.PAYOUT.lvl, days: L.PAYOUT.days, myDays: G.act.days, ok: G.lvl >= L.PAYOUT.lvl && G.act.days >= L.PAYOUT.days },
     smelt: L.SMELT, inv: { max: L.invMax(G), cost: L.bagCost(G), step: L.BAG.step, vaultMax: L.VAULT_MAX, rate: L.OVF_RATE },
-    train: { gateStep: L.GATE_STEP, gate: Object.fromEntries(Object.keys(L.UPG).map((k) => [k, L.gateCost(k, G.up[k as keyof L.State["up"]])])) },
+    refine: { g: L.REFINE.g, sh: L.REFINE.sh, minR: L.REFINE.minR, cap: L.refineCap(G) },
+    train: { max: L.TRAIN_MAX, pct: L.TRAIN_PCT, gateStep: L.GATE_STEP, gate: Object.fromEntries(Object.keys(L.UPG).map((k) => [k, L.gateCost(k, G.up[k as keyof L.State["up"]])])) },
     dng: {
       unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS, daily: L.DNG_DAILY, left: L.dngLeft(G, now),
       tiers: Array.from({ length: L.DNG_TIERS }, (_, i) => {
@@ -498,7 +499,8 @@ async function preAction(user: TgUser, start: string | undefined, action: string
 
 async function handle(user: TgUser, start: string | undefined, action: string, args: Record<string, unknown>) {
   const pre: Pre | null = PRE.has(action) ? await preAction(user, start, action, args) : null;
-  const giveTo = action === "clanGive" || action === "clanGiveRes" || action === "clanGiveAsh" ? await clanOf(user.id) : null;
+  const giveTo = action === "clanGive" || action === "clanGiveRes" || action === "clanGiveAsh" || action === "keyGive" ? await clanOf(user.id) : null;
+  const keyTo = action === "keyGive" ? await clanOf(Number(args.pid)) : null; // передача особистих ключів соклановцю (04.11)
   await settleWeek(Date.now()); await settleSeason(Date.now());
   // нагороди тижневих рейтингів забираємо лише на sync: він не кидає ігрових помилок, тож нагорода не загубиться
   const reward = action === "sync" ? Number((await SB.rpc("reward_claim", { p_player: user.id })).data || 0) : 0;
@@ -514,6 +516,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
     let out: unknown = null;
     let pvp: { def: number | null; oppRating: number; win: boolean } | null = null;
     let give = 0, giveAsh = 0, wbHit = -1;
+    let keyGift: { t: number; n: number; pid: number } | null = null;
     let sellLot: { it?: L.Item; mat?: L.MatLot; price: number; cur: L.MCur } | null = null;
     let giveRes: { k: string; n: number } | null = null;
     const before = { gold: G.gold, souls: G.souls, ash: G.ash, shards: G.shards, cat: G.cat, ess: G.ess };
@@ -612,6 +615,18 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "passClaim": out = L.actPassClaim(G, now); break;
       case "arenaTicket": out = L.actArenaTicket(G, now); break;
       case "achClaim": out = L.actAchClaim(G); break;
+      case "refine": out = L.actRefine(G, Number(args.id), Number(args.n ?? 1)); break;
+      case "keyGive": {
+        // особисті ключі (зокрема забрані зі складу клану) — іншому учаснику свого клану: списуємо під блокуванням версії, отримувачу — після запису
+        const t = Math.floor(Number(args.t)), pid = Number(args.pid), n = Math.max(1, Math.min(1000, Math.floor(Number(args.n) || 1)));
+        if (!giveTo) throw new L.GameError("clan_none");
+        if (!(t >= 1 && t <= L.DNG_TIERS)) throw new L.GameError("dng_locked");
+        if (pid === user.id || !keyTo || keyTo.clan_id !== giveTo.clan_id) throw new L.GameError("key_to");
+        if ((G.keys[String(t)] || 0) < n) throw new L.GameError("key_none");
+        G.keys[String(t)] -= n; keyGift = { t, n, pid };
+        out = { t, n };
+        break;
+      }
       case "relicAsh": out = L.actRelicAsh(G, args.ids === "junk" ? "junk" : (args.ids as number[])); break;
       case "share": out = L.actShare(G, now); break;
       case "notify": { G.ntf = args.on ? 1 : 0; await SB.from("players").update({ notify: !!args.on }).eq("tg_id", user.id); out = { on: G.ntf }; break; }
@@ -639,6 +654,20 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       const { error: ge } = await SB.rpc("clan_bank_give", { p_clan: giveTo.clan_id, p_player: user.id, p_amt: give }); if (ge) console.error(ge);
       await clog(giveTo.clan_id, user, "give", { gold: give });
       out = await clanInfo(user.id, G, now);
+    }
+    if (keyGift && giveTo) {
+      const { t, n, pid } = keyGift;
+      let ok = false;
+      for (let i = 0; i < 5 && !ok; i++) {
+        const { data: row } = await SB.from("game_state").select("version,state").eq("player_id", pid).maybeSingle();
+        if (!row) break;
+        const S = L.migrate(row.state as L.State); S.keys[String(t)] = (S.keys[String(t)] || 0) + n;
+        const { data: upd } = await SB.from("game_state").update({ state: S, version: (row.version as number) + 1 }).eq("player_id", pid).eq("version", row.version).select("version");
+        ok = !!upd?.length;
+      }
+      if (!ok) { const { error: ke } = await SB.rpc("clan_keys_add", { p_clan: giveTo.clan_id, p_tier: t, p_n: n }); if (ke) console.error("keyGive", ke); } // не вдалося — ключі не губляться, ідуть на склад клану
+      await clog(giveTo.clan_id, user, ok ? "keygift" : "givekey", { who: await nameOf(pid), t, n });
+      out = { t, n, ok };
     }
     if (giveAsh && giveTo) {
       const { error: ge } = await SB.rpc("clan_ash_give", { p_clan: giveTo.clan_id, p_player: user.id, p_amt: giveAsh }); if (ge) console.error(ge);
