@@ -202,6 +202,7 @@ function renderTop(){
  $('timer').style.display=B.rep?'block':'none';if(B.rep)$('timeri').style.width=Math.max(0,(BOSS_TIME-B.rep.t)/BOSS_TIME*100)+'%';
  const nw=G.inv.filter(i=>i.nw).length,nb=$('newb');nb.style.display=nw?'inline':'none';nb.textContent=nw;
  {const P=V.pass,qb=$('qb');const q=(P&&(P.lv>P.f.length||(P.prem&&P.lv>P.p.length)))||(V.ach||[]).some(x=>x.done>x.got);if(qb)qb.style.display=q?'inline':'none'}
+ {const hc=$('hsCur');if(hc&&document.body.classList.contains('hs-open'))hc.innerHTML=`<span>💰 ${fmt(gold)}</span><span>🔥 ${fmt(G.souls||0)} · ⚱️ ${fmt(G.ash||0)}</span>`} // баланс у шторці «Герой»: верхня панель під нею не видна (04.11)
  if(tab==='train')renderTrainBtns();
 }
 // поки сервер не підтвердив 10 перемог, показуємо не більше 9
@@ -1044,7 +1045,7 @@ function showPane(){if(groupOf(tab)!=='hero')prevTab=tab;heroSheet(groupOf(tab)=
 let prevTab='bag';const HERO_PANES=['hero','pet','train','log','prof'];
 function heroSheet(open){
  let sh=$('hsheet');
- if(!sh){sh=document.createElement('div');sh.id='hsheet';sh.innerHTML=`<div class="hs-bg"></div><div class="hs-box"><div class="hs-head"><i class="hs-grip"></i><div class="hs-t"><b id="hsTitle"></b><span id="hsSub"></span></div><button class="mx" id="hsX">✕</button></div><div class="hs-body" id="hsBody"></div></div>`;document.body.appendChild(sh);
+ if(!sh){sh=document.createElement('div');sh.id='hsheet';sh.innerHTML=`<div class="hs-bg"></div><div class="hs-box"><div class="hs-head"><i class="hs-grip"></i><div class="hs-t"><b id="hsTitle"></b><span id="hsSub"></span></div><div class="hs-cur" id="hsCur"></div><button class="mx" id="hsX">✕</button></div><div class="hs-body" id="hsBody"></div></div>`;document.body.appendChild(sh);
   const close=()=>{const b=document.querySelector(tabBtn(groupOf(prevTab)));if(b)b.click()};
   sh.querySelector('.hs-bg').onclick=close;$('hsX').onclick=close;
   let y0=null;const hd=sh.querySelector('.hs-head'),bx=sh.querySelector('.hs-box');
@@ -1057,7 +1058,7 @@ function heroSheet(open){
   if(st.parentNode!==body)body.appendChild(st);
   for(const k of HERO_PANES){const p=$('p-'+k);if(p.parentNode!==body)body.appendChild(p)}
   $('hsTitle').textContent='🧙 '+T('tab_hero');$('hsSub').textContent=G?T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)}):'';
-  if(!sh.classList.contains('open')){sh.classList.add('open');document.body.classList.add('hs-open');body.scrollTop=0}
+  if(!sh.classList.contains('open')){sh.classList.add('open');document.body.classList.add('hs-open');body.scrollTop=0};renderTop()
  }else{
   if(!sh.classList.contains('open'))return;
   document.querySelector('.tabsw').appendChild(st);
