@@ -170,7 +170,8 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
 .getrow{display:flex;justify-content:space-between;gap:8px;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding:8px 0;margin:6px 0}.getrow>div{display:flex;flex-direction:column;gap:2px}.btn.big{padding:12px;font-size:15px}
 .modal{position:fixed;inset:0;background:#000b;display:none;place-items:center;z-index:20;padding:20px}
 .modal.show{display:grid}
-.mbox{background:var(--panel);border:1px solid #4a3d55;border-radius:16px;padding:18px;max-width:360px;width:100%;text-align:center}
+.mbox{background:var(--panel);border:1px solid #4a3d55;border-radius:16px;padding:18px;max-width:360px;width:100%;text-align:center;position:relative}
+.mx{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:1px solid #e0484e88;background:#3a1418;color:#ff5a5f;font-size:16px;font-weight:800;line-height:1;display:grid;place-items:center;padding:0;z-index:2}.mx:active{background:#5a1c22}
 .mbox h3{margin:0 0 8px;font-size:18px}
 .mbox p{margin:6px 0;color:#d4ccdb}
 .mbox .big{font-size:44px}
@@ -265,6 +266,6 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
 
 <script src="src/i18n.js?v=37"></script>
 <script src="src/gear.js?v=5"></script>
-<script src="src/game.js?v=55"></script>
+<script src="src/game.js?v=56"></script>
 </body>
 </html>

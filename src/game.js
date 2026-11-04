@@ -250,8 +250,8 @@ function renderHero(){
  $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
 }
 // Вдосконалення речі (04.11): +1 рівень предмета за золото й уламки, до (найвищий етап − 15)
-const refK=r=>Math.sqrt(Math.min(14,RAR[r].m));
-function refCost(it){const R=V.refine||{g:500,sh:2};return{gold:Math.round(mobGold(it.il)*R.g*refK(it.r)),shards:Math.round(R.sh*it.il*refK(it.r))}}
+const refK=r=>((V.refine&&V.refine.m)||[0,0,0,1,2,5,15])[r]||1; // множник ціни за рідкістю (04.11: вічна в 7,5 раза дорожча за легендарку)
+function refCost(it){const R=V.refine||{g:300,sh:1};return{gold:Math.round(mobGold(it.il)*R.g*refK(it.r)),shards:Math.round(R.sh*it.il*refK(it.r))}}
 function refOk(it){const R=V.refine;return !!(R&&it&&it.r>=R.minR&&it.il<R.cap)}
 function findItem(id){return Object.values(G.eq).find(x=>x&&x.id===id)||G.inv.find(x=>x.id===id)}
 function refineDlg(id){const it=findItem(id);if(!it)return;const R=V.refine||{};
@@ -810,8 +810,8 @@ async function act(a,args,ok){
 // ---------- модалки ----------
 const queue=[];
 function modal(html,btn,cb){queue.push({html,btn,cb});if(queue.length===1)showModal()}
-// вікно з дією (cb) завжди можна закрити без дії: кнопка «Закрити» або тап поза вікном (04.11 — вікно вдосконалення не закривалось)
-function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb;$('mbox').innerHTML=q.html+(q.btn?`<div class="row">${cl?`<button class="btn" id="mcl">${T('m_close')}</button>`:''}<button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{q.cb&&q.cb();queue.shift();showModal()};
+// вікно з дією (cb) завжди можна закрити без дії: червоний ✕ у куті або тап поза вікном (04.11)
+function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb;$('mbox').innerHTML=(cl?`<button class="mx" id="mcl" aria-label="${T('m_close')}">✕</button>`:'')+q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{q.cb&&q.cb();queue.shift();showModal()};
  const close=()=>{queue.shift();showModal()};if(cl)$('mcl').onclick=close;$('modal').onclick=e=>{if(cl&&e.target===$('modal'))close()}}
 let dailyShown='';
 function afterSync(r){

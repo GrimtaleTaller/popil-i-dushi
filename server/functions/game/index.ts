@@ -84,7 +84,7 @@ function view(G: L.State, now: number, uid = 0) {
     cb: G.cb || { atk: 0, gold: 0, xp: 0 }, isAdmin: ADMINS.includes(uid), clanStage: L.CLAN.joinStage, clanCost: L.clanCreateCost(G),
     payout: { lvl: L.PAYOUT.lvl, days: L.PAYOUT.days, myDays: G.act.days, ok: G.lvl >= L.PAYOUT.lvl && G.act.days >= L.PAYOUT.days },
     smelt: L.SMELT, inv: { max: L.invMax(G), cost: L.bagCost(G), step: L.BAG.step, vaultMax: L.VAULT_MAX, rate: L.OVF_RATE },
-    refine: { g: L.REFINE.g, sh: L.REFINE.sh, minR: L.REFINE.minR, cap: L.refineCap(G) },
+    refine: { g: L.REFINE.g, sh: L.REFINE.sh, minR: L.REFINE.minR, m: L.REFINE.m, cap: L.refineCap(G) },
     train: { max: L.TRAIN_MAX, pct: L.TRAIN_PCT, gateStep: L.GATE_STEP, gate: Object.fromEntries(Object.keys(L.UPG).map((k) => [k, L.gateCost(k, G.up[k as keyof L.State["up"]])])) },
     dng: {
       unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS, daily: L.DNG_DAILY, left: L.dngLeft(G, now),
