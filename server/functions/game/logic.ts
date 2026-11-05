@@ -84,7 +84,7 @@ export const mobXp = (s: number) => 6 * Math.pow(XPC.mob, s - 1);
 export const xpNeed = (l: number) => Math.floor(XPC.base * Math.pow(XPC.need, l - 1));
 export const gearScale = (il: number) => Math.pow(1.16, il - 1);
 
-export type Item = { id: number; slot: Slot; r: number; il: number; nm: number; st: Stats; nw?: number; gm?: string[] }; // gm — камені в гніздах, коди "a3"
+export type Item = { id: number; slot: Slot; r: number; il: number; nm: number; st: Stats; nw?: number; gm?: string[]; af?: [string, number][]; sr?: number }; // gm — камені в гніздах, коди "a3"; af — властивості, sr — зірки (05.11)
 export type LogE = { t: number; k: string; a?: (string | number)[] };
 export type State = {
   v: 2;
@@ -145,6 +145,7 @@ export function fresh(now: number): State {
 }
 // дописує нові поля до старих збережень
 export function migrate(G: State): State {
+  for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it && AF_N[it.r] && !it.af) it.af = rollAfs(it.r); // 05.11: властивості й речам, отриманим раніше (і купленим на ринку)
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
   if (!G.dngd && G.dng) { G.dngd = {}; for (let t = 1; t <= (G.dng.max || 0); t++) G.dngd[String(t)] = 1; }
@@ -192,10 +193,11 @@ export function heroCtx(G: State) {
   const mh = (1 + pg.hp / 100) * cm * sp * tp("hp");
   const md = (1 + petB(G, "def") / 100) * (1 + pg.def / 100) * sp * tp("def"); // Голем
   c += pg.crit + abilV(G, "sight"); // спорядження пітомця, Прозріння Сови
-  return { a, h, d, c, ma, mh, md, em, eqs };
+  const af = afSum(G); // властивості надітих речей (05.11)
+  return { a, h, d, c, ma: ma * (1 + af.atk / 100), mh: mh * (1 + af.hp / 100), md: md * (1 + af.def / 100), em, eqs, af };
 }
-export function itemRaw(it: Item, em: number) {
-  const g = gemStats(it);
+export function itemRaw(it: Item, em0: number) {
+  const g = gemStats(it), em = em0 * (1 + STAR.step * (it.sr || 0)); // зірки посилюють базові характеристики речі (не камені)
   return { a: (it.st.atk || 0) * em + g.atk, h: (it.st.hp || 0) * em + g.hp, d: (it.st.def || 0) * em + g.def, c: (it.st.crit || 0) + g.crit };
 }
 // межа шансу криту 60%; надлишок понад межу стає силою криту: +1% урону криту за кожен 1% (05.11 — Смарагди більше не марні)
@@ -204,8 +206,8 @@ export const critOf = (c: number) => ({ crit: Math.min(CRIT_CAP, c), cd: 2 + Mat
 export const cdOf = (h: { cd?: number }) => h.cd || 2; // множник урону криту (старі знімки арени без cd — ×2)
 export const critMul = (h: { crit: number; cd?: number }) => 1 + h.crit / 100 * (cdOf(h) - 1); // середній множник урону від криту
 export function hero(G: State) {
-  const x = heroCtx(G);
-  return { atk: x.a * x.ma, hp: x.h * x.mh, def: x.d * x.md, ...critOf(x.c) };
+  const x = heroCtx(G), c = critOf(x.c);
+  return { atk: x.a * x.ma, hp: x.h * x.mh, def: x.d * x.md, crit: c.crit, cd: c.cd + x.af.cdm / 100, bd: 1 + x.af.boss / 100 }; // bd — множник урону по босах
 }
 export const power = (h: { atk: number; hp: number; def: number; crit: number; cd?: number }) => Math.round(h.atk * critMul(h) * 2 + h.hp * 0.25 + h.def * 1.5);
 // бойові вміння пітомця як еквівалент характеристик (01.11): Укус — атака, Ухилення й Відродження — здоров'я. Так «Сила» героя
@@ -224,7 +226,9 @@ export function setPowWith(G: State, slot: Slot, r: number) {
 export function itemScore(G: State, it: Item, x = heroCtx(G)) {
   const o = x.eqs[it.slot] || { a: 0, h: 0, d: 0, c: 0 }, v = itemRaw(it, x.em);
   const k = (1 + setPowWith(G, it.slot, it.r) / 100) / (1 + setInfo(G).pow / 100); // зміна бонусу сету від заміни
-  return power({ atk: (x.a - o.a + v.a) * x.ma * k, hp: (x.h - o.h + v.h) * x.mh * k, def: (x.d - o.d + v.d) * x.md * k, ...critOf(x.c - o.c + v.c) });
+  const cur = G.eq[it.slot], fo = afOf(cur && cur.id !== it.id ? cur : undefined), fn = afOf(cur && cur.id === it.id ? undefined : it), f = (key: AfKey) => (1 + (x.af[key] - fo[key] + fn[key]) / 100) / (1 + x.af[key] / 100);
+  const c = critOf(x.c - o.c + v.c);
+  return power({ atk: (x.a - o.a + v.a) * x.ma * k * f("atk"), hp: (x.h - o.h + v.h) * x.mh * k * f("hp"), def: (x.d - o.d + v.d) * x.md * k * f("def"), crit: c.crit, cd: c.cd + (x.af.cdm - fo.cdm + fn.cdm) / 100 });
 }
 export const sellPrice = (it: Item) => Math.max(1, Math.round(mobGold(it.il) * 2 * Math.pow(Math.min(14, RAR[it.r].m), 1.5)));
 
@@ -258,7 +262,9 @@ export function buildItem(G: State, ilvl: number, r: number, slot: Slot): Item {
     st[k] = Math.max(1, Math.round(base * sc * 0.5));
   }
   if (r >= 3) st.crit = Math.round(((st.crit || 0) + rnd(1, 2.5) * (r - 1)) * 10) / 10;
-  return { id: G.nid++, slot, r, il: ilvl, nm: Math.floor(Math.random() * def.names), st, nw: 1 };
+  const it: Item = { id: G.nid++, slot, r, il: ilvl, nm: Math.floor(Math.random() * def.names), st, nw: 1 };
+  if (AF_N[r]) it.af = rollAfs(r);
+  return it;
 }
 
 // додає предмет; повертає золото, якщо предмет продано автоматично
@@ -320,7 +326,7 @@ export function progress(G: State, now: number): Progress {
   G.frac = k - kills;
   if (!kills) return res;
   const lootM = 1 + abilV(G, "loot") / 100; // Здобич Ворона: очікуваний приріст
-  const gold = kills * mobGold(s) * (1 + ((G.cb?.gold || 0) + petB(G, "gold") + pgearSum(G).gold) / 100) * lootM, xp = kills * mobXp(s) * (1 + ((G.cb?.xp || 0) + petB(G, "xp") + pgearSum(G).xp) / 100); // Скарбниця й Бібліотека клану
+  const AF = afSum(G), gold = kills * mobGold(s) * (1 + ((G.cb?.gold || 0) + petB(G, "gold") + pgearSum(G).gold + AF.gold) / 100) * lootM, xp = kills * mobXp(s) * (1 + ((G.cb?.xp || 0) + petB(G, "xp") + pgearSum(G).xp + AF.xp) / 100); // Скарбниця й Бібліотека клану
   G.gold += gold; res.gold = gold; res.xp = xp;
   res.lvlUps = gainXp(G, xp);
   G.tot.kills += kills; res.kills = kills;
@@ -368,7 +374,7 @@ export function fightBoss(G: State): BossResult {
     if (nh <= nm) {
       ht = nh;
       const cr = Math.random() * 100 < H.crit;
-      const d = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1);
+      const d = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1) * H.bd;
       bhp -= d; ev.push([r2(t), 0, Math.round(d), cr ? 1 : 0]);
       if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; bhp -= b; ev.push([r2(t), 2, Math.round(b), 0]); }
       if (bhp <= 0) { win = true; break; }
@@ -386,7 +392,7 @@ export function fightBoss(G: State): BossResult {
   const res: BossResult = { win, ev, hp: H.hp, bossHp: Math.round(max), gold: 0, xp: 0, stage: s, timeout };
   if (win) {
     const lootM = 1 + abilV(G, "loot") / 100;
-    res.gold = mobGold(s) * 8 * lootM * (1 + pgearSum(G).gold / 100); res.xp = mobXp(s) * 6 * (1 + ((G.cb?.xp || 0) + pgearSum(G).xp + 2 * abilV(G, "sight")) / 100); // Здобич Ворона, Прозріння Сови
+    const AF = afSum(G); res.gold = mobGold(s) * 8 * lootM * (1 + (pgearSum(G).gold + AF.gold) / 100); res.xp = mobXp(s) * 6 * (1 + ((G.cb?.xp || 0) + pgearSum(G).xp + AF.xp + 2 * abilV(G, "sight")) / 100); // Здобич Ворона, Прозріння Сови
     G.gold += res.gold; gainXp(G, res.xp); G.tot.kills++; G.tot.bosses++;
     const it = makeItem(G, s, 1, 1, MOB_MAX_R); res.item = it; res.gold += addItem(G, it, true);
     const first = s === G.maxStage;
@@ -700,7 +706,7 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
       if (nh <= nm) {
         ht = nh; t = nh;
         const cr = Math.random() * 100 < H.crit;
-        const dd = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1);
+        const dd = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1) * (f.boss ? H.bd : 1);
         fh -= dd; if (rec) ev.push([r2(t), 0, Math.round(dd), cr ? 1 : 0]);
         if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; fh -= b; if (rec) ev.push([r2(t), 2, Math.round(b), 0]); }
         if (fh <= 0) { win = true; break; }
@@ -724,18 +730,18 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
 }
 // мінімальна сила для проходження: середній (без випадковості) бій з героєм гравця, масштабованим k разів;
 // шукаємо найменший k, за якого герой проходить усі кімнати й боса, і беремо +10% запасу
-type HStat = { atk: number; hp: number; def: number; crit: number; cd?: number };
+type HStat = { atk: number; hp: number; def: number; crit: number; cd?: number; bd?: number };
 function dngWinAvg(H: HStat, t: number, d: number, A?: FightAb) {
   const s = dngStage(t, d), dmg = H.atk * critMul(H) * (1 + (A?.bite || 0) / 100 / BITE_EVERY);
   let hp = H.hp + (A ? H.hp * A.rebirth / 100 : 0), total = 0; // Відродження — як додатковий запас
   for (let i = 0; i <= DNG_ROOMS; i++) {
     const boss = i === DNG_ROOMS, fhp = mobHp(s) * (boss ? 12 : 3), fat = mobAtk(s) * (boss ? 1.5 : 1.2);
-    let fh = fhp, ht = 0, mt = 0.6, tt = 0, win = false;
+    let fh = fhp, ht = 0, mt = 0.6, tt = 0, win = false; const dm = dmg * (boss ? H.bd || 1 : 1);
     const hit = dmgTaken(fat, H.def) * (1 - (A?.dodge || 0) / 100);
     if (boss && A) hp += hit * A.skin; // Кам'яна шкіра
     while (total + tt < DNG_TIME) {
       const nh = ht + 1, nm = mt + 1.4;
-      if (nh <= nm) { ht = nh; tt = nh; fh -= dmg; if (fh <= 0) { win = true; break; } hp = Math.min(H.hp, hp + H.hp * 0.02); }
+      if (nh <= nm) { ht = nh; tt = nh; fh -= dm; if (fh <= 0) { win = true; break; } hp = Math.min(H.hp, hp + H.hp * 0.02); }
       else { mt = nm; tt = nm; hp -= hit; if (hp <= 0) break; }
     }
     total += tt;
@@ -746,7 +752,7 @@ function dngWinAvg(H: HStat, t: number, d: number, A?: FightAb) {
 }
 export function dngNeedPower(G: State, t: number, d = 1) {
   const H = hero(G), A = fightAb(G);
-  const sc = (k: number): HStat => ({ atk: H.atk * k, hp: H.hp * k, def: H.def * k, crit: H.crit, cd: H.cd });
+  const sc = (k: number): HStat => ({ atk: H.atk * k, hp: H.hp * k, def: H.def * k, crit: H.crit, cd: H.cd, bd: H.bd });
   let lo = 0, hi = 1;
   while (!dngWinAvg(sc(hi), t, d, A) && hi < 1e7) { lo = hi; hi *= 2; }
   for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (dngWinAvg(sc(m), t, d, A)) hi = m; else lo = m; }
@@ -1453,7 +1459,7 @@ export function wbFight(G: State) {
   while (true) {
     const nh = ht + 1, nm = mt + 1.4, next = Math.min(nh, nm); if (next > WB.time) break; t = next;
     if (nh <= nm) {
-      ht = nh; const cr = Math.random() * 100 < H.crit, d = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1); dmg += d; ev.push([r2(t), 0, Math.round(d), cr ? 1 : 0]);
+      ht = nh; const cr = Math.random() * 100 < H.crit, d = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1) * H.bd; dmg += d; ev.push([r2(t), 0, Math.round(d), cr ? 1 : 0]);
       if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; dmg += b; ev.push([r2(t), 2, Math.round(b), 0]); }
       hp = Math.min(H.hp, hp + H.hp * 0.02);
     } else {
@@ -1472,4 +1478,57 @@ export function actWbAttack(G: State, now: number, pay: boolean) {
   const w = wbDay(G, now); let paid = 0;
   if (w.used >= WB.free) { if (!pay) fail("wb_limit"); paid = wbPrice(G); if (G.ash < paid) fail("no_ash"); G.ash -= paid; w.paid++; } else w.used++;
   const f = wbFight(G); bump(G, "wb"); return { ...f, paid };
+}
+
+// ---------- Властивості й зірки речей (05.11, рішення Влада: щоб легендарки мали цінність, а золото й уламки — куди йти) ----------
+// Властивості: легендарна 1, прадавня 2, вічна 3; значення залежать від рідкості. Перекидання однієї властивості — за Золото й уламки.
+// Зірки: злиття з такою ж річчю (слот і рідкість) — +8% до атаки, здоров'я й захисту речі за зірку, до ★5.
+export type AfKey = "atk" | "hp" | "def" | "boss" | "gold" | "xp" | "cdm";
+export const AFX: Record<AfKey, { w: number; v: [number, number][] }> = {
+  atk: { w: 3, v: [[1, 3], [2, 5], [3, 7]] }, hp: { w: 3, v: [[1, 3], [2, 5], [3, 7]] }, def: { w: 3, v: [[1, 3], [2, 5], [3, 7]] },
+  boss: { w: 2, v: [[3, 8], [5, 12], [8, 18]] }, gold: { w: 2, v: [[3, 8], [5, 12], [8, 18]] }, xp: { w: 2, v: [[3, 8], [5, 12], [8, 18]] }, cdm: { w: 2, v: [[3, 8], [5, 12], [8, 18]] },
+};
+export const AF_N = [0, 0, 0, 0, 1, 2, 3];
+export const STAR = { max: 5, step: 0.08, cost: 2 }; // ціна злиття = вдосконалення × 2
+export const REROLL = { cost: 3 };                   // ціна перекидання = вдосконалення × 3
+export function rollAf(r: number, except: string[] = []): [AfKey, number] {
+  const keys = (Object.keys(AFX) as AfKey[]).filter((k) => !except.includes(k));
+  let roll = Math.random() * keys.reduce((a, k) => a + AFX[k].w, 0), key = keys[0];
+  for (const k of keys) { roll -= AFX[k].w; key = k; if (roll <= 0) break; }
+  const [lo, hi] = AFX[key].v[Math.max(0, Math.min(2, r - 4))];
+  return [key, Math.round(rnd(lo, hi) * 10) / 10];
+}
+export function rollAfs(r: number) { const out: [AfKey, number][] = []; for (let i = 0; i < AF_N[r]; i++) out.push(rollAf(r, out.map((x) => x[0]))); return out; }
+const AF0 = (): Record<AfKey, number> => ({ atk: 0, hp: 0, def: 0, boss: 0, gold: 0, xp: 0, cdm: 0 });
+export function afOf(it?: Item) { const o = AF0(); for (const [k, v] of it?.af || []) if (k in o) o[k as AfKey] += v; return o; }
+export function afSum(G: State) { const o = AF0(); for (const s of SLOTS) { const f = afOf(G.eq[s]); for (const k in o) o[k as AfKey] += f[k as AfKey]; } return o; }
+const findAny = (G: State, id: number) => Object.values(G.eq).find((x) => x && x.id === id) || G.inv.find((x) => x.id === id) || (G.vault || []).find((x) => x.id === id);
+export const starCost = (it: Item) => { const c = refineCost(it); return { gold: c.gold * STAR.cost, shards: c.shards * STAR.cost }; };
+export const rerollCost = (it: Item) => { const c = refineCost(it); return { gold: c.gold * REROLL.cost, shards: c.shards * REROLL.cost }; };
+// дублікат для злиття: та сама рідкість і слот, без каменів, не надітий; спершу без зірок і найнижчого рівня
+export function starDup(G: State, it: Item) {
+  return [...G.inv, ...(G.vault || [])].filter((x) => x.id !== it.id && x.slot === it.slot && x.r === it.r && !(x.gm && x.gm.length))
+    .sort((a, b) => (a.sr || 0) - (b.sr || 0) || a.il - b.il)[0];
+}
+export function actStar(G: State, id: number) {
+  const it = findAny(G, Number(id)); if (!it) fail("no_item");
+  if (!AF_N[it!.r]) fail("star_rar");
+  if ((it!.sr || 0) >= STAR.max) fail("star_max");
+  const src = starDup(G, it!); if (!src) fail("star_dup");
+  const c = starCost(it!); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
+  G.gold -= c.gold; G.shards -= c.shards;
+  G.inv = G.inv.filter((x) => x.id !== src!.id); if (G.vault) G.vault = G.vault.filter((x) => x.id !== src!.id);
+  it!.sr = (it!.sr || 0) + 1;
+  log(G, "star", [it!.slot, it!.r, it!.sr]);
+  return { sr: it!.sr, used: src!.id, gold: c.gold, shards: c.shards };
+}
+export function actReroll(G: State, id: number, idx: number) {
+  const it = findAny(G, Number(id)); if (!it || !it.af) fail("no_item");
+  idx = Math.floor(Number(idx)); if (!(idx >= 0 && idx < it!.af!.length)) fail("bad_idx");
+  const c = rerollCost(it!); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
+  G.gold -= c.gold; G.shards -= c.shards;
+  const old = it!.af![idx];
+  it!.af![idx] = rollAf(it!.r, it!.af!.filter((_, i) => i !== idx).map((x) => x[0]));
+  bump(G, "up", 1);
+  return { idx, old, now: it!.af![idx], gold: c.gold, shards: c.shards };
 }

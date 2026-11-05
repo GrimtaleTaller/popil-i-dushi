@@ -85,6 +85,7 @@ function view(G: L.State, now: number, uid = 0) {
     payout: { lvl: L.PAYOUT.lvl, days: L.PAYOUT.days, myDays: G.act.days, ok: G.lvl >= L.PAYOUT.lvl && G.act.days >= L.PAYOUT.days },
     smelt: L.SMELT, inv: { max: L.invMax(G), cost: L.bagCost(G), step: L.BAG.step, vaultMax: L.VAULT_MAX, rate: L.OVF_RATE },
     refine: { g: L.REFINE.g, sh: L.REFINE.sh, minR: L.REFINE.minR, m: L.REFINE.m, cap: L.refineCap(G) },
+    afx: { n: L.AF_N, star: L.STAR, reroll: L.REROLL, v: Object.fromEntries(Object.entries(L.AFX).map(([k, d]) => [k, d.v])) },
     train: { max: L.TRAIN_MAX, pct: L.TRAIN_PCT, gateStep: L.GATE_STEP, gate: Object.fromEntries(Object.keys(L.UPG).map((k) => [k, L.gateCost(k, G.up[k as keyof L.State["up"]])])) },
     dng: {
       unlockStage: L.DNG_UNLOCK_STAGE, rooms: L.DNG_ROOMS, daily: L.DNG_DAILY, left: L.dngLeft(G, now),
@@ -619,6 +620,8 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "arenaTicket": out = L.actArenaTicket(G, now); break;
       case "achClaim": out = L.actAchClaim(G); break;
       case "refine": out = L.actRefine(G, Number(args.id), Number(args.n ?? 1)); break;
+      case "star": out = L.actStar(G, Number(args.id)); break;
+      case "reroll": out = L.actReroll(G, Number(args.id), Number(args.i)); break;
       case "keyGive": {
         // особисті ключі (зокрема забрані зі складу клану) — іншому учаснику свого клану: списуємо під блокуванням версії, отримувачу — після запису
         const t = Math.floor(Number(args.t)), pid = Number(args.pid), n = Math.max(1, Math.min(1000, Math.floor(Number(args.n) || 1)));
