@@ -70,7 +70,9 @@ export function mythChance(G: State, n: number) {
 
 // здоров'я ворогів ×1,25 за етап, після 50-го — ×1,18 (31.10, рішення Влада: знято стіну на ~60–69; симуляція — активний гравець етап 79 на 45-й день)
 export const HP_SLOW = { from: 50, g: 1.18 };
-export const mobHp = (s: number) => s <= HP_SLOW.from ? 25 * Math.pow(1.25, s - 1) : 25 * Math.pow(1.25, HP_SLOW.from - 1) * Math.pow(HP_SLOW.g, s - HP_SLOW.from);
+export const HP_END = { from: 80, g: 1.22 }; // після 80-го етапу здоров'я ворогів росте швидше (05.11, рішення Влада)
+export const mobHp = (s: number) => s <= HP_SLOW.from ? 25 * Math.pow(1.25, s - 1)
+  : 25 * Math.pow(1.25, HP_SLOW.from - 1) * Math.pow(HP_SLOW.g, Math.min(s, HP_END.from) - HP_SLOW.from) * Math.pow(HP_END.g, Math.max(0, s - HP_END.from));
 // атака ворогів ×1,22 за етап (було 1,19) і м'який захист: урон = атака² / (атака + захист), без «мінімуму 20%».
 // Рішення Влада 30.10 після симуляції: раніше бос не міг убити героя (знімав ≤33% HP за бій), здоров'я й захист не грали ролі.
 export const mobAtk = (s: number) => 4 * Math.pow(1.22, s - 1);
@@ -658,7 +660,7 @@ export const keyPrice = (t: number) => ASH.key[Math.max(0, Math.min(ASH.key.leng
 export const dngLoc = (t: number) => (t - 1) % REGIONS; // фон/локація
 // скрині трьох видів: вид = мінімальна рідкість речі (1 незвичайна, 2 рідкісна, 3 епічна). Ключ "рівень" — звичайна (старі збереження)
 // шанс легендарки: звичайна ~1,3%, рідкісна 2%, епічна ~5,7% (рішення 29.10, було 3,8% і 14%)
-export const CHEST_LW: Record<number, number> = { 1: 1, 2: 0.5, 3: 0.36 };
+export const CHEST_LW: Record<number, number> = { 1: 1, 2: 0.5, 3: 0.24 }; // епічна скриня: легендарка 3,8% (05.11; було 0,36 → 5,7%)
 export const chestKey = (il: number, g = 1) => (g > 1 ? `${il}:${g}` : String(il));
 export const chestParse = (k: string) => { const [a, b] = k.split(":"); return { il: Number(a), g: Math.max(1, Math.min(3, Number(b) || 1)) }; };
 export function addChests(G: State, il: number, n: number, g = 1) { const k = chestKey(il, g); G.chests[k] = (G.chests[k] || 0) + n; }
@@ -668,11 +670,15 @@ export function dngOpen(G: State, t: number, d = 1) {
   if (d > 1) return dngDiffMax(G, t) >= d - 1;
   return t <= (G.dng?.max || 0) + 1;
 }
+// Самоцвіт і Есенція в підземеллях 8+ тиру (05.11, рішення Влада після відгуку топ-гравця: вічний сет за тиждень)
+export const DNG_DROP = { cat8: 0.3, cat8d: 0.1, ess8: 0.05, ess8d: 0.03, ess67: 0.02 }; // було 1 / 0,15 / 0,15 / 0,1 / 0,05
 export function dngRewards(t: number, d = 1) {
   const m = DIFF_MUL[d - 1] || 1;
   return {
     chests: Math.round((1 + t) * m), chestIl: dngStage(t, d), chestG: d, mat: Math.min(3, Math.floor((t - 1) / 2.5)), matN: Math.round((3 + t) * m),
-    souls: 2 * t * d, gemChance: Math.min(1, 0.2 + 0.04 * t + 0.15 * (d - 1)), gem2: d === 3 && t >= 5 ? 0.3 : 0, catChance: Math.min(1, (t >= 8 ? 1 : t >= 4 ? 0.5 : 0) + 0.15 * (d - 1)), essChance: t >= 8 ? 0.15 + 0.1 * (d - 1) : t >= 6 && d === 3 ? 0.05 : 0,
+    souls: 2 * t * d, gemChance: Math.min(1, 0.2 + 0.04 * t + 0.15 * (d - 1)), gem2: d === 3 && t >= 5 ? 0.3 : 0,
+    catChance: t >= 8 ? Math.min(1, DNG_DROP.cat8 + DNG_DROP.cat8d * (d - 1)) : Math.min(1, (t >= 4 ? 0.5 : 0) + 0.15 * (d - 1)),
+    essChance: t >= 8 ? DNG_DROP.ess8 + DNG_DROP.ess8d * (d - 1) : t >= 6 && d === 3 ? DNG_DROP.ess67 : 0,
   };
 }
 type Foe = { hp: number; atk: number; boss: boolean };
