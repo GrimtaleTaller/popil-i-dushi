@@ -126,7 +126,7 @@ export type State = {
   shr?: string;                                           // день, коли востаннє взято нагороду за «Поділитися»
   ntf?: 0 | 1;                                            // 0 — гравець вимкнув нагадування від бота
 };
-export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number } };
+export type ArenaOpp = { id: number | null; name: string; lvl: number; power: number; rating: number; st: { atk: number; hp: number; def: number; crit: number; cd?: number } };
 export type ArenaState = { day: string; used: number; bt?: number; pts: number; rating: number; w: number; l: number; opps: ArenaOpp[] };
 
 export function fresh(now: number): State {
@@ -196,16 +196,21 @@ export function itemRaw(it: Item, em: number) {
   const g = gemStats(it);
   return { a: (it.st.atk || 0) * em + g.atk, h: (it.st.hp || 0) * em + g.hp, d: (it.st.def || 0) * em + g.def, c: (it.st.crit || 0) + g.crit };
 }
+// межа шансу криту 60%; надлишок понад межу стає силою криту: +1% урону криту за кожен 1% (05.11 — Смарагди більше не марні)
+export const CRIT_CAP = 60, CRIT_OVER = 1;
+export const critOf = (c: number) => ({ crit: Math.min(CRIT_CAP, c), cd: 2 + Math.max(0, c - CRIT_CAP) * CRIT_OVER / 100 });
+export const cdOf = (h: { cd?: number }) => h.cd || 2; // множник урону криту (старі знімки арени без cd — ×2)
+export const critMul = (h: { crit: number; cd?: number }) => 1 + h.crit / 100 * (cdOf(h) - 1); // середній множник урону від криту
 export function hero(G: State) {
   const x = heroCtx(G);
-  return { atk: x.a * x.ma, hp: x.h * x.mh, def: x.d * x.md, crit: Math.min(60, x.c) };
+  return { atk: x.a * x.ma, hp: x.h * x.mh, def: x.d * x.md, ...critOf(x.c) };
 }
-export const power = (h: ReturnType<typeof hero>) => Math.round(h.atk * (1 + h.crit / 100) * 2 + h.hp * 0.25 + h.def * 1.5);
+export const power = (h: { atk: number; hp: number; def: number; crit: number; cd?: number }) => Math.round(h.atk * critMul(h) * 2 + h.hp * 0.25 + h.def * 1.5);
 // бойові вміння пітомця як еквівалент характеристик (01.11): Укус — атака, Ухилення й Відродження — здоров'я. Так «Сила» героя
 // і «Потрібна сила» підземелля рахуються однаково з будь-яким пітомцем
 type AbEq = { bite?: number; dodge?: number; rebirth?: number };
-export const powerAb = (h: { atk: number; hp: number; def: number; crit: number }, A?: AbEq) => power({
-  atk: h.atk * (1 + (A?.bite || 0) / 100 / BITE_EVERY), hp: h.hp * (1 + (A?.rebirth || 0) / 100) / (1 - Math.min(0.9, (A?.dodge || 0) / 100)), def: h.def, crit: h.crit });
+export const powerAb = (h: { atk: number; hp: number; def: number; crit: number; cd?: number }, A?: AbEq) => power({
+  atk: h.atk * (1 + (A?.bite || 0) / 100 / BITE_EVERY), hp: h.hp * (1 + (A?.rebirth || 0) / 100) / (1 - Math.min(0.9, (A?.dodge || 0) / 100)), def: h.def, crit: h.crit, cd: h.cd });
 export const powerG = (G: State) => powerAb(hero(G), fightAb(G));
 // оцінка речі = Сила героя, якщо надіти її у свій слот (з рунами, межею криту 60%, бонусами клану, пітомця й сету).
 // Раніше крит рахувався без межі й без рун — прадавня річ з +1% криту «перемагала» сильнішу легендарку (01.11)
@@ -217,7 +222,7 @@ export function setPowWith(G: State, slot: Slot, r: number) {
 export function itemScore(G: State, it: Item, x = heroCtx(G)) {
   const o = x.eqs[it.slot] || { a: 0, h: 0, d: 0, c: 0 }, v = itemRaw(it, x.em);
   const k = (1 + setPowWith(G, it.slot, it.r) / 100) / (1 + setInfo(G).pow / 100); // зміна бонусу сету від заміни
-  return power({ atk: (x.a - o.a + v.a) * x.ma * k, hp: (x.h - o.h + v.h) * x.mh * k, def: (x.d - o.d + v.d) * x.md * k, crit: Math.min(60, x.c - o.c + v.c) });
+  return power({ atk: (x.a - o.a + v.a) * x.ma * k, hp: (x.h - o.h + v.h) * x.mh * k, def: (x.d - o.d + v.d) * x.md * k, ...critOf(x.c - o.c + v.c) });
 }
 export const sellPrice = (it: Item) => Math.max(1, Math.round(mobGold(it.il) * 2 * Math.pow(Math.min(14, RAR[it.r].m), 1.5)));
 
@@ -279,14 +284,14 @@ function gainXp(G: State, x: number): number {
 export const biteMul = (G: State) => 1 + abilV(G, "bite") / 100 / BITE_EVERY; // Укус Вовка: середній приріст урону
 export function canFarm(G: State, s: number) {
   const H = hero(G);
-  const dmg = H.atk * (1 + H.crit / 100) * biteMul(G);
+  const dmg = H.atk * critMul(H) * biteMul(G);
   const kt = Math.ceil(mobHp(s) / dmg) + 0.45;
   const taken = dmgTaken(mobAtk(s), H.def) / 1.4 * kt * (1 - abilV(G, "dodge") / 100);
   return taken < H.hp * 0.8 + H.hp * 0.02 * kt;
 }
 export function killTime(G: State, s: number) {
   const H = hero(G);
-  return Math.ceil(mobHp(s) / (H.atk * (1 + H.crit / 100) * biteMul(G))) + 0.45;
+  return Math.ceil(mobHp(s) / (H.atk * critMul(H) * biteMul(G))) + 0.45;
 }
 
 export type Progress = { sec: number; offline: boolean; stage: number; kills: number; gold: number; xp: number; items: number; lvlUps: number; souls?: number; boss?: BossResult; offSh?: number; offBy?: number[] };
@@ -361,7 +366,7 @@ export function fightBoss(G: State): BossResult {
     if (nh <= nm) {
       ht = nh;
       const cr = Math.random() * 100 < H.crit;
-      const d = H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1);
+      const d = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1);
       bhp -= d; ev.push([r2(t), 0, Math.round(d), cr ? 1 : 0]);
       if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; bhp -= b; ev.push([r2(t), 2, Math.round(b), 0]); }
       if (bhp <= 0) { win = true; break; }
@@ -689,7 +694,7 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
       if (nh <= nm) {
         ht = nh; t = nh;
         const cr = Math.random() * 100 < H.crit;
-        const dd = H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1);
+        const dd = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1);
         fh -= dd; if (rec) ev.push([r2(t), 0, Math.round(dd), cr ? 1 : 0]);
         if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; fh -= b; if (rec) ev.push([r2(t), 2, Math.round(b), 0]); }
         if (fh <= 0) { win = true; break; }
@@ -713,9 +718,9 @@ export function simDungeon(G: State, t: number, rec = false, d = 1) {
 }
 // мінімальна сила для проходження: середній (без випадковості) бій з героєм гравця, масштабованим k разів;
 // шукаємо найменший k, за якого герой проходить усі кімнати й боса, і беремо +10% запасу
-type HStat = { atk: number; hp: number; def: number; crit: number };
+type HStat = { atk: number; hp: number; def: number; crit: number; cd?: number };
 function dngWinAvg(H: HStat, t: number, d: number, A?: FightAb) {
-  const s = dngStage(t, d), dmg = H.atk * (1 + H.crit / 100) * (1 + (A?.bite || 0) / 100 / BITE_EVERY);
+  const s = dngStage(t, d), dmg = H.atk * critMul(H) * (1 + (A?.bite || 0) / 100 / BITE_EVERY);
   let hp = H.hp + (A ? H.hp * A.rebirth / 100 : 0), total = 0; // Відродження — як додатковий запас
   for (let i = 0; i <= DNG_ROOMS; i++) {
     const boss = i === DNG_ROOMS, fhp = mobHp(s) * (boss ? 12 : 3), fat = mobAtk(s) * (boss ? 1.5 : 1.2);
@@ -735,7 +740,7 @@ function dngWinAvg(H: HStat, t: number, d: number, A?: FightAb) {
 }
 export function dngNeedPower(G: State, t: number, d = 1) {
   const H = hero(G), A = fightAb(G);
-  const sc = (k: number): HStat => ({ atk: H.atk * k, hp: H.hp * k, def: H.def * k, crit: H.crit });
+  const sc = (k: number): HStat => ({ atk: H.atk * k, hp: H.hp * k, def: H.def * k, crit: H.crit, cd: H.cd });
   let lo = 0, hi = 1;
   while (!dngWinAvg(sc(hi), t, d, A) && hi < 1e7) { lo = hi; hi *= 2; }
   for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (dngWinAvg(sc(m), t, d, A)) hi = m; else lo = m; }
@@ -858,11 +863,11 @@ export function actArenaTicket(G: State, now: number) {
   arenaDay(G, now); const p = ticketPrice(G); if (G.ash < p) fail("no_ash");
   G.ash -= p; G.arena.bt = (G.arena.bt || 0) + 1; return { price: p, next: ticketPrice(G) };
 }
-export const heroSnap = (G: State) => { const H = hero(G); return { atk: Math.round(H.atk), hp: Math.round(H.hp), def: Math.round(H.def), crit: Math.round(H.crit * 10) / 10 }; };
+export const heroSnap = (G: State) => { const H = hero(G); return { atk: Math.round(H.atk), hp: Math.round(H.hp), def: Math.round(H.def), crit: Math.round(H.crit * 10) / 10, cd: Math.round(H.cd * 100) / 100 }; };
 // суперник-бот: сила близька до гравця, коли живих суперників замало
 export function botOpp(G: State, k: number): ArenaOpp {
   const H = hero(G), m = rnd(0.82, 1.12);
-  const st = { atk: Math.round(H.atk * m), hp: Math.round(H.hp * m), def: Math.round(H.def * m), crit: Math.round(H.crit * 10) / 10 };
+  const st = { atk: Math.round(H.atk * m), hp: Math.round(H.hp * m), def: Math.round(H.def * m), crit: Math.round(H.crit * 10) / 10, cd: Math.round(H.cd * 100) / 100 };
   return { id: null, name: BOT_NAMES[(G.nid + k * 5 + Math.floor(Math.random() * 12)) % BOT_NAMES.length], lvl: Math.max(1, G.lvl + Math.round(rnd(-3, 3))), power: power(st), rating: Math.max(0, G.arena.rating + Math.round(rnd(-60, 60))), st };
 }
 export type PvpEv = [number, 0 | 1, number, 0 | 1];
@@ -872,7 +877,7 @@ export function pvpFight(A: ArenaOpp["st"], D: ArenaOpp["st"]) {
   const PH = 4, mA = A.hp * PH, mD = D.hp * PH;
   let ha = mA, hd = mD, ta = 1, td = 1.25;
   const ev: PvpEv[] = [];
-  const hit = (x: ArenaOpp["st"], y: ArenaOpp["st"]) => { const cr = Math.random() * 100 < x.crit; return { d: Math.round(Math.max(x.atk * 0.25, x.atk - y.def * 0.6) * rnd(0.9, 1.1) * (cr ? 2 : 1)), cr }; };
+  const hit = (x: ArenaOpp["st"], y: ArenaOpp["st"]) => { const cr = Math.random() * 100 < x.crit; return { d: Math.round(Math.max(x.atk * 0.25, x.atk - y.def * 0.6) * rnd(0.9, 1.1) * (cr ? cdOf(x) : 1)), cr }; };
   while (Math.min(ta, td) <= ARENA.time && ha > 0 && hd > 0) {
     if (ta <= td) { const h = hit(A, D); hd -= h.d; ev.push([r2(ta), 0, h.d, h.cr ? 1 : 0]); ta += 1; }
     else { const h = hit(D, A); ha -= h.d; ev.push([r2(td), 1, h.d, h.cr ? 1 : 0]); td += 1; }
@@ -1405,7 +1410,7 @@ export function wbFight(G: State) {
   while (true) {
     const nh = ht + 1, nm = mt + 1.4, next = Math.min(nh, nm); if (next > WB.time) break; t = next;
     if (nh <= nm) {
-      ht = nh; const cr = Math.random() * 100 < H.crit, d = H.atk * rnd(0.92, 1.08) * (cr ? 2 : 1); dmg += d; ev.push([r2(t), 0, Math.round(d), cr ? 1 : 0]);
+      ht = nh; const cr = Math.random() * 100 < H.crit, d = H.atk * rnd(0.92, 1.08) * (cr ? cdOf(H) : 1); dmg += d; ev.push([r2(t), 0, Math.round(d), cr ? 1 : 0]);
       if (A.bite && ++A.hits % BITE_EVERY === 0) { const b = H.atk * A.bite / 100; dmg += b; ev.push([r2(t), 2, Math.round(b), 0]); }
       hp = Math.min(H.hp, hp + H.hp * 0.02);
     } else {

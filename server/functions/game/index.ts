@@ -67,7 +67,7 @@ async function loadOrCreate(u: TgUser, start: string | undefined, now: number) {
 function view(G: L.State, now: number, uid = 0) {
   const H = L.hero(G);
   return {
-    s: G, hero: { ...H, power: L.powerG(G) }, sc: (({ eqs, ...x }) => ({ ...x, eqs }))(L.heroCtx(G)), daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
+    s: G, hero: { ...H, power: L.powerG(G) }, crit: { cap: L.CRIT_CAP, over: L.CRIT_OVER }, sc: (({ eqs, ...x }) => ({ ...x, eqs }))(L.heroCtx(G)), daily: L.dailyInfo(G, now), canFarm: L.canFarm(G, G.stage), kt: L.killTime(G, G.stage), now,
     pass: G.pass ? L.passInfo(G, now) : null,
     ach: L.achInfo(G), coll: L.collInfo(G), share: { ...L.SHARE, gold: Math.round(L.mobGold(G.maxStage) * L.SHARE.gold), taken: G.shr === new Date(now).toISOString().slice(0, 10) },
     wb: { stage: L.WB.stage, free: L.WB.free, left: G.wb?.day === new Date(now).toISOString().slice(0, 10) ? Math.max(0, L.WB.free - G.wb.used) : L.WB.free, price: G.wb?.day === new Date(now).toISOString().slice(0, 10) ? L.wbPrice(G) : L.WB.price, week: L.passWeek(now) },

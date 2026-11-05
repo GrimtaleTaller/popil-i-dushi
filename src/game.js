@@ -123,7 +123,7 @@ function tick(dt){
  B.hp=Math.min(H.hp,B.hp+H.hp*0.02*dt);
  B.ht+=dt;
  if(B.ht>=1){B.ht-=1;
-  const cr=Math.random()*100<H.crit,d=H.atk*rnd(0.92,1.08)*(cr?2:1);B.m.hp-=d;
+  const cr=Math.random()*100<H.crit,d=H.atk*rnd(0.92,1.08)*(cr?(H.cd||2):1);B.m.hp-=d;
   anim('hs','lunge-r');anim('ms','hit');floatNum(fmt(d)+(cr?'!':''),cr?'crit':'','m');
   if(B.m.hp<=0){killFx();return}
  }
@@ -184,7 +184,7 @@ function sockView(it){const n=sockN(it);if(!n)return '';const gm=it.gm||[];let h
 // оцінка речі = Сила героя, якщо надіти її (як itemScore на сервері; V.sc — сирі суми й множники героя)
 function itemScore(it,noSet){const x=V&&V.sc,g=gemSum(it);if(!x)return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5;
  const o=x.eqs[it.slot]||{a:0,h:0,d:0,c:0},va=(it.st.atk||0)*x.em+g.atk,vh=(it.st.hp||0)*x.em+g.hp,vd=(it.st.def||0)*x.em+g.def,vc=(it.st.crit||0)+g.crit;
- const k=noSet?1:setK(it),atk=(x.a-o.a+va)*x.ma*k,crit=Math.min(60,x.c-o.c+vc);return Math.round(atk*(1+crit/100)*2+(x.h-o.h+vh)*x.mh*k*0.25+(x.d-o.d+vd)*x.md*k*1.5)}
+ const k=noSet?1:setK(it),atk=(x.a-o.a+va)*x.ma*k,cc=x.c-o.c+vc,crit=Math.min(60,cc),cd=2+Math.max(0,cc-60)*((V.crit&&V.crit.over)||0)/100;return Math.round(atk*(1+crit/100*(cd-1))*2+(x.h-o.h+vh)*x.mh*k*0.25+(x.d-o.d+vd)*x.md*k*1.5)}
 // як зміниться бонус повного сету, якщо надіти цю річ (сервер: setPowWith)
 function setPowWith(slot,r){const S=(V.forge&&V.forge.setCfg)||{anc:{pow:0},eter:{pow:0}};let a=0,e=0;for(const s of SLOTS){const rr=s===slot?r:((G.eq[s]||{}).r||0);if(rr===5)a++;else if(rr>=6)e++}return e===SLOTS.length?S.eter.pow:a+e===SLOTS.length?S.anc.pow:0}
 function setK(it){if(it.r==null)return 1;const cur=setPowWith(null,-1);return(1+setPowWith(it.slot,it.r)/100)/(1+cur/100)}
@@ -242,12 +242,12 @@ function renderHero(){
  h+=`</div><div class="card"><h4>🌐 ${T('lang')}</h4><div class="chips">${LANGS.map(l=>`<button data-lang="${l}" class="${l===LANG?'act':''}">${{uk:'Українська',en:'English',ru:'Русский'}[l]}</button>`).join('')}</div></div>
  <details class="hstats" id="hStats"${statsOpen?' open':''}><summary>📊 ${T('hero_stats')}</summary><div class="stats">
   <div><span>${STATN.atk}</span><b>${fmt(H.atk)}</b></div><div><span>${STATN.hp}</span><b>${fmt(H.hp)}</b></div>
-  <div><span>${STATN.def}</span><b>${fmt(H.def)}</b></div><div><span>${T('crit_chance')}</span><b>${H.crit.toFixed(1)}%</b></div>
+  <div><span>${STATN.def}</span><b>${fmt(H.def)}</b></div><div><span>${T('crit_chance')}</span><b>${H.crit.toFixed(1)}%</b></div><div><span>${T('crit_dmg')}</span><b>+${Math.round(((H.cd||2)-1)*100)}%</b></div>
   <div><span>${T('max_stage')}</span><b>${G.maxStage}</b></div><div><span>${T('kills')}</span><b>${fmt(G.tot.kills)}</b></div>
   <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
   <div><span>${T('ench')}</span><b>+${Math.round((G.ench||0)*V.forge.enchStep*100)}%</b></div><div><span>${T('souls_h')}</span><b>${fmt(V.forge.soulsPerHour)}</b></div>
   <div><span>${T('act_days')}</span><b>${V.payout?V.payout.myDays:'—'}</b></div></div>
-  <p class="hint">${T('hero_hint')}</p></details>`;
+  <p class="hint">${T('crit_hint',{v:(V.crit&&V.crit.over)||0})}</p><p class="hint">${T('hero_hint')}</p></details>`;
  $('p-hero').innerHTML=h;$('hStats').ontoggle=e=>{statsOpen=e.target.open}; /* характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями */$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best')));
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
  $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
