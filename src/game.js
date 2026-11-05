@@ -248,7 +248,7 @@ function renderHero(){
   <div><span>${T('ench')}</span><b>+${Math.round((G.ench||0)*V.forge.enchStep*100)}%</b></div><div><span>${T('souls_h')}</span><b>${fmt(V.forge.soulsPerHour)}</b></div>
   <div><span>${T('act_days')}</span><b>${V.payout?V.payout.myDays:'—'}</b></div></div>
   <p class="hint">${T('hero_hint')}</p></details>`;
- $('p-hero').innerHTML=h;$('hStats').ontoggle=e=>{statsOpen=e.target.open}; // характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best')));
+ $('p-hero').innerHTML=h;$('hStats').ontoggle=e=>{statsOpen=e.target.open}; /* характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями */$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best')));
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
  $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
  $('p-hero').querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{lastSub.bag=b.dataset.hq;document.querySelector(tabBtn('bag')).click()});
