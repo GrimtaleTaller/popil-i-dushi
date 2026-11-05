@@ -187,3 +187,10 @@ body.hs-open{overflow:hidden}
 .ccell .clock{position:absolute;top:22px;left:50%;transform:translate(-50%,-50%);font-style:normal;font-size:13px;filter:drop-shadow(0 1px 2px #000)}
 /* ✕ у вікні лишається видимим під час прокрутки довгого вмісту (05.11) */
 #mbox>.mx{position:sticky;top:0;float:right;margin:-6px -6px 0 0;z-index:5}
+/* властивості й зірки речей (05.11) */
+.st.afx{color:#c9a8ff}
+.isr{color:#f2c14e;font-size:.85em;letter-spacing:-1px;text-shadow:0 0 6px #f2c14e88}
+.ipanel{margin:10px 0 0;padding:10px 12px;text-align:left}
+.ipanel h4{margin:0 0 6px}
+.afrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed #ffffff14}
+.afrow span{color:#c9a8ff}

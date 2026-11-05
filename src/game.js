@@ -168,13 +168,14 @@ function replayTick(dt){
 // ---------- UI ----------
 const dirty={quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1,market:1};
 let tab='hero';
-let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?span[ >])/g,'&lt;');e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
+let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?(?:span|i|b|small)[ >])/g,'&lt;'); /* 05.11: значок каменя має <i> (рівень) — раніше він показувався як текст */e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
 // ---------- камені: a Рубін (атака), h Сапфір (здоров'я), d Аметист (захист), c Смарагд (крит) ----------
 const GEMC={a:'#e0475a',h:'#3f86e8',d:'#a15be0',c:'#2fb36b'},GEMS=['a','h','d','c'],ROM=['I','II','III','IV','V'];
 const gemP=k=>({t:k[0],l:+k[1]}),gemCfg=()=>V.gem||{sockets:[0,0,0,1,2,3,3],out:[2,5,12,25,50],m:[0.5,1.2,2.5,5,9],crit:[0.5,1,2,3.5,5],max:5,pts:40};
 function gemStat(k,il){const g=gemP(k),C=gemCfg(),v=Math.pow(1.16,il-1)*C.m[g.l-1],o={};if(g.t==='a')o.atk=3*v;else if(g.t==='h')o.hp=14*v;else if(g.t==='d')o.def=2*v;else o.crit=C.crit[g.l-1];return o}
-function fullSt(it){const g=gemSum(it),o={};for(const k of ['atk','hp','def','crit'])if((it.st[k]||0)+g[k])o[k]=(it.st[k]||0)+g[k];return o}
+function fullSt(it){const g=gemSum(it),o={},st=stSr(it);for(const k of ['atk','hp','def','crit'])if((st[k]||0)+g[k])o[k]=(st[k]||0)+g[k];return o}
+function stSr(it){if(!it.sr)return it.st;const m=1+((V&&V.afx&&V.afx.star.step)||0.08)*it.sr,o={...it.st};for(const k of ['atk','hp','def'])if(o[k])o[k]=Math.round(o[k]*m);return o} // характеристики з урахуванням зірок (05.11)
 function gemSum(it){const o={atk:0,hp:0,def:0,crit:0};for(const k of it.gm||[]){const s=gemStat(k,it.il);for(const x in s)o[x]+=s[x]}return o}
 const gemIc=(k,big)=>{const g=gemP(k);return `<span class="gem${big?' big':''}" style="--gc:${GEMC[g.t]}">◆<i>${ROM[g.l-1]}</i></span>`};
 const gemName=k=>{const g=gemP(k);return T('gem_'+g.t)+' '+ROM[g.l-1]};
@@ -183,8 +184,17 @@ const sockN=it=>gemCfg().sockets[it.r]||0;
 function sockView(it){const n=sockN(it);if(!n)return '';const gm=it.gm||[];let h='';for(let i=0;i<n;i++)h+=gm[i]?gemIc(gm[i]):'<span class="gem empty">◇</span>';return `<span class="socks">${h}</span>`}
 // оцінка речі = Сила героя, якщо надіти її (як itemScore на сервері; V.sc — сирі суми й множники героя)
 function itemScore(it,noSet){const x=V&&V.sc,g=gemSum(it);if(!x)return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5;
- const o=x.eqs[it.slot]||{a:0,h:0,d:0,c:0},va=(it.st.atk||0)*x.em+g.atk,vh=(it.st.hp||0)*x.em+g.hp,vd=(it.st.def||0)*x.em+g.def,vc=(it.st.crit||0)+g.crit;
- const k=noSet?1:setK(it),atk=(x.a-o.a+va)*x.ma*k,cc=x.c-o.c+vc,crit=Math.min(60,cc),cd=2+Math.max(0,cc-60)*((V.crit&&V.crit.over)||0)/100;return Math.round(atk*(1+crit/100*(cd-1))*2+(x.h-o.h+vh)*x.mh*k*0.25+(x.d-o.d+vd)*x.md*k*1.5)}
+ const em=x.em*(1+starStep()*(it.sr||0)),o=x.eqs[it.slot]||{a:0,h:0,d:0,c:0},va=(it.st.atk||0)*em+g.atk,vh=(it.st.hp||0)*em+g.hp,vd=(it.st.def||0)*em+g.def,vc=(it.st.crit||0)+g.crit;
+ const cur=G.eq[it.slot],AF=x.af||{},fo=afOf(cur&&cur.id!==it.id?cur:null),fn=afOf(cur&&cur.id===it.id?null:it),f=k=>(1+((AF[k]||0)-fo[k]+fn[k])/100)/(1+(AF[k]||0)/100); // властивості й зірки (05.11), як itemScore на сервері
+ const k=noSet?1:setK(it),atk=(x.a-o.a+va)*x.ma*k*f('atk'),cc=x.c-o.c+vc,crit=Math.min(60,cc),cd=2+Math.max(0,cc-60)*((V.crit&&V.crit.over)||0)/100+((AF.cdm||0)-fo.cdm+fn.cdm)/100;return Math.round(atk*(1+crit/100*(cd-1))*2+(x.h-o.h+vh)*x.mh*k*f('hp')*0.25+(x.d-o.d+vd)*x.md*k*f('def')*1.5)}
+// ---------- властивості й зірки речей (05.11) ----------
+const AFK=['atk','hp','def','boss','gold','xp','cdm'],AFI={atk:'⚔️',hp:'❤️',def:'🛡️',boss:'👑',gold:'💰',xp:'📘',cdm:'💥'};
+const starStep=()=>(V&&V.afx&&V.afx.star.step)||0.08;
+function afOf(it){const o={};AFK.forEach(k=>o[k]=0);for(const[k,v]of (it&&it.af)||[])if(k in o)o[k]+=v;return o}
+const afTxt=([k,v])=>`${AFI[k]||'✦'} ${T('af_'+k,{v:(+v).toFixed(1).replace(/\.0$/,'')})}`;
+const afLine=it=>it&&it.af&&it.af.length?`<div class="st afx">${it.af.map(afTxt).join(' · ')}</div>`:'';
+const starsOf=it=>it&&it.sr?`<span class="isr">${'★'.repeat(it.sr)}</span>`:'';
+function starDup(it){return [...G.inv,...(G.vault||[])].filter(x=>x.id!==it.id&&x.slot===it.slot&&x.r===it.r&&!(x.gm&&x.gm.length)).sort((a,b)=>(a.sr||0)-(b.sr||0)||a.il-b.il)[0]}
 // як зміниться бонус повного сету, якщо надіти цю річ (сервер: setPowWith)
 function setPowWith(slot,r){const S=(V.forge&&V.forge.setCfg)||{anc:{pow:0},eter:{pow:0}};let a=0,e=0;for(const s of SLOTS){const rr=s===slot?r:((G.eq[s]||{}).r||0);if(rr===5)a++;else if(rr>=6)e++}return e===SLOTS.length?S.eter.pow:a+e===SLOTS.length?S.anc.pow:0}
 function setK(it){if(it.r==null)return 1;const cur=setPowWith(null,-1);return(1+setPowWith(it.slot,it.r)/100)/(1+cur/100)}
@@ -238,7 +248,7 @@ function renderHero(){
  let h=`<div class="qrow">${[['bag','🎒',T('sub_bag')],['pet','🐾',T('sub_pet')],['train','💪',T('sub_train')],['market','⚖️',T('sub_market')]].map(([k,i,n])=>`<button class="qb" data-hq="${k}"><span>${i}</span>${n}${k==='bag'&&G.inv.some(x=>x.nw)?'<i class="qdot"></i>':''}</button>`).join('')}</div><div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
  for(const s of SLOTS){const it=G.eq[s];
   h+=`<div class="slot" ${it?`data-rf="${it.id}" style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
-   (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>${refOk(it)?`<div class="sn ref">⬆️ ${T('ref_btn')}</div>`:''}`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
+   (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)} ${starsOf(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>${refOk(it)?`<div class="sn ref">⬆️ ${T('ref_btn')}</div>`:''}`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
  h+=`</div><div class="card"><h4>🌐 ${T('lang')}</h4><div class="chips">${LANGS.map(l=>`<button data-lang="${l}" class="${l===LANG?'act':''}">${{uk:'Українська',en:'English',ru:'Русский'}[l]}</button>`).join('')}</div></div>
  <details class="hstats" id="hStats"${statsOpen?' open':''}><summary>📊 ${T('hero_stats')}</summary><div class="stats">
   <div><span>${STATN.atk}</span><b>${fmt(H.atk)}</b></div><div><span>${STATN.hp}</span><b>${fmt(H.hp)}</b></div>
@@ -258,13 +268,21 @@ const refK=r=>((V.refine&&V.refine.m)||[0,0,0,1,2,5,15])[r]||1; // множни�
 function refCost(it){const R=V.refine||{g:300,sh:1};return{gold:Math.round(mobGold(it.il)*R.g*refK(it.r)),shards:Math.round(R.sh*it.il*refK(it.r))}}
 function refOk(it){const R=V.refine;return !!(R&&it&&it.r>=R.minR&&it.il<R.cap)}
 function findItem(id){return Object.values(G.eq).find(x=>x&&x.id===id)||G.inv.find(x=>x.id===id)}
-function refineDlg(id){const it=findItem(id);if(!it)return;const R=V.refine||{};
+function refineDlg(id){const it=findItem(id);if(!it)return;const R=V.refine||{},A=V.afx;
  let body;if(it.r<(R.minR||3))body=`<p class="hint">${T('ref_rar')}</p>`;
  else if(it.il>=R.cap)body=`<p class="hint">${T('ref_cap_t',{n:R.cap})}</p>`;
- else{const c=refCost(it),k=1.16,nx={...it.st};for(const s of ['atk','hp','def'])if(it.st[s])nx[s]=Math.round(it.st[s]*k);
-  body=`<p>${T('ref_txt',{n:R.cap})}</p><div class="st">${statLine(nx,it.st)}</div><p><b>${T('lvl',{n:it.il})} → ${it.il+1}</b> · 💰${fmt(c.gold)} · 🔩${fmt(c.shards)}</p><p class="hint">${T('ref_have',{g:fmt(G.gold),s:fmt(G.shards)})}</p><div class="row"><button class="btn" id="rfMax">${T('ref_max')}</button></div>`}
- modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>${body}`,refOk(it)?'⬆️ '+T('ref_btn')+' +1':T('ok'),()=>{if(refOk(it))act('refine',{id:it.id,n:1},r=>{haptic('light');toast(T('ref_done',{n:r.out.il}))})},()=>{const b=$('rfMax');if(b)b.onclick=()=>{queue.shift();showModal();act('refine',{id:it.id,n:0},r=>{haptic('heavy');toast(T('ref_done_n',{k:r.out.n,n:r.out.il,g:fmt(r.out.gold),s:fmt(r.out.shards)}))})}},'item');
+ else{const c=refCost(it),k=1.16,cur=stSr(it),nx={...cur};for(const s of ['atk','hp','def'])if(cur[s])nx[s]=Math.round(cur[s]*k);
+  body=`<p>${T('ref_txt',{n:R.cap})}</p><div class="st">${statLine(nx,cur)}</div><p><b>${T('lvl',{n:it.il})} → ${it.il+1}</b> · 💰${fmt(c.gold)} · 🔩${fmt(c.shards)}</p><p class="hint">${T('ref_have',{g:fmt(G.gold),s:fmt(G.shards)})}</p><div class="row"><button class="btn" id="rfMax">${T('ref_max')}</button></div>`}
+ // властивості й зірки (05.11): легендарна й краще
+ if(A&&A.n[it.r]){const rc=refCost(it),rr={gold:rc.gold*A.reroll.cost,shards:rc.shards*A.reroll.cost},sc={gold:rc.gold*A.star.cost,shards:rc.shards*A.star.cost},can=c=>G.gold>=c.gold&&G.shards>=c.shards,dup=starDup(it),sr=it.sr||0;
+  body+=`<div class="card ipanel"><h4>✦ ${T('af_title')}</h4>`+(it.af||[]).map((a,i)=>`<div class="afrow"><span>${afTxt(a)}</span><button class="btn mini" data-rr="${i}" ${can(rr)?'':'disabled'}>🎲 ${T('af_reroll')}</button></div>`).join('')+`<p class="hint">${T('af_cost',{g:fmt(rr.gold),s:fmt(rr.shards)})}</p></div>`;
+  body+=`<div class="card ipanel"><h4>★ ${T('star_title')} ${stars(sr)}</h4>`+(sr>=A.star.max?`<p class="hint">${T('star_max')}</p>`:dup?`<p>${T('star_txt',{p:Math.round(A.star.step*100)})}</p><p class="hint">${T('star_use',{n:itemName(dup),l:dup.il})}</p><div class="row"><button class="btn pri" id="stUp" ${can(sc)?'':'disabled'}>★ ${T('star_btn')} · 💰${fmt(sc.gold)} · 🔩${fmt(sc.shards)}</button></div>`:`<p class="hint">${T('star_none',{p:Math.round(A.star.step*100)})}</p>`)+`</div>`}
+ const re=()=>setTimeout(()=>refineDlg(id),60);
+ modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)} ${starsOf(it)}</h3>${body}`,refOk(it)?'⬆️ '+T('ref_btn')+' +1':null,()=>{if(refOk(it))act('refine',{id:it.id,n:1},r=>{haptic('light');toast(T('ref_done',{n:r.out.il}))})},()=>{const b=$('rfMax');if(b)b.onclick=()=>{queue.shift();showModal();act('refine',{id:it.id,n:0},r=>{haptic('heavy');toast(T('ref_done_n',{k:r.out.n,n:r.out.il,g:fmt(r.out.gold),s:fmt(r.out.shards)}))})};
+  document.querySelectorAll('#mbox [data-rr]').forEach(b=>b.onclick=()=>{const i=+b.dataset.rr;queue.shift();showModal();act('reroll',{id:it.id,i},r=>{haptic('light');toast(T('af_rolled',{a:afTxt(r.out.old),b:afTxt(r.out.now)}));re()})});
+  const st=$('stUp');if(st)st.onclick=()=>{queue.shift();showModal();act('star',{id:it.id},r=>{haptic('heavy');toast(T('star_done',{n:r.out.sr}));re()})}},'item');
 }
+
 // Особисті ключі в сумці + передача соклановцю (04.11)
 function keysBar(){const K=G.keys||{},ts=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);if(!ts.length)return '';
  return `<div class="chestbar keys">🗝️<span>${ts.map(t=>`<span class="chg">${T('tier',{n:t})} ×${K[t]}</span>`).join('')}</span><button class="btn" id="keyGv">🤝 ${T('key_give')}</button></div>`}
@@ -303,9 +321,9 @@ function renderBag(){
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
  for(const it of list){const eq=G.eq[it.slot],better=!eq||itemScore(it)>itemScore(eq);
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
-   <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
-   <div class="st">${statLine(it.st,eq?fullSt(eq):{},gemSum(it))}</div>${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
-   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)?`<button class="btn" data-rf="${it.id}">⬆️</button>`:''}</div></div>`}
+   <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
+   <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
+   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
