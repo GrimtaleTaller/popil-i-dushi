@@ -560,6 +560,8 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "petEquip": out = L.actPetEquip(G, Number(args.id)); break;
       case "petUnequip": out = L.actPetUnequip(G, String(args.slot)); break;
       case "petDis": out = L.actPetDis(G, args.ids as number[]); break;
+      case "petEquipBest": out = L.actPetEquipBest(G); break;
+      case "petDisJunk": out = L.actPetDisJunk(G); break;
       case "arena": case "arenaRefresh": {
         if (G.maxStage < L.ARENA.stage) throw new L.GameError("arena_locked");
         L.arenaDay(G, now); G.arena.rating = await myRating(user.id);

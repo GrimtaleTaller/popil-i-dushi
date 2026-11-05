@@ -614,6 +614,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
   if(cost){const ok=(G.mats||[]).slice(cost.mat).reduce((x,y)=>x+(y||0),0)>=cost.matN&&G.shards>=cost.shards;
    h+=`<h4 style="margin-top:12px">${T('pg_craft_t')}</h4><p class="hint">${T('pg_craft_hint',{l:a.l})}</p><div class="st">${T('pet_cost')}: ⛏️${MATN[cost.mat]}×${cost.matN} · 🔩${fmt(cost.shards)}</div><div class="row">`+PGSLOTS.map(s=>`<button class="btn pri" data-pgc="${s}" ${ok?'':'disabled'}>${PGIC[s]} ${T('pslot_'+s)}</button>`).join('')+`<button class="btn ${pgCat?'on':''}" id="pgCat" ${G.cat>0?'':'disabled'}>${T('pg_cat')} ${G.cat||0}</button></div>`}
   h+=`<h4 style="margin-top:12px">${T('pg_bag')} ${PI.length}/${GI.invMax||30}</h4>`;
+  if(GI.best||GI.junk)h+=`<div class="row" style="margin-top:0;margin-bottom:8px">${GI.best?`<button class="btn pri" id="pgBest">${T('pg_best',{n:GI.best})}</button>`:''}${GI.junk?`<button class="btn" id="pgJunk">${T('pg_junk',{n:GI.junk})}</button>`:''}</div>`; // 05.11
   h+=PI.length?PI.map(it=>`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${T('pslot_'+it.slot)}</div><div class="sub">${it.sp?petIc(it.sp,0,(P.list[it.sp]||{}).l)+' ':''}${RAR[it.r].n} · ${T('lvl',{n:it.il})}${it.sp&&it.sp!==P.act?' · '+T('pg_for',{p:T('pet_'+it.sp)}):it.il>a.l?' · ⚠️ '+T('pg_inactive'):''}</div><div class="st">${pgSt(it)}</div></div><div class="acts"><button class="btn pri" data-pgeq="${it.id}" ${it.il>a.l||(it.sp&&it.sp!==P.act)?'disabled':''}>${T('pg_equip')}</button><button class="btn" data-pgdis="${it.id}">⚒️ ${T('pg_dis')}</button></div></div>`).join(''):`<p class="hint">${T('pg_bag_empty')}</p>`;
   h+=`</div>`}
  // інкубатор
@@ -635,6 +636,8 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  E.querySelectorAll('[data-pgc]').forEach(b=>b.onclick=()=>act('petCraft',{slot:b.dataset.pgc,cat:pgCat},r=>{const it=r.out.item;pgCat=pgCat&&G.cat>0;toast(`${RAR[it.r].n} ${T('pslot_'+it.slot)} · ${T('lvl',{n:it.il})}`);haptic(it.r>=3?'heavy':'light')}));
  E.querySelectorAll('[data-pgeq]').forEach(b=>b.onclick=()=>act('petEquip',{id:+b.dataset.pgeq},()=>haptic('light')));
  E.querySelectorAll('[data-pgoff]').forEach(b=>b.onclick=()=>act('petUnequip',{slot:b.dataset.pgoff},()=>haptic('light')));
+ if($('pgBest'))$('pgBest').onclick=()=>act('petEquipBest',{},r=>{haptic('light');toast(T('equipped_n',{n:r.out.n}))});
+ if($('pgJunk'))$('pgJunk').onclick=()=>modal(`<div class="big">🔩</div><h3>${T('pg_junk',{n:GI.junk})}</h3><p class="hint">${T('pg_junk_q')}</p>`,T('pg_dis'),()=>act('petDisJunk',{},r=>toast(T('pg_dis_done',{n:r.out.n,s:fmt(r.out.shards)}))));
  E.querySelectorAll('[data-pgdis]').forEach(b=>b.onclick=()=>act('petDis',{ids:[+b.dataset.pgdis]},r=>toast(T('pg_dis_done',{n:r.out.n,s:fmt(r.out.shards)}))));
  E.querySelectorAll('[data-pset]').forEach(b=>b.onclick=()=>{if(P.act===b.dataset.pset)return;act('petSet',{sp:b.dataset.pset},()=>toast(T('pet_set',{p:T('pet_'+b.dataset.pset)})))});
 }

@@ -1225,8 +1225,25 @@ export function actPetDis(G: State, ids: number[]) {
 }
 export function petGearInfo(G: State) {
   const P = G.pet; const a = P && P.act ? P.list[P.act] : null;
-  return { abil: abil(G), sum: pgearSum(G), cost: a ? pgearCost(a.l) : null, defs: ABIL, slots: PSLOTS, gear: PGEAR, gearSp: PGEAR_SP, prar: PRAR, invMax: PINV_MAX, lvl: a ? a.l : 0 };
+  return { abil: abil(G), sum: pgearSum(G), cost: a ? pgearCost(a.l) : null, defs: ABIL, slots: PSLOTS, gear: PGEAR, gearSp: PGEAR_SP, prar: PRAR, invMax: PINV_MAX, lvl: a ? a.l : 0, best: petBestIds(G).length, junk: petJunkIds(G).length };
 }
+// сумка пітомця (05.11, прохання Влада): «Надіти найкращі» — для активного пітомця в кожному слоті найсильніша річ, що вже діє (рівень ≤ рівня пітомця);
+// «Розібрати гірші» — речі, не кращі за надіту в тому ж слоті свого пітомця (прив'язані — свого виду, без прив'язки — активного)
+export function petBestIds(G: State) {
+  const P = G.pet; if (!P || !P.act) return [] as number[];
+  const l = P.list[P.act]?.l || 0, eq = pgearEq(G), out: number[] = [];
+  for (const s of PSLOTS) {
+    const c = (P.inv || []).filter((it) => it.slot === s && (!it.sp || it.sp === P.act) && it.il <= l).sort((a, b) => pscore(b) - pscore(a))[0];
+    const cur = eq[s]; if (c && (!cur || cur.il > l || pscore(c) > pscore(cur))) out.push(c.id);
+  }
+  return out;
+}
+export function petJunkIds(G: State) {
+  const P = G.pet; if (!P) return [] as number[];
+  return (P.inv || []).filter((it) => { const sp = it.sp || P.act; if (!sp) return false; const cur = (P.eqs?.[sp] || {})[it.slot]; return !!cur && pscore(it) <= pscore(cur); }).map((it) => it.id);
+}
+export function actPetEquipBest(G: State) { const ids = petBestIds(G); for (const id of ids) actPetEquip(G, id); return { n: ids.length }; }
+export function actPetDisJunk(G: State) { const ids = petJunkIds(G); if (!ids.length) return { n: 0, shards: 0 }; return actPetDis(G, ids); }
 
 // ---------- ринок між гравцями: за Попіл або за Золото (рішення 29.10) ----------
 // речі від рідкісних (r >= 2), легендарні й кращі — лише за Попіл; матеріали I–IV — будь-яка валюта.
