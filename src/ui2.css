@@ -154,3 +154,34 @@ body.hs-open{overflow:hidden}
 .hstats[open] summary::after{transform:rotate(180deg)}
 .hstats .stats{margin:0;border:none;border-top:1px solid #ffffff0a;border-radius:0;box-shadow:none;background:none}
 .hstats .hint{padding:0 12px 10px}
+
+/* ── 05.11: «Сумка» лише кнопкою в Спорядженні — без дубля у вкладках ── */
+.tabs button[data-t="bag"]{display:none}
+
+/* ── Ринок: панель фільтрів-«таблеток», згорнутий продаж матеріалів ── */
+.mbar{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.msel{position:relative;flex:1 1 calc(50% - 6px);min-width:0}
+.msel select{width:100%;appearance:none;-webkit-appearance:none;padding:8px 28px 8px 12px;border-radius:999px;background:var(--glass);border:1px solid #e2b97a33;color:#f0dcb4;font:600 12.5px system-ui,sans-serif;box-shadow:inset 0 1px 0 #ffffff08;text-overflow:ellipsis}
+.msel::after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#e2b97a;pointer-events:none;font-size:12px}
+.mmat summary{list-style:none;cursor:pointer;display:flex;align-items:center}.mmat summary::-webkit-details-marker{display:none}
+.mmat summary h4{margin:0;flex:1}.mmat summary::after{content:"▾";color:var(--mut);transition:transform .2s}.mmat[open] summary::after{transform:rotate(180deg)}
+.mmat[open] summary{margin-bottom:8px}
+#p-market .item .acts .btn.pri{min-width:76px}
+
+/* ── Колекція ── */
+.collban{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;margin-bottom:6px;background:radial-gradient(120% 140% at 0% 0%,#3a2414,#17121a 70%);border:1px solid #e2b97a40;box-shadow:inset 0 1px 0 #ffffff10,0 8px 22px #0007}
+.collban .cb-n{font:800 30px Georgia,serif;color:#f5d58a;text-shadow:0 0 14px #f2a33a66;min-width:84px;text-align:center}
+.collban b{display:block;color:var(--gl2);font-size:14px}.collban span{font-size:11.5px;color:var(--mut)}
+.crow{border-radius:14px;padding:9px 10px 10px;margin-bottom:8px;background:var(--glass);border:1px solid #ffffff0c;border-left:3px solid var(--rc)}
+.crow.done{box-shadow:0 0 0 1px color-mix(in srgb,var(--rc) 40%,transparent),0 0 16px color-mix(in srgb,var(--rc) 22%,transparent)}
+.crh{display:flex;align-items:center;gap:8px}.crh b{flex:1;font-size:13.5px}
+.crp{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+.crb{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffffff0a;color:var(--mut)}
+.crow.done .crb{background:#56c27126;color:#7fe39a}
+.crbar{height:4px;border-radius:4px;background:#ffffff10;margin:7px 0 8px;overflow:hidden}.crbar i{display:block;height:100%;background:var(--rc);box-shadow:0 0 8px var(--rc)}
+.crs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.ccell{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px}
+.ccell .gic{width:40px;height:40px}
+.ccell small{font-size:9px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ccell.miss .gic{filter:grayscale(1) brightness(.45);box-shadow:none;animation:none}
+.ccell .clock{position:absolute;top:22px;left:50%;transform:translate(-50%,-50%);font-style:normal;font-size:13px;filter:drop-shadow(0 1px 2px #000)}
