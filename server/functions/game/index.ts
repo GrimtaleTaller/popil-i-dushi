@@ -246,7 +246,7 @@ async function clanInfo(id: number, G: L.State, now: number, q = "") {
     return { id: m.player_id, name: String(x?.name || p?.first_name || "Hero").slice(0, 24), lvl: x?.lvl || 1, stage: x?.max_stage || 1, power: Number(x?.power || 0), role: m.role, given: Number(m.given || 0), givenAsh: Number(m.given_ash || 0), seen: p?.last_seen || null, me: m.player_id === id };
   }).sort((a, b) => ro[a.role] - ro[b.role] || b.power - a.power);
   const kn = Number(c!.kn || 0), bld = (c!.bld || {}) as Record<string, number>;
-  const builds = (Object.keys(L.BUILD) as L.BldKey[]).map((k) => ({ k, lvl: Number(bld[k] || 0), max: L.BUILD[k].max, step: L.BUILD[k].step, cost: L.bldCost(k, Number(bld[k] || 0)) }));
+  const builds = (Object.keys(L.BUILD) as L.BldKey[]).map((k) => ({ k, lvl: Number(bld[k] || 0), max: L.BUILD[k].max, step: L.BUILD[k].step, cur: L.bldVal(k, Number(bld[k] || 0)), nx: L.bldVal(k, Number(bld[k] || 0) + 1) - L.bldVal(k, Number(bld[k] || 0)), cost: L.bldCost(k, Number(bld[k] || 0)) }));
   const craft = Array.from({ length: L.DNG_TIERS }, (_, i) => ({ t: i + 1, ash: L.clanKeyCost(i + 1, 1, Number(bld.forge || 0)), ash5: L.clanKeyCost(i + 1, 5, Number(bld.forge || 0)), can: L.dngOpen(G, i + 1) })); // ключі — на всі тири, відкриті крафтеру для входу (30.10)
   const { data: lg } = await SB.from("clan_log").select("name,kind,data,at").eq("clan_id", me.clan_id).order("id", { ascending: false }).limit(30);
   let apps: unknown[] = [];

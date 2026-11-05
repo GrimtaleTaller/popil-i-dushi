@@ -924,26 +924,29 @@ export const clanCreateCost = (_G?: State) => 50000; // фіксована ці�
 // клан крафтить ключі з казни Попелу без ліміту й без зростання ціни (рішення 29.10, див. ASH).
 export const ckeyCrafted = (G: State, now: number) => (G.ckey.day === dayStr(now) ? G.ckey.n : 0);
 export function clanKeyCost(t: number, n = 1, forge = 0) { // у Попелі з казни клану: 70% ціни соло-входу, не дорожчає, Ковальня −5%/рів.
-  const k = 1 - BUILD.forge.step / 100 * Math.min(BUILD.forge.max, forge || 0);
+  const k = 1 - bldVal("forge", forge || 0) / 100;
   return Math.max(1, Math.round(keyPrice(t) * ASH.clanMul * k)) * n;
 }
-// будівлі клану: прокачка з казни (золото + матеріал + уламки), бонуси всім учасникам. step — бонус за рівень
+// будівлі клану: прокачка з казни (золото + матеріал + уламки), бонуси всім учасникам. step — бонус за рівень 1–5, step2 — за рівні 6–10 (05.11, план кінцевої гри)
 export type BldKey = "citadel" | "forge" | "vault" | "barracks" | "library";
-export const BUILD: Record<BldKey, { max: number; base: number; mul: number; step: number }> = {
-  citadel: { max: 5, base: 200000, mul: 3, step: 2 },    // +2 місця в клані
-  forge: { max: 5, base: 100000, mul: 2.5, step: 5 },    // −5% ціни ключів з казни
-  vault: { max: 5, base: 150000, mul: 2.5, step: 3 },    // +3% золота з ворогів
-  barracks: { max: 5, base: 150000, mul: 2.5, step: 2 }, // +2% атаки й здоров'я
-  library: { max: 5, base: 150000, mul: 2.5, step: 3 },  // +3% досвіду
+export const BLD_HI = 5; // з якого рівня діє step2 і дорожча ціна
+export const BUILD: Record<BldKey, { max: number; base: number; mul: number; mul2: number; step: number; step2: number }> = {
+  citadel: { max: 10, base: 200000, mul: 3, mul2: 3.5, step: 2, step2: 2 },    // +2 місця в клані
+  forge: { max: 10, base: 100000, mul: 2.5, mul2: 5, step: 5, step2: 2 },     // −5% ціни ключів з казни (6–10: −2%)
+  vault: { max: 10, base: 150000, mul: 2.5, mul2: 5, step: 3, step2: 3 },     // +3% золота з ворогів
+  barracks: { max: 10, base: 150000, mul: 2.5, mul2: 5, step: 2, step2: 2 },  // +2% атаки й здоров'я
+  library: { max: 10, base: 150000, mul: 2.5, mul2: 5, step: 3, step2: 3 },   // +3% досвіду
 };
-// ресурси на рівень: матеріал (тир за рівнем будівлі) і уламки
-const BLD_MAT = [0, 0, 1, 2, 2], BLD_MATN = [30, 80, 150, 250, 400];
+export const bldVal = (k: BldKey, lvl: number) => { const b = BUILD[k], l = Math.max(0, Math.min(b.max, Number(lvl) || 0)); return b.step * Math.min(l, BLD_HI) + b.step2 * Math.max(0, l - BLD_HI); };
+// ресурси на рівень: матеріал (тир за рівнем будівлі) і уламки; рівні 6–10 — матеріали III–IV, золото ×mul2 за рівень від ціни 5-го (злив золота топів)
+const BLD_MAT = [0, 0, 1, 2, 2, 2, 3, 3, 3, 3], BLD_MATN = [30, 80, 150, 250, 400, 600, 150, 300, 500, 800];
 export function bldCost(k: BldKey, lvl: number) {
   if (lvl >= BUILD[k].max) return null;
-  return { gold: Math.round(BUILD[k].base * Math.pow(BUILD[k].mul, lvl)), mat: BLD_MAT[lvl], matN: BLD_MATN[lvl], sh: 200 * (lvl + 1) * (lvl + 1) };
+  const b = BUILD[k], g = b.base * Math.pow(b.mul, Math.min(lvl, BLD_HI - 1)) * Math.pow(b.mul2, Math.max(0, lvl - BLD_HI + 1));
+  return { gold: Math.round(g), mat: BLD_MAT[lvl], matN: BLD_MATN[lvl], sh: 200 * (lvl + 1) * (lvl + 1) };
 }
-export const clanMax = (bld?: Record<string, number> | null) => CLAN.max + BUILD.citadel.step * Math.min(BUILD.citadel.max, Number(bld?.citadel || 0));
-export const clanBonus = (bld?: Record<string, number> | null) => ({ atk: BUILD.barracks.step * Number(bld?.barracks || 0), gold: BUILD.vault.step * Number(bld?.vault || 0), xp: BUILD.library.step * Number(bld?.library || 0) });
+export const clanMax = (bld?: Record<string, number> | null) => CLAN.max + bldVal("citadel", Number(bld?.citadel || 0));
+export const clanBonus = (bld?: Record<string, number> | null) => ({ atk: bldVal("barracks", Number(bld?.barracks || 0)), gold: bldVal("vault", Number(bld?.vault || 0)), xp: bldVal("library", Number(bld?.library || 0)) });
 export function ckeyAdd(G: State, now: number, n: number) { const d = dayStr(now); if (G.ckey.day !== d) G.ckey = { day: d, n: 0 }; G.ckey.n += n; }
 // внесок ресурсу в казну клану: k = m0..m3 (матеріали I–IV) або sh (уламки)
 export function clanResTake(G: State, k: string, n: number) {
