@@ -263,8 +263,7 @@ function refineDlg(id){const it=findItem(id);if(!it)return;const R=V.refine||{};
  else if(it.il>=R.cap)body=`<p class="hint">${T('ref_cap_t',{n:R.cap})}</p>`;
  else{const c=refCost(it),k=1.16,nx={...it.st};for(const s of ['atk','hp','def'])if(it.st[s])nx[s]=Math.round(it.st[s]*k);
   body=`<p>${T('ref_txt',{n:R.cap})}</p><div class="st">${statLine(nx,it.st)}</div><p><b>${T('lvl',{n:it.il})} → ${it.il+1}</b> · 💰${fmt(c.gold)} · 🔩${fmt(c.shards)}</p><p class="hint">${T('ref_have',{g:fmt(G.gold),s:fmt(G.shards)})}</p><div class="row"><button class="btn" id="rfMax">${T('ref_max')}</button></div>`}
- modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>${body}`,refOk(it)?'⬆️ '+T('ref_btn')+' +1':T('ok'),()=>{if(refOk(it))act('refine',{id:it.id,n:1},r=>{haptic('light');toast(T('ref_done',{n:r.out.il}))})});
- setTimeout(()=>{const b=$('rfMax');if(b)b.onclick=()=>{queue.shift();showModal();act('refine',{id:it.id,n:0},r=>{haptic('heavy');toast(T('ref_done_n',{k:r.out.n,n:r.out.il,g:fmt(r.out.gold),s:fmt(r.out.shards)}))})}},0);
+ modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>${body}`,refOk(it)?'⬆️ '+T('ref_btn')+' +1':T('ok'),()=>{if(refOk(it))act('refine',{id:it.id,n:1},r=>{haptic('light');toast(T('ref_done',{n:r.out.il}))})},()=>{const b=$('rfMax');if(b)b.onclick=()=>{queue.shift();showModal();act('refine',{id:it.id,n:0},r=>{haptic('heavy');toast(T('ref_done_n',{k:r.out.n,n:r.out.il,g:fmt(r.out.gold),s:fmt(r.out.shards)}))})}},'item');
 }
 // Особисті ключі в сумці + передача соклановцю (04.11)
 function keysBar(){const K=G.keys||{},ts=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);if(!ts.length)return '';
@@ -282,12 +281,11 @@ function keyGiveDlg(){
    <div class="row" style="align-items:center;justify-content:center"><span class="hint" style="margin:0">${T('key_qty')}</span><input id="kfN" class="inp" type="number" min="1" value="1" inputmode="numeric" style="flex:0 0 80px"></div>`,T('key_give'),()=>{
    const n=Math.floor(+$('kfN').value||0);if(!pid){toast(T('key_pick_err'));$('kfPick').classList.add('shake');setTimeout(()=>$('kfPick')&&$('kfPick').classList.remove('shake'),400);return false}
    if(!(n>=1)){toast(T('bad_amount'));return false}
-   const t=tsel;act('keyGive',{pid,t,n},r=>{haptic('light');clanData=null;toast(r.out.ok===false?T('key_to_clan'):T('key_sent',{n,t,who:pnm}))})});
-  setTimeout(()=>{const pb=$('kfPick'),pl=$('kfList');if(!pb)return;
+   const t=tsel;act('keyGive',{pid,t,n},r=>{haptic('light');clanData=null;toast(r.out.ok===false?T('key_to_clan'):T('key_sent',{n,t,who:pnm}))})},()=>{const pb=$('kfPick'),pl=$('kfList');if(!pb)return;
    pb.onclick=()=>pl.classList.toggle('open');
    pl.querySelectorAll('[data-kp]').forEach(b=>b.onclick=()=>{pid=+b.dataset.kp;pnm=b.querySelector('b').textContent;pb.querySelector('span').innerHTML=b.innerHTML.replace(/<small>.*<\/small>/,'');pb.classList.add('set');pl.classList.remove('open');pl.querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b))});
    $('kfT').querySelectorAll('[data-kt]').forEach(b=>b.onclick=()=>{tsel=+b.dataset.kt;$('kfT').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b))});
-  },0)};
+  },'keygive')};
  if(clanData)go();else api('clan').then(r=>{clanData=r.out;go()}).catch(e=>toast(errT(e)));
 }
 let bagFilter='all';
@@ -392,8 +390,7 @@ function bindGem(){const P=$('p-forge');
  P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>act('gemMerge',{k:b.dataset.gm,n:0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}));
  P.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>gemPick(+b.dataset.gi));
  P.querySelectorAll('[data-gr]').forEach(b=>b.onclick=()=>{const[id,i]=b.dataset.gr.split(':').map(Number);const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(x=>x&&x.id===id);const k=it&&it.gm&&it.gm[i];if(!k)return;const c=gemCfg().out[gemP(k).l-1];
-  modal(`<div class="big">◆</div><h3>${gemName(k)}</h3><p>${T('gem_out_q',{c})}</p><div class="row"><button class="btn" id="gNo">${T('cancel')}</button></div>`,T('gem_out_btn',{c}),()=>act('gemRemove',{id,i},()=>toast(T('gem_out_ok',{g:gemName(k)}))));
-  setTimeout(()=>{const n=$('gNo');if(n)n.onclick=()=>{queue.shift();showModal()}},0)});
+  modal(`<div class="big">◆</div><h3>${gemName(k)}</h3><p>${T('gem_out_q',{c})}</p>`,T('gem_out_btn',{c}),()=>act('gemRemove',{id,i},()=>toast(T('gem_out_ok',{g:gemName(k)}))))}); // закрити — червоним ✕ (кнопку «Скасувати» прибрано)
  if(gemSel){const e=P.querySelector(`[data-gi="${gemSel}"],[data-gr^="${gemSel}:"]`);if(e)e.scrollIntoView({block:'center'});gemSel=null}}
 function renderForge(){
  const F=V.forge,legs=s=>G.inv.filter(i=>i.r===4&&i.slot===s);
@@ -767,8 +764,7 @@ function renderClan(){
  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>clanAct('clanKick',{pid:+b.dataset.ck}));
  el.querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>clanAct('clanRole',{pid:+b.dataset.cr,role:b.dataset.r}));
  if($('cRef'))$('cRef').onclick=()=>{clanData=null;renderClan()};
- if($('cLeave'))$('cLeave').onclick=()=>modal(`<div class="big">🚪</div><h3>${T('leave_q')}</h3><p class="hint">${T(C.role==='leader'?'leave_leader':'leave_hint')}</p><div class="row"><button class="btn" id="lvNo">${T('cancel')}</button></div>`,T('leave'),()=>clanAct('clanLeave',{}));
- setTimeout(()=>{const n=$('lvNo');if(n)n.onclick=()=>{queue.shift();showModal()}},0);
+ if($('cLeave'))$('cLeave').onclick=()=>modal(`<div class="big">🚪</div><h3>${T('leave_q')}</h3><p class="hint">${T(C.role==='leader'?'leave_leader':'leave_hint')}</p>`,T('leave'),()=>clanAct('clanLeave',{}));
 }
 
 // ---------- арена й рейтинги ----------
@@ -827,10 +823,10 @@ async function act(a,args,ok){
 
 // ---------- модалки ----------
 const queue=[];
-function modal(html,btn,cb){queue.push({html,btn,cb});if(queue.length===1)showModal()}
+function modal(html,btn,cb,on,tag){if(tag&&queue.some(q=>q.tag===tag))return;queue.push({html,btn,cb,on,tag});if(queue.length===1)showModal()} // on — підключити обробники саме цього вікна, коли воно показане (05.11); tag — не відкривати те саме вікно двічі
 // вікно з дією (cb) завжди можна закрити без дії: червоний ✕ у куті або тап поза вікном (04.11)
 function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb;$('mbox').innerHTML=(cl?`<button class="mx" id="mcl" aria-label="${T('m_close')}">✕</button>`:'')+q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{if(q.cb&&q.cb()===false)return;queue.shift();showModal()}; // cb може повернути false — вікно лишається (напр., не обрано отримувача)
- const close=()=>{queue.shift();showModal()};if(cl)$('mcl').onclick=close;$('modal').onclick=e=>{if(cl&&e.target===$('modal'))close()}}
+ const close=()=>{queue.shift();showModal()};if(cl)$('mcl').onclick=close;$('modal').onclick=e=>{if(cl&&e.target===$('modal'))close()};if(q.on)q.on()}
 let dailyShown='';
 function afterSync(r){
  const p=r.prog;
