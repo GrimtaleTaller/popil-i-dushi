@@ -549,6 +549,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "astral": out = L.actAstral(G, Number(args.id)); break;
       case "gemInsert": out = L.actGemInsert(G, Number(args.id), String(args.k)); break;
       case "gemRemove": out = L.actGemRemove(G, Number(args.id), Number(args.i)); break;
+      case "gemRemoveAll": out = L.actGemRemoveAll(G); break;
       case "gemMerge": out = L.actGemMerge(G, String(args.k), Number(args.n ?? 1)); break;
       case "petSet": out = L.actPetSet(G, String(args.sp), now); break;
       case "petFeed": out = L.actPetFeed(G, Number(args.n ?? 1)); break;

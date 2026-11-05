@@ -1015,6 +1015,16 @@ export function actGemRemove(G: State, id: number, i: number) {
   addGem(G, k!);
   return { id: it!.id, k, cost };
 }
+// витягнути всі камені з не надітих речей (сумка й сховище) — за звичайну ціну вилучення кожного (05.11, прохання Влада)
+export const gemLooseItems = (G: State) => [...G.inv, ...(G.vault || [])].filter((it) => it.gm && it.gm.length);
+export const gemOutAllCost = (G: State) => gemLooseItems(G).reduce((a, it) => a + it.gm!.reduce((b, k) => b + GEM_OUT[gemParse(k)!.l - 1], 0), 0);
+export function actGemRemoveAll(G: State) {
+  const items = gemLooseItems(G); if (!items.length) fail("no_gem");
+  const cost = gemOutAllCost(G); if (G.ash < cost) fail("no_ash");
+  let n = 0; for (const it of items) { for (const k of it.gm!) { addGem(G, k); n++; } delete it.gm; }
+  G.ash -= cost; log(G, "gemOutAll", [n, cost]);
+  return { n, items: items.length, cost };
+}
 // злиття: 3 камені рівня l → 1 рівня l+1; n = 0 — скільки вистачить
 export function actGemMerge(G: State, k: string, n = 1) {
   const g = gemParse(k); if (!g) fail("bad_gem");

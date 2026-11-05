@@ -377,6 +377,8 @@ function gemPane(){const C=gemCfg(),GM=G.gems||{};
  if(gemSel&&!all.some(i=>i.id===gemSel))gemSel=null;
  let h=`<div class="card"><h4>◆ ${T('gem_title')}</h4><p class="hint">${T('gem_hint',{p:C.pts})}</p><div class="gemg">`+GEMS.map(t=>`<div class="gemrow"><span class="gname" style="color:${GEMC[t]}">${T('gem_'+t)}</span>`+[1,2,3,4,5].map(l=>{const k=t+l,n=GM[k]||0;return `<div class="gcell ${n?'':'dim'}">${gemIc(k)}<b>${n}</b>${l<C.max&&n>=3?`<button class="btn mini" data-gm="${k}">⬆${Math.floor(n/3)}</button>`:''}</div>`}).join('')+'</div>').join('')+`</div><p class="hint">${T('gem_merge_hint')}</p></div>`;
  h+=`<div class="card"><h4>${T('gem_items')}</h4><p class="hint">${T('gem_items_hint',{o:C.out.join(' / ')})}</p>`;
+ {const lo=[...G.inv,...(G.vault||[])].filter(i=>i.gm&&i.gm.length),gn=lo.reduce((a,i)=>a+i.gm.length,0),gc=lo.reduce((a,i)=>a+i.gm.reduce((b,k)=>b+C.out[gemP(k).l-1],0),0);
+  if(gn)h+=`<div class="row" style="margin-top:0"><button class="btn" id="gOutAll" data-n="${gn}" data-c="${gc}" data-i="${lo.length}">◆ ${T('gem_out_all',{n:gn})} · ⚱️${fmt(gc)}</button></div>`} // витягнути всі камені з невдягнених речей (05.11)
  if(!all.length)h+=`<p class="hint">${T('gem_no_items')}</p>`;
  for(const it of all){const eqd=SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id),n=sockN(it),gm=it.gm||[];
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${eqd?' · '+T('equipped'):''}</div><div class="socrow">`+
@@ -384,11 +386,12 @@ function gemPane(){const C=gemCfg(),GM=G.gems||{};
  return h+'</div>'}
 function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.id===id);if(!it)return;const GM=G.gems||{};
  const ks=Object.keys(GM).filter(k=>GM[k]>0).sort((a,b)=>b[1]-a[1]||GEMS.indexOf(a[0])-GEMS.indexOf(b[0]));
- modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),T('cancel'));
- setTimeout(()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),0)}
+ modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),null,()=>{},()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),'gempick')} // 05.11: замість «Скасувати» внизу довгого списку — ✕ і тап поза вікном
 function bindGem(){const P=$('p-forge');
  P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>act('gemMerge',{k:b.dataset.gm,n:0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}));
  P.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>gemPick(+b.dataset.gi));
+ if($('gOutAll'))$('gOutAll').onclick=()=>{const d=$('gOutAll').dataset,c=+d.c,ok=(G.ash||0)>=c;
+  modal(`<div class="big">◆</div><h3>${T('gem_out_all',{n:d.n})}</h3><p>${T('gem_out_all_q',{i:d.i,c:fmt(c)})}</p><p class="hint">${T('gem_have_ash',{a:fmt(G.ash||0)})}</p>`,ok?T('gem_out_btn',{c:fmt(c)}):null,()=>{if(ok)act('gemRemoveAll',{},r=>{haptic('light');toast(T('gem_out_all_ok',{n:r.out.n,c:fmt(r.out.cost)}))})},null,'gemall')};
  P.querySelectorAll('[data-gr]').forEach(b=>b.onclick=()=>{const[id,i]=b.dataset.gr.split(':').map(Number);const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(x=>x&&x.id===id);const k=it&&it.gm&&it.gm[i];if(!k)return;const c=gemCfg().out[gemP(k).l-1];
   modal(`<div class="big">◆</div><h3>${gemName(k)}</h3><p>${T('gem_out_q',{c})}</p>`,T('gem_out_btn',{c}),()=>act('gemRemove',{id,i},()=>toast(T('gem_out_ok',{g:gemName(k)}))))}); // закрити — червоним ✕ (кнопку «Скасувати» прибрано)
  if(gemSel){const e=P.querySelector(`[data-gi="${gemSel}"],[data-gr^="${gemSel}:"]`);if(e)e.scrollIntoView({block:'center'});gemSel=null}}
@@ -828,7 +831,7 @@ async function act(a,args,ok){
 const queue=[];
 function modal(html,btn,cb,on,tag){if(tag&&queue.some(q=>q.tag===tag))return;queue.push({html,btn,cb,on,tag});if(queue.length===1)showModal()} // on — підключити обробники саме цього вікна, коли воно показане (05.11); tag — не відкривати те саме вікно двічі
 // вікно з дією (cb) завжди можна закрити без дії: червоний ✕ у куті або тап поза вікном (04.11)
-function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb;$('mbox').innerHTML=(cl?`<button class="mx" id="mcl" aria-label="${T('m_close')}">✕</button>`:'')+q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{if(q.cb&&q.cb()===false)return;queue.shift();showModal()}; // cb може повернути false — вікно лишається (напр., не обрано отримувача)
+function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb||!q.btn;$('mbox').innerHTML=(cl?`<button class="mx" id="mcl" aria-label="${T('m_close')}">✕</button>`:'')+q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{if(q.cb&&q.cb()===false)return;queue.shift();showModal()}; // cb може повернути false — вікно лишається (напр., не обрано отримувача)
  const close=()=>{queue.shift();showModal()};if(cl)$('mcl').onclick=close;$('modal').onclick=e=>{if(cl&&e.target===$('modal'))close()};if(q.on)q.on()}
 let dailyShown='';
 function afterSync(r){
