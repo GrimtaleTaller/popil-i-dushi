@@ -145,7 +145,7 @@ export function fresh(now: number): State {
 }
 // дописує нові поля до старих збережень
 export function migrate(G: State): State {
-  for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it && AF_N[it.r] && !it.af) it.af = rollAfs(it.r); // 05.11: властивості й речам, отриманим раніше (і купленим на ринку)
+  for (const it of [...Object.values(G.eq || {}), ...(G.inv || []), ...(G.vault || [])]) if (it && AF_N[it.r] && (!it.af || it.af.length < AF_N[it.r])) afUpgrade(it); // 05.11: властивості й речам, отриманим раніше (і купленим на ринку); добрати, якщо річ стала вічною
   const d = fresh(G.tick || Date.now()) as unknown as Record<string, unknown>;
   const g = G as unknown as Record<string, unknown>;
   if (!G.dngd && G.dng) { G.dngd = {}; for (let t = 1; t <= (G.dng.max || 0); t++) G.dngd[String(t)] = 1; }
@@ -853,7 +853,7 @@ export function actAstral(G: State, id: number) {
   if (win) {
     const nw = buildItem(G, it!.il, 6, it!.slot);
     nw.id = it!.id; delete nw.nw; G.nid--; // той самий предмет стає астральним
-    it!.r = 6; it!.st = nw.st;
+    it!.r = 6; it!.st = nw.st; afUpgrade(it!, 5); // камені, зірки й властивості лишаються; властивості — до рівня вічної (05.11)
     G.astFails = 0; log(G, "astral", [1, it!.slot]);
   } else { G.astFails++; log(G, "astral", [0, it!.slot, chance]); }
   return { win, chance, souls };
@@ -1497,6 +1497,16 @@ export function rollAf(r: number, except: string[] = []): [AfKey, number] {
   for (const k of keys) { roll -= AFX[k].w; key = k; if (roll <= 0) break; }
   const [lo, hi] = AFX[key].v[Math.max(0, Math.min(2, r - 4))];
   return [key, Math.round(rnd(lo, hi) * 10) / 10];
+}
+// властивості речі під її рідкість: наявні значення переносяться на шкалу нової рідкості (те саме місце в діапазоні), бракуючі додаються
+export function afUpgrade(it: Item, fromR?: number) {
+  const t = Math.max(0, Math.min(2, it.r - 4)), f = fromR != null ? Math.max(0, Math.min(2, fromR - 4)) : -1, keys = new Set<string>();
+  it.af = (it.af || []).filter(([k]) => k in AFX && !keys.has(k) && keys.add(k)).map(([k, v]) => {
+    const rng = AFX[k as AfKey].v, [lo, hi] = rng[t]; if (f < 0 && v >= lo && v <= hi) return [k, v] as [string, number];
+    const src = f >= 0 ? rng[f] : rng.find(([a, b]) => v >= a && v <= b) || rng[0], q = (v - src[0]) / Math.max(0.1, src[1] - src[0]);
+    return [k, Math.round((lo + Math.max(0, Math.min(1, q)) * (hi - lo)) * 10) / 10] as [string, number];
+  });
+  while (it.af.length < AF_N[it.r]) it.af.push(rollAf(it.r, it.af.map((x) => x[0])));
 }
 export function rollAfs(r: number) { const out: [AfKey, number][] = []; for (let i = 0; i < AF_N[r]; i++) out.push(rollAf(r, out.map((x) => x[0]))); return out; }
 const AF0 = (): Record<AfKey, number> => ({ atk: 0, hp: 0, def: 0, boss: 0, gold: 0, xp: 0, cdm: 0 });
