@@ -9,7 +9,9 @@ const TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const BOT = "Grimtalebot";
 const H = 3600e3;
 const OFFLINE_MAX = 8 * H;
-const GAP: Record<string, number> = { off: 24 * H, streak: 20 * H, egg: 0, find: 24 * H, wb: 7 * 24 * H };
+const GAP: Record<string, number> = { off: 24 * H, streak: 20 * H, egg: 0, find: 24 * H, wb: 7 * 24 * H, rank: 5 * 24 * H, back: 0 };
+// тижневі рейтинги (05.11): нагадування за 1–6 год до підсумку (понеділок 00:00 UTC) тим, хто в топ-50 за Силою, Етапом чи Ареною
+const PRIZE = (pl: number) => pl === 1 ? 300 : pl <= 3 ? 200 : pl <= 10 ? 100 : pl <= 50 ? 30 : 0;
 
 const TXT: Record<string, Record<string, string>> = {
   uk: {
@@ -18,6 +20,10 @@ const TXT: Record<string, Record<string, string>> = {
     egg: "🥚 Яйце вилупилось! Подивись, хто з'явився.",
     find: "🐾 Пітомець приніс 3 знахідки й більше не вміщає. Забери їх!",
     wb: "👹 Світовий бос прокинувся! Б'ємо всі разом — нагороди за урон у понеділок.",
+    rank: "⏳ До підсумку тижневих рейтингів — {h} год. Ти #{p} {kind}: це +{a} Попелу. Місце ще можна втримати або підняти!",
+    back: "⚔️ Тебе не було {d} дн. — Мандрівник сумує. Чекають на тебе:\n{list}",
+    k_power: "за Силою", k_stage: "за Етапом", k_arena: "на Арені",
+    l_chests: "• скрині: {n}", l_egg: "• яйце вилупилось", l_find: "• знахідки пітомця: {n}", l_daily: "• щоденна нагорода", l_loot: "• повна скарбничка",
     play: "▶️ Грати", off_hint: "Вимкнути нагадування: у грі → Профіль.",
   },
   ru: {
@@ -26,6 +32,10 @@ const TXT: Record<string, Record<string, string>> = {
     egg: "🥚 Яйцо вылупилось! Посмотри, кто появился.",
     find: "🐾 Питомец принёс 3 находки и больше не вмещает. Забери их!",
     wb: "👹 Мировой босс проснулся! Бьём все вместе — награды за урон в понедельник.",
+    rank: "⏳ До итогов недельных рейтингов — {h} ч. Ты #{p} {kind}: это +{a} Пепла. Место ещё можно удержать или поднять!",
+    back: "⚔️ Тебя не было {d} дн. — Странник скучает. Тебя ждут:\n{list}",
+    k_power: "по Силе", k_stage: "по Этапу", k_arena: "на Арене",
+    l_chests: "• сундуки: {n}", l_egg: "• яйцо вылупилось", l_find: "• находки питомца: {n}", l_daily: "• ежедневная награда", l_loot: "• полная копилка",
     play: "▶️ Играть", off_hint: "Отключить напоминания: в игре → Профиль.",
   },
   en: {
@@ -34,6 +44,10 @@ const TXT: Record<string, Record<string, string>> = {
     egg: "🥚 Your egg has hatched! Come see who appeared.",
     find: "🐾 Your pet brought 3 finds and can't carry more. Collect them!",
     wb: "👹 The World Boss has awakened! Everyone hits together — rewards for damage on Monday.",
+    rank: "⏳ Weekly rankings close in {h} h. You are #{p} {kind}: that's +{a} Ash. You can still hold or climb!",
+    back: "⚔️ You've been away {d} days — your Wanderer misses you. Waiting for you:\n{list}",
+    k_power: "by Power", k_stage: "by Stage", k_arena: "in the Arena",
+    l_chests: "• chests: {n}", l_egg: "• your egg has hatched", l_find: "• pet finds: {n}", l_daily: "• daily reward", l_loot: "• a full loot chest",
     play: "▶️ Play", off_hint: "Turn off reminders: in game → Profile.",
   },
 };
@@ -48,12 +62,15 @@ async function tg(method: string, body: Record<string, unknown>) {
 
 // що варто нагадати гравцю зараз (за пріоритетом); null — нічого
 // deno-lint-ignore no-explicit-any
-function pick(G: any, now: number, last: Record<string, number>): { k: string; n?: number } | null {
+function pick(G: any, now: number, last: Record<string, number>, seen: number, rk?: { p: number; kind: string }): { k: string; n?: number; x?: Record<string, string | number> } | null {
   const can = (k: string, since = 0) => GAP[k] ? (!last[k] || now - last[k] >= GAP[k]) : (!last[k] || last[k] < since); // egg: раз на кожне вилуплення
   const hr = new Date(now).getUTCHours();
   if (G.pet?.inc && G.pet.inc.at <= now && can("egg", G.pet.inc.at)) return { k: "egg" };
   const y = dayStr(now - 864e5);
   if (G.daily?.date === y && (G.daily.streak || 0) >= 2 && hr >= 16 && hr <= 18 && can("streak")) return { k: "streak", n: G.daily.streak };
+  const toSettle = weekStart(now) + 7 * 24 * H - now; // до підсумку тижня
+  if (rk && toSettle <= 6 * H && toSettle >= H && can("rank")) return { k: "rank", x: { h: Math.round(toSettle / H), p: rk.p, kind: rk.kind, a: PRIZE(rk.p) } };
+  if (now - seen >= 72 * H && (!last.back || last.back < seen)) return { k: "back", x: { d: Math.floor((now - seen) / (24 * H)) } }; // раз за кожну відсутність
   if (now - (G.tick || now) >= OFFLINE_MAX && now - (G.tick || now) < 72 * H && can("off")) return { k: "off" };
   if (G.pet?.act && (G.pet.fn || 0) >= 3 && can("find")) return { k: "find" };
   if ((G.maxStage || 0) >= 15 && now - weekStart(now) < 30 * H && hr >= 15 && (!last.wb || last.wb < weekStart(now))) return { k: "wb" };
@@ -75,16 +92,37 @@ Deno.serve(async (req) => {
   const last: Record<number, Record<string, number>> = {};
   for (const r of rs || []) (last[r.player_id] = last[r.player_id] || {})[r.kind] = Date.parse(r.sent_at);
   const st: Record<number, unknown> = {}; for (const g of gs || []) st[g.player_id] = g.state;
+  const ranks: Record<number, { p: number; kind: string }> = {};
+  const toSettle = weekStart(now) + 7 * 24 * H - now;
+  if (toSettle <= 6 * H && toSettle >= H) {
+    const { data: sts } = await SB.from("stats").select("player_id,power,max_stage,rating,wins,losses").limit(5000);
+    const all = sts || [];
+    const rankBy = (kind: string, val: (x: (typeof all)[number]) => number, only?: (x: (typeof all)[number]) => boolean) => {
+      all.filter((x) => !only || only(x)).sort((a, b) => val(b) - val(a)).slice(0, 50).forEach((x, i) => {
+        const cur = ranks[x.player_id as number]; if (!cur || i + 1 < cur.p) ranks[x.player_id as number] = { p: i + 1, kind };
+      });
+    };
+    rankBy("k_power", (x) => Number(x.power || 0)); rankBy("k_stage", (x) => Number(x.max_stage || 0));
+    rankBy("k_arena", (x) => Number(x.rating || 0), (x) => Number(x.wins || 0) + Number(x.losses || 0) > 0);
+  }
   let sent = 0; const blocked: number[] = [];
   for (const p of ps || []) {
     const G = st[p.tg_id as number]; if (!G) continue;
     const ls = last[p.tg_id as number] || {};
     const today = Object.entries(ls).filter(([k, t]) => k !== "any" && now - t < 24 * H).length;
     if (today >= 2) continue;
-    const r = pick(G, now, ls); if (!r) continue;
+    const r = pick(G, now, ls, Date.parse(p.last_seen as string), ranks[p.tg_id as number]); if (!r) continue;
     const l = langOf(p.lang as string), T = TXT[l];
-    if (dry) { plan.push({ id: p.tg_id, k: r.k, l }); continue; }
-    const res = await tg("sendMessage", { chat_id: p.tg_id, text: T[r.k].replace("{n}", String(r.n ?? "")) + "\n\n<i>" + T.off_hint + "</i>", parse_mode: "HTML",
+    let text = T[r.k].replace("{n}", String(r.n ?? ""));
+    if (r.k === "rank") text = text.replace("{h}", String(r.x!.h)).replace("{p}", String(r.x!.p)).replace("{kind}", T[String(r.x!.kind)]).replace("{a}", String(r.x!.a));
+    if (r.k === "back") { // deno-lint-ignore no-explicit-any
+      const g = G as any, ch = Object.values(g.chests || {}).reduce((a: number, b) => a + Number(b || 0), 0) as number, li: string[] = [];
+      li.push(T.l_loot); if (ch) li.push(T.l_chests.replace("{n}", String(ch))); if (g.pet?.inc && g.pet.inc.at <= now) li.push(T.l_egg);
+      if (g.pet?.act && (g.pet.fn || 0) > 0) li.push(T.l_find.replace("{n}", String(g.pet.fn))); if (g.daily?.date !== dayStr(now)) li.push(T.l_daily);
+      text = text.replace("{d}", String(r.x!.d)).replace("{list}", li.join("\n"));
+    }
+    if (dry) { plan.push({ id: p.tg_id, k: r.k, l, text }); continue; }
+    const res = await tg("sendMessage", { chat_id: p.tg_id, text: text + "\n\n<i>" + T.off_hint + "</i>", parse_mode: "HTML",
       reply_markup: { inline_keyboard: [[{ text: T.play, url: `https://t.me/${BOT}?startapp=remind` }]] } });
     if (res?.ok) { sent++; await SB.from("reminders").upsert({ player_id: p.tg_id, kind: r.k, sent_at: new Date(now).toISOString() }); }
     else if (res?.error_code === 403) blocked.push(p.tg_id as number);
