@@ -458,7 +458,7 @@ function renderForge(){
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aOk=aIt&&G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=aSo,eqA=G.eq[aSlot];
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
-  ${AM.length?`<div class="anvil">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
+  ${AM.length?`${AM.length>1?`<p class="hint">${T('ast_one')}</p>`:''}<div class="anvil ast">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b>${eqA&&eqA.id===it.id?`<em class="aon">${T('ast_on')}</em>`:''}${it.gm&&it.gm.length?`<em class="agm">◆${it.gm.length}</em>`:''}</div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*RAR[6].m/RAR[5].m))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
@@ -658,7 +658,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  E.querySelectorAll('[data-pgeq]').forEach(b=>b.onclick=()=>act('petEquip',{id:+b.dataset.pgeq},()=>haptic('light')));
  E.querySelectorAll('[data-pgoff]').forEach(b=>b.onclick=()=>act('petUnequip',{slot:b.dataset.pgoff},()=>haptic('light')));
  if($('pgBest'))$('pgBest').onclick=()=>act('petEquipBest',{},r=>{haptic('light');toast(T('equipped_n',{n:r.out.n}))});
- if($('pgJunk'))$('pgJunk').onclick=()=>modal(`<div class="big">🔩</div><h3>${T('pg_junk',{n:GI.junk})}</h3><p class="hint">${T('pg_junk_q')}</p>`,T('pg_dis'),()=>act('petDisJunk',{},r=>toast(T('pg_dis_done',{n:r.out.n,s:fmt(r.out.shards)}))));
+ if($('pgJunk'))$('pgJunk').onclick=()=>modal(`<div class="big">🔩</div><h3>${T('pg_junk',{n:(D.gear||{}).junk||0})}</h3><p class="hint">${T('pg_junk_q')}</p>`,T('pg_dis'),()=>act('petDisJunk',{},r=>toast(T('pg_dis_done',{n:r.out.n,s:fmt(r.out.shards)}))));
  E.querySelectorAll('[data-pgdis]').forEach(b=>b.onclick=()=>act('petDis',{ids:[+b.dataset.pgdis]},r=>toast(T('pg_dis_done',{n:r.out.n,s:fmt(r.out.shards)}))));
  E.querySelectorAll('[data-pset]').forEach(b=>b.onclick=()=>{if(P.act===b.dataset.pset)return;act('petSet',{sp:b.dataset.pset},()=>toast(T('pet_set',{p:T('pet_'+b.dataset.pset)})))});
 }

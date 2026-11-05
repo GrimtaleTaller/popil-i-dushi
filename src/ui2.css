@@ -194,3 +194,8 @@ body.hs-open{overflow:hidden}
 .ipanel h4{margin:0 0 6px}
 .afrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed #ffffff14}
 .afrow span{color:#c9a8ff}
+
+/* Вічне: вибір однієї речі (05.11) */
+.anvil.ast .atile{position:relative;opacity:.55;transition:opacity .2s}.anvil.ast .atile.sel{opacity:1}
+.anvil.ast .atile.sel::after{content:'✓';position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;background:var(--gold);color:#1b1820;font:700 12px/18px sans-serif;text-align:center}
+.anvil.ast em{position:absolute;font-style:normal;font-size:9px;line-height:1;padding:2px 3px;border-radius:4px;background:#000a}.anvil.ast .aon{top:2px;left:2px;color:var(--gold)}.anvil.ast .agm{bottom:15px;right:2px;color:#d08cff}
