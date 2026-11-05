@@ -991,7 +991,7 @@ function renderQuest(){
  $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
  $('qShare').onclick=shareStory;
 }
-const SHARE_IMG=()=>new URL('assets/share.jpg',location.href).href;
+const SHARE_IMG=()=>new URL('assets/share2.jpg',location.href).href;
 function shareStory(){
  const w=window.Telegram&&Telegram.WebApp,link=inviteLink(),txt=T('share_txt'),S=V.share||{};
  const done=()=>{if(!S.taken)setTimeout(()=>act('share',{},r=>toast('📣 +💰'+fmt(r.out.gold)+' +⚱️'+r.out.ash)),1200)};

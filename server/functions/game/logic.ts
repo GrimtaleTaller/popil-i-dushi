@@ -1274,8 +1274,16 @@ function passCnt(G: State): Record<string, number> {
 }
 type QDef = { k: string; n: number; ok?: (G: State) => boolean };
 const qDng = (G: State) => G.maxStage >= DNG_UNLOCK_STAGE, qArena = (G: State) => G.maxStage >= ARENA.stage, qPet = (G: State) => !!G.pet?.act;
-export const PASS_DQ: QDef[] = [{ k: "kills", n: 300 }, { k: "dng", n: 3, ok: qDng }, { k: "arena", n: 3, ok: qArena }, { k: "chests", n: 15, ok: qDng }, { k: "dis", n: 20 }, { k: "feed", n: 2, ok: qPet }, { k: "up", n: 10 }];
-export const PASS_WQ: QDef[] = [{ k: "daily", n: 5 }, { k: "kills", n: 3000 }, { k: "dng", n: 20, ok: qDng }, { k: "arena", n: 15, ok: qArena }, { k: "chests", n: 100, ok: qDng }, { k: "dis", n: 150 }, { k: "finds", n: 5, ok: qPet }, { k: "up", n: 60 }];
+// «Тренуйся / вдосконалюй N разів» можливе, лише якщо є що тренувати або є річ від епічної нижче межі вдосконалення (05.11: на максимумі завдання було не виконати)
+// upRoom — скільки ще кроків тренування й вдосконалення можна зробити зараз (до 1000)
+export function upRoom(G: State) {
+  let n = 0; const cap = refineCap(G);
+  for (const k of Object.keys(UPG) as (keyof State["up"])[]) n += UPG[k].max ? Math.max(0, UPG[k].max! - G.up[k]) : 1000;
+  for (const it of [...Object.values(G.eq), ...G.inv, ...(G.vault || [])]) if (it && it.r >= REFINE.minR) n += Math.max(0, cap - it.il);
+  return Math.min(1000, n);
+}
+export const PASS_DQ: QDef[] = [{ k: "kills", n: 300 }, { k: "dng", n: 3, ok: qDng }, { k: "arena", n: 3, ok: qArena }, { k: "chests", n: 15, ok: qDng }, { k: "dis", n: 20 }, { k: "feed", n: 2, ok: qPet }, { k: "up", n: 10, ok: (G) => upRoom(G) >= 10 }];
+export const PASS_WQ: QDef[] = [{ k: "daily", n: 5 }, { k: "kills", n: 3000 }, { k: "dng", n: 20, ok: qDng }, { k: "arena", n: 15, ok: qArena }, { k: "chests", n: 100, ok: qDng }, { k: "dis", n: 150 }, { k: "finds", n: 5, ok: qPet }, { k: "up", n: 60, ok: (G) => upRoom(G) >= 60 }];
 // однаковий для всіх набір на день: перемішування за датою, далі відсіюються недоступні гравцю
 function seeded(key: string) { let h = 2166136261; for (const ch of key) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; }; }
 function pickQ(G: State, pool: QDef[], n: number, key: string): PassQ[] {
@@ -1310,6 +1318,8 @@ function passGive(G: State, r: PassR) {
 export const passLv = (P: PassState) => Math.min(PASS.lv, Math.floor(P.pts / PASS.per));
 function passCredit(G: State) {
   const P = G.pass!, c = passCnt(G);
+  const room = upRoom(G); // завдання «тренуйся N разів», яке вже не виконати (усе на максимумі), зараховується
+  for (const q of [...P.dq, ...P.wq]) if (q.k === "up" && !q.ok && q.n - ((c.up || 0) - q.b) > room) q.b = (c.up || 0) - q.n;
   for (const q of P.dq) if (!q.ok && (c[q.k] || 0) - q.b >= q.n) { q.ok = 1; P.pts += PASS.dPts; const r = passDqR(G); G.gold += r.gold; G.shards += r.shards; } // щоденний квест: своя нагорода + очки
   if (!P.db && P.dq.length && P.dq.every((q) => q.ok)) { P.db = 1; addChests(G, G.maxStage, PASS.allCh, 2); G.ash += PASS.allAsh; log(G, "dqAll", [PASS.allAsh]); } // усі квести дня: рідкісна скриня + Попіл
   for (const q of P.wq) if (!q.ok && (c[q.k] || 0) - q.b >= q.n) { q.ok = 1; P.pts += PASS.wPts; }
