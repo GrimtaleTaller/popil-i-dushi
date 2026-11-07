@@ -98,7 +98,7 @@ async function give(chat: number, admin: number, text: string, msgId = 0) {
   if (!ws.length) { await tg("sendMessage", { chat_id: chat, text: GIVE_HELP, parse_mode: "HTML" }); return; }
   let amt: number | null = null, what: ReturnType<typeof giveWhat> = null, who = "";
   for (const w of ws) {
-        if (/^@/.test(w) || /^\d{8,15}$/.test(w)) who = w; // 8+ цифр — завжди id гравця (кількість таку — через k/m/b), тож «/give 123456789 gold» не видасть 123 млн
+    if (/^@/.test(w) || /^\d{8,15}$/.test(w)) who = w; // 8+ цифр — завжди id гравця (кількість таку — через k/m/b), тож «/give 123456789 gold» не видасть 123 млн
     else if (amt === null && giveNum(w) !== null) amt = giveNum(w);
     else if (!what && giveWhat(w)) what = giveWhat(w);
     else { await tg("sendMessage", { chat_id: chat, text: `Не зрозумів «${escH(w)}».\n\n` + GIVE_HELP, parse_mode: "HTML" }); return; }
