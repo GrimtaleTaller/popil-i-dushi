@@ -378,7 +378,7 @@ async function preAction(user: TgUser, start: string | undefined, action: string
     }
     case "clanBuild": {
       if (!me || !canLead(me.role)) fail("clan_rights");
-      const k = String(args.k) as L.BldKey; if (!L.BUILD[k]) fail("bad_role");
+      const k = String(args.k) as L.BldKey; if (!L.isBld(k)) fail("bad_role"); // 07.11: hasOwn — "__proto__"/"constructor" давали ціну NaN → NULL у казні
       const { data: cv } = await SB.from("clan_view").select("bank,bld,res").eq("id", me!.clan_id).single();
       const lvl = Number((cv!.bld || {})[k] || 0), cost = L.bldCost(k, lvl);
       if (cost === null) fail("max");
@@ -620,7 +620,7 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "arenaTicket": out = L.actArenaTicket(G, now); break;
       case "achClaim": out = L.actAchClaim(G); break;
       case "refine": out = L.actRefine(G, Number(args.id), Number(args.n ?? 1)); break;
-      case "star": out = L.actStar(G, Number(args.id)); break;
+      case "star": out = L.actStar(G, Number(args.id), args.src == null ? undefined : Number(args.src)); break;
       case "reroll": out = L.actReroll(G, Number(args.id), Number(args.i)); break;
       case "keyGive": {
         // особисті ключі (зокрема забрані зі складу клану) — іншому учаснику свого клану: списуємо під блокуванням версії, отримувачу — після запису

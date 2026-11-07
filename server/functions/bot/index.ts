@@ -78,7 +78,7 @@ function giveWhat(w: string): { k: string; nm: string; t?: number } | null {
   w = w.toLowerCase();
   if (GIVE[w]) return { k: GIVE[w][0], nm: GIVE[w][1] };
   let r = /^(?:key|ключ|ключі|ключи|k)(\d{1,2})$/.exec(w);
-  if (r && +r[1] >= 1 && +r[1] <= 15) return { k: "keys", nm: `Ключі тиру ${r[1]}`, t: +r[1] };
+  if (r && +r[1] >= 1 && +r[1] <= 10) return { k: "keys", nm: `Ключі тиру ${r[1]}`, t: +r[1] };
   r = /^(?:mat|мат|матеріал|материал|m)([1-4])$/.exec(w);
   if (r) return { k: "mats", nm: `Матеріали ${["I", "II", "III", "IV"][+r[1] - 1]}`, t: +r[1] };
   return null;
@@ -89,16 +89,18 @@ function giveNum(w: string): number | null {
   return Math.round(parseFloat(r[1].replace(",", ".")) * mul);
 }
 const fmt = (n: number) => Math.floor(n).toLocaleString("uk-UA");
-const GIVE_HELP = "🎁 <b>/give</b> — видати гравцю (лише адмін)\n\n<code>/give 5000 ash</code> — собі\n<code>/give 1m gold @нік</code> або <code>/give 300 ash 123456789</code> — іншому\n<code>/give -100 ash @нік</code> — забрати\n\nЩо: ash (попіл), gold (золото), souls (іскри), shards (уламки), cat (самоцвіти), ess (есенція), key1…key15 (ключі тиру), mat1…mat4 (матеріали). Кількість: 5000, 50k, 2m, 1b.";
-async function give(chat: number, admin: number, text: string) {
+const escH = (x: string) => String(x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!)); // 07.11 (критик): імена й ввід у HTML-повідомленнях
+const GIVE_HELP = "🎁 <b>/give</b> — видати гравцю (лише адмін)\n\n<code>/give 5000 ash</code> — собі\n<code>/give 1m gold @нік</code> або <code>/give 300 ash 123456789</code> — іншому\n<code>/give -100 ash @нік</code> — забрати\n\nЩо: ash (попіл), gold (золото), souls (іскри), shards (уламки), cat (самоцвіти), ess (есенція), key1…key10 (ключі тиру), mat1…mat4 (матеріали). Кількість: 5000, 50k, 2m, 1b.";
+async function give(chat: number, admin: number, text: string, msgId = 0) {
   const ws = text.trim().split(/\s+/).slice(1);
   if (!ws.length) { await tg("sendMessage", { chat_id: chat, text: GIVE_HELP, parse_mode: "HTML" }); return; }
   let amt: number | null = null, what: ReturnType<typeof giveWhat> = null, who = "";
   for (const w of ws) {
-    if (/^@/.test(w) || (/^\d{5,15}$/.test(w) && amt !== null)) who = w;
+    // id гравця — лише після кількості або назви ресурсу («/give gold 123456789» без кількості — не видача 123 млн, а підказка)
+    if (/^@/.test(w) || (/^\d{5,15}$/.test(w) && (amt !== null || what))) who = w;
     else if (amt === null && giveNum(w) !== null) amt = giveNum(w);
     else if (!what && giveWhat(w)) what = giveWhat(w);
-    else { await tg("sendMessage", { chat_id: chat, text: `Не зрозумів «${w}».\n\n` + GIVE_HELP, parse_mode: "HTML" }); return; }
+    else { await tg("sendMessage", { chat_id: chat, text: `Не зрозумів «${escH(w)}».\n\n` + GIVE_HELP, parse_mode: "HTML" }); return; }
   }
   if (!amt || !what) { await tg("sendMessage", { chat_id: chat, text: GIVE_HELP, parse_mode: "HTML" }); return; }
   const cap = GIVE_MAX[what.k] ?? 1e7;
@@ -112,7 +114,13 @@ async function give(chat: number, admin: number, text: string) {
   if (!ps?.length) { await tg("sendMessage", { chat_id: chat, text: `Гравця ${who || admin} не знайдено.` }); return; }
   if (ps.length > 1) { await tg("sendMessage", { chat_id: chat, text: `Під ${who} кілька гравців — вкажи id.` }); return; }
   const p = ps[0] as { tg_id: number; username: string | null; first_name: string | null };
-  const name = `${p.first_name || ""}${p.username ? " (@" + p.username + ")" : ""} · ${p.tg_id}`.trim();
+  const name = escH(`${p.first_name || ""}${p.username ? " (@" + p.username + ")" : ""} · ${p.tg_id}`.trim());
+  // 07.11 (критик): повторна доставка того самого повідомлення Telegram (тайм-аут вебхука) не видає вдруге
+  const key = msgId ? `${chat}:${msgId}` : "";
+  if (key) {
+    const { data: dup } = await SB.from("ledger").select("id").eq("reason", "admin_grant").eq("delta->>msg", key).limit(1);
+    if (dup?.length) return;
+  }
   // зміна стану під блокуванням версії (як на сервері гри)
   for (let i = 0; i < 6; i++) {
     const { data: row } = await SB.from("game_state").select("version,state").eq("player_id", p.tg_id).maybeSingle();
@@ -134,9 +142,10 @@ async function give(chat: number, admin: number, text: string) {
     if (!upd?.length) { await new Promise((r) => setTimeout(r, 150 + i * 150)); continue; }
     const d = after - before;
     const delta: Record<string, unknown> = what.k === "keys" ? { keys: { [what.t!]: d } } : what.k === "mats" ? { mats: { [what.t!]: d } } : { [what.k]: d };
-    await SB.from("ledger").insert({ player_id: p.tg_id, reason: "admin_grant", delta: { ...delta, by: admin, via: "bot" } });
-    await tg("sendMessage", { chat_id: chat, parse_mode: "HTML",
-      text: `✅ ${name}\n${what.nm}: ${fmt(before)} → <b>${fmt(after)}</b> (${d >= 0 ? "+" : ""}${fmt(d)})\nУ грі з'явиться за ~10 с.` });
+    const { error: le } = await SB.from("ledger").insert({ player_id: p.tg_id, reason: "admin_grant", delta: { ...delta, by: admin, via: "bot", ...(key ? { msg: key } : {}) } });
+    const r = await tg("sendMessage", { chat_id: chat, parse_mode: "HTML",
+      text: `✅ ${name}\n${what.nm}: ${fmt(before)} → <b>${fmt(after)}</b> (${d >= 0 ? "+" : ""}${fmt(d)})\nУ грі з'явиться за ~10 с.` + (le ? `\n⚠️ Запис у журнал (ledger) не вдався: ${escH(le.message)}` : "") });
+    if (!r?.ok) await tg("sendMessage", { chat_id: chat, text: `✅ Видано (${what.nm} ${d >= 0 ? "+" : ""}${fmt(d)}, гравець ${p.tg_id}). Повторно не надсилай.` });
     return;
   }
   await tg("sendMessage", { chat_id: chat, text: "Гравець саме грає й стан постійно змінюється — спробуй ще раз за кілька секунд." });
@@ -176,7 +185,7 @@ Deno.serve(async (req) => {
       else await newsPreview(m.chat.id);
     } else if (cmd.startsWith("/give")) {
       if (!ADMINS.includes(m.from?.id || 0)) await tg("sendMessage", { chat_id: m.chat.id, text: L.no });
-      else await give(m.chat.id, m.from!.id, m.text);
+      else await give(m.chat.id, m.from!.id, m.text, (m as { message_id?: number }).message_id || 0);
     } else if (cmd.startsWith("/stats")) {
       if (!ADMINS.includes(m.from?.id || 0)) await tg("sendMessage", { chat_id: m.chat.id, text: L.no });
       else await tg("sendMessage", { chat_id: m.chat.id, text: await statsText(), parse_mode: "HTML" });

@@ -923,7 +923,7 @@ export const CLAN = { max: 20, createStage: 10, joinStage: 5 };
 export const clanCreateCost = (_G?: State) => 50000; // фіксована ціна: інакше росте разом з етапом і «тікає» від гравця
 // клан крафтить ключі з казни Попелу без ліміту й без зростання ціни (рішення 29.10, див. ASH).
 export const ckeyCrafted = (G: State, now: number) => (G.ckey.day === dayStr(now) ? G.ckey.n : 0);
-export function clanKeyCost(t: number, n = 1, forge = 0) { // у Попелі з казни клану: 70% ціни соло-входу, не дорожчає, Ковальня −5%/рів.
+export function clanKeyCost(t: number, n = 1, forge = 0) { // у Попелі з казни клану: 70% ціни соло-входу, не дорожчає, Ковальня −5%/рів. (6–10: −2%, макс. −35%)
   const k = 1 - bldVal("forge", forge || 0) / 100;
   return Math.max(1, Math.round(keyPrice(t) * ASH.clanMul * k)) * n;
 }
@@ -937,6 +937,7 @@ export const BUILD: Record<BldKey, { max: number; base: number; mul: number; mul
   barracks: { max: 10, base: 150000, mul: 2.5, mul2: 5, step: 2, step2: 2 },  // +2% атаки й здоров'я
   library: { max: 10, base: 150000, mul: 2.5, mul2: 5, step: 3, step2: 3 },   // +3% досвіду
 };
+export const isBld = (k: string): k is BldKey => Object.prototype.hasOwnProperty.call(BUILD, k);
 export const bldVal = (k: BldKey, lvl: number) => { const b = BUILD[k], l = Math.max(0, Math.min(b.max, Number(lvl) || 0)); return b.step * Math.min(l, BLD_HI) + b.step2 * Math.max(0, l - BLD_HI); };
 // ресурси на рівень: матеріал (тир за рівнем будівлі) і уламки; рівні 6–10 — матеріали III–IV, золото ×mul2 за рівень від ціни 5-го (злив золота топів)
 const BLD_MAT = [0, 0, 1, 2, 2, 2, 3, 3, 3, 3], BLD_MATN = [30, 80, 150, 250, 400, 600, 150, 300, 500, 800];
@@ -1516,19 +1517,24 @@ const AF0 = (): Record<AfKey, number> => ({ atk: 0, hp: 0, def: 0, boss: 0, gold
 export function afOf(it?: Item) { const o = AF0(); for (const [k, v] of it?.af || []) if (k in o) o[k as AfKey] += v; return o; }
 export function afSum(G: State) { const o = AF0(); for (const s of SLOTS) { const f = afOf(G.eq[s]); for (const k in o) o[k as AfKey] += f[k as AfKey]; } return o; }
 const findAny = (G: State, id: number) => Object.values(G.eq).find((x) => x && x.id === id) || G.inv.find((x) => x.id === id) || (G.vault || []).find((x) => x.id === id);
-export const starCost = (it: Item) => { const c = refineCost(it); return { gold: c.gold * STAR.cost, shards: c.shards * STAR.cost }; };
-export const rerollCost = (it: Item) => { const c = refineCost(it); return { gold: c.gold * REROLL.cost, shards: c.shards * REROLL.cost }; };
+// 07.11 (критик): ціна — від рівня, до якого річ можна вдосконалити (не нижче), інакше зірки й перекидання робили на речі 5 рівня майже даром, а потім вдосконалювали
+export const afBase = (it: Item, G?: State) => G ? { ...it, il: Math.max(it.il, refineCap(G)) } : it;
+export const starCost = (it: Item, G?: State) => { const c = refineCost(afBase(it, G)); return { gold: c.gold * STAR.cost, shards: c.shards * STAR.cost }; };
+export const rerollCost = (it: Item, G?: State) => { const c = refineCost(afBase(it, G)); return { gold: c.gold * REROLL.cost, shards: c.shards * REROLL.cost }; };
 // дублікат для злиття: та сама рідкість і слот, без каменів, не надітий; спершу без зірок і найнижчого рівня
-export function starDup(G: State, it: Item) {
-  return [...G.inv, ...(G.vault || [])].filter((x) => x.id !== it.id && x.slot === it.slot && x.r === it.r && !(x.gm && x.gm.length))
-    .sort((a, b) => (a.sr || 0) - (b.sr || 0) || a.il - b.il)[0];
+export function starDups(G: State, it: Item) {
+  const eq = new Set(Object.values(G.eq).filter(Boolean).map((x) => x!.id));
+  return [...G.inv, ...(G.vault || [])].filter((x) => x.id !== it.id && !eq.has(x.id) && x.slot === it.slot && x.r === it.r && !(x.gm && x.gm.length))
+    .sort((a, b) => (a.sr || 0) - (b.sr || 0) || a.il - b.il);
 }
-export function actStar(G: State, id: number) {
+export const starDup = (G: State, it: Item) => starDups(G, it)[0];
+export function actStar(G: State, id: number, srcId?: number) {
   const it = findAny(G, Number(id)); if (!it) fail("no_item");
   if (!AF_N[it!.r]) fail("star_rar");
   if ((it!.sr || 0) >= STAR.max) fail("star_max");
-  const src = starDup(G, it!); if (!src) fail("star_dup");
-  const c = starCost(it!); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
+  // 07.11 (критик): дублікат обирає гравець; без вибору — найдешевший (без зірок, найнижчий рівень)
+  const ds = starDups(G, it!), src = srcId != null && Number.isFinite(Number(srcId)) ? ds.find((x) => x.id === Number(srcId)) : ds[0]; if (!src) fail("star_dup");
+  const c = starCost(it!, G); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
   G.gold -= c.gold; G.shards -= c.shards;
   G.inv = G.inv.filter((x) => x.id !== src!.id); if (G.vault) G.vault = G.vault.filter((x) => x.id !== src!.id);
   it!.sr = (it!.sr || 0) + 1;
@@ -1538,7 +1544,7 @@ export function actStar(G: State, id: number) {
 export function actReroll(G: State, id: number, idx: number) {
   const it = findAny(G, Number(id)); if (!it || !it.af) fail("no_item");
   idx = Math.floor(Number(idx)); if (!(idx >= 0 && idx < it!.af!.length)) fail("bad_idx");
-  const c = rerollCost(it!); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
+  const c = rerollCost(it!, G); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
   G.gold -= c.gold; G.shards -= c.shards;
   const old = it!.af![idx];
   it!.af![idx] = rollAf(it!.r, it!.af!.filter((_, i) => i !== idx).map((x) => x[0]));
