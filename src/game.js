@@ -21,7 +21,10 @@ function detectLang(){
 }
 let LANG=detectLang(),L=I18N[LANG];
 function T(k,o){let s=L.t[k]!=null?L.t[k]:(I18N.uk.t[k]!=null?I18N.uk.t[k]:k);if(o)s=s.replace(/\{(\w+)\}/g,(m,x)=>o[x]!=null?o[x]:m);return s}
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// emoji в іменах без FE0F (напр. 1⃣, 👁 з Telegram) на Android показуються квадратиками — додаємо селектор емодзі-вигляду
+let EMO_RE=null;try{EMO_RE=new RegExp('(?<!\\u200D)(?![\\u00A9\\u00AE\\u2122])(\\p{Extended_Pictographic})(?![\\uFE0F\\u200D\\u{1F3FB}-\\u{1F3FF}])','gu')}catch(e){}
+const emoFix=s=>{s=s.replace(/([0-9#*])⃣/g,'$1️⃣');return EMO_RE?s.replace(EMO_RE,'$1️'):s};
+const esc=s=>emoFix(String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---------- дані (лише для показу) ----------
 const REGIONS=[
