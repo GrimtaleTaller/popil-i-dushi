@@ -117,12 +117,12 @@ async function give(chat: number, admin: number, text: string, msgId = 0) {
   const p = ps[0] as { tg_id: number; username: string | null; first_name: string | null };
   const name = escH(`${p.first_name || ""}${p.username ? " (@" + p.username + ")" : ""} · ${p.tg_id}`.trim());
   // 07.11 (критик): повторна доставка того самого повідомлення Telegram (тайм-аут вебхука) не видає вдруге
-  // спершу «бронюємо» видачу рядком у ledger: з кількох однакових доставок перемагає рядок з найменшим id, решта нічого не видає
+  // спершу «бронюємо» видачу рядком у ledger
   const key = msgId ? `${chat}:${msgId}` : `${chat}:t${Date.now()}`;
+  // унікальний індекс ledger_admin_grant_msg_uq: друга «бронь» з тим самим msg не вставиться (23505) — це повтор того самого повідомлення, нічого не видаємо
   const { data: mine, error: ie } = await SB.from("ledger").insert({ player_id: p.tg_id, reason: "admin_grant", delta: { pending: true, by: admin, via: "bot", msg: key } }).select("id").single();
+  if (ie?.code === "23505") return;
   if (ie || !mine) { await tg("sendMessage", { chat_id: chat, text: `Не вдалося записати в журнал (ledger) — нічого не видано. ${escH(ie?.message || "")}`, parse_mode: "HTML" }); return; }
-  const { data: same, error: se } = await SB.from("ledger").select("id").eq("reason", "admin_grant").eq("delta->>msg", key).order("id").limit(1);
-  if (se || !same?.length || same[0].id !== mine.id) { await SB.from("ledger").delete().eq("id", mine.id); return; } // повтор того самого повідомлення
   const unbook = () => SB.from("ledger").delete().eq("id", mine.id);
   // зміна стану під блокуванням версії (як на сервері гри)
   for (let i = 0; i < 6; i++) {

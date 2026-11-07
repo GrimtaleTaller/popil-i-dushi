@@ -201,6 +201,8 @@ const starsOf=it=>it&&it.sr?`<span class="isr">${'★'.repeat(it.sr)}</span>`:''
 function starDups(it){return [...G.inv,...(G.vault||[])].filter(x=>x.id!==it.id&&x.slot===it.slot&&x.r===it.r&&!(x.gm&&x.gm.length)).sort((a,b)=>(a.sr||0)-(b.sr||0)||a.il-b.il)}
 function starDup(it){return starDups(it)[0]}
 // 07.11 (критик): ціна зірок і перекидання — від рівня, до якого річ можна вдосконалити
+// доплата при вдалому куванні вічної за зірки й перекидання (07.11) — так само, як на сервері
+function astExtra(it){const u=(it.sr||0)*((V.afx&&V.afx.star.cost)||2)+(it.rr||0)*((V.afx&&V.afx.reroll.cost)||3);if(!u||it.r!==5)return{gold:0,shards:0};const cap=(V.refine&&V.refine.cap)||0,b={...it,il:Math.max(it.il,cap)},hi=refCost({...b,r:6}),lo=refCost({...b,r:5});return{gold:u*Math.max(0,hi.gold-lo.gold),shards:u*Math.max(0,hi.shards-lo.shards)}}
 function afCost(it){const cap=(V.refine&&V.refine.cap)||0;return refCost(cap>it.il?{...it,il:cap}:it)}
 // як зміниться бонус повного сету, якщо надіти цю річ (сервер: setPowWith)
 function setPowWith(slot,r){const S=(V.forge&&V.forge.setCfg)||{anc:{pow:0},eter:{pow:0}};let a=0,e=0;for(const s of SLOTS){const rr=s===slot?r:((G.eq[s]||{}).r||0);if(rr===5)a++;else if(rr>=6)e++}return e===SLOTS.length?S.eter.pow:a+e===SLOTS.length?S.anc.pow:0}
@@ -463,14 +465,14 @@ function renderForge(){
  const myths=[...SLOTS.map(s=>G.eq[s]).filter(i=>i&&i.r===5),...G.inv.filter(i=>i.r===5)],A=F.ast;
  const mOf=s=>myths.filter(i=>i.slot===s);
  if(!aSlot||!mOf(aSlot).length)aSlot=SLOTS.find(s=>mOf(s).length)||aSlot||'weapon';
- const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aOk=aIt&&G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=aSo,eqA=G.eq[aSlot];
+ const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aEx=aIt?astExtra(aIt):{gold:0,shards:0},aOk=aIt&&G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=aSo&&G.gold>=aEx.gold&&G.shards>=aEx.shards,eqA=G.eq[aSlot];
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
   ${AM.length?`${AM.length>1?`<p class="hint">${T('ast_one')}</p>`:''}<div class="anvil ast">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b>${eqA&&eqA.id===it.id?`<em class="aon">${T('ast_on')}</em>`:''}${it.gm&&it.gm.length?`<em class="agm">◆${it.gm.length}</em>`:''}</div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*RAR[6].m/RAR[5].m))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
-   <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.souls,aSo,'🔥')} · ${resC(G.cat,A.cat,'💎')} · ${resC(G.ess||0,A.ess,'✦')}</span></div></div>
+   <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.souls,aSo,'🔥')} · ${resC(G.cat,A.cat,'💎')} · ${resC(G.ess||0,A.ess,'✦')}</span></div>${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
   <p class="hint">${T('ast_keep')}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
  if(fsub==='gem')h+=gemPane();

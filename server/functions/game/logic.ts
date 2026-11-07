@@ -840,6 +840,12 @@ export function actOpenChests(G: State, max = 100) {
 export const AST = { base: 30, fail: 5, cap: 80, cat: 2, ess: 1 };
 export const astSouls = (il: number) => Math.round(400 + il * 12);
 export const astChance = (G: State) => Math.min(AST.cap, AST.base + AST.fail * (G.astFails || 0));
+// 07.11 (рішення Влада після критика): зірки й перекидання на прадавній утричі дешевші, ніж на вічній; при вдалому куванні — доплата за різницю (лише якщо вдалося)
+export function astExtra(G: State, it: Item) {
+  const u = (it.sr || 0) * STAR.cost + (it.rr || 0) * REROLL.cost; if (!u || it.r !== 5) return { gold: 0, shards: 0 };
+  const b = afBase(it, G), hi = refineCost({ ...b, r: 6 }), lo = refineCost({ ...b, r: 5 });
+  return { gold: u * Math.max(0, hi.gold - lo.gold), shards: u * Math.max(0, hi.shards - lo.shards) };
+}
 export function actAstral(G: State, id: number) {
   const it = G.inv.find((i) => i.id === Number(id)) || SLOTS.map((s) => G.eq[s]).find((i) => i && i.id === Number(id));
   if (!it) fail("no_item");
@@ -848,16 +854,18 @@ export function actAstral(G: State, id: number) {
   if (G.cat < AST.cat) fail("no_catalyst");
   if (G.ess < AST.ess) fail("no_essence");
   if (G.souls < souls) fail("no_souls");
+  const ex = astExtra(G, it!); if (G.gold < ex.gold) fail("no_gold"); if (G.shards < ex.shards) fail("no_shards");
   const chance = astChance(G);
   G.cat -= AST.cat; G.ess -= AST.ess; G.souls -= souls;
   const win = Math.random() * 100 < chance;
   if (win) {
     const nw = buildItem(G, it!.il, 6, it!.slot);
     nw.id = it!.id; delete nw.nw; G.nid--; // той самий предмет стає астральним
+    G.gold -= ex.gold; G.shards -= ex.shards; // доплата за зірки й перекидання (07.11)
     it!.r = 6; it!.st = nw.st; afUpgrade(it!, 5); // камені, зірки й властивості лишаються; властивості — до рівня вічної (05.11)
     G.astFails = 0; log(G, "astral", [1, it!.slot]);
   } else { G.astFails++; log(G, "astral", [0, it!.slot, chance]); }
-  return { win, chance, souls };
+  return { win, chance, souls, extra: win ? ex : { gold: 0, shards: 0 } };
 }
 
 // ---------- арена ----------
