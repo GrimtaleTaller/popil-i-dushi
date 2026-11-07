@@ -1009,6 +1009,7 @@ function renderQuest(){
  const can=P.lv>P.f.length||(P.prem&&P.lv>P.p.length),inLv=P.lv>=P.max?P.per:P.pts-P.lv*P.per;
  let h=`<div class="card"><h4>🎟️ ${T('pass_title')} · ${T('pass_lv',{l:P.lv,m:P.max})}</h4><div class="bar" style="height:10px"><i style="width:${P.lv>=P.max?100:inLv/P.per*100}%;background:linear-gradient(90deg,#b98a3e,#f2c14e)"></i></div>
  <div class="row" style="align-items:center;margin:6px 0 0"><span class="hint" style="flex:2;margin:0">${T('pass_pts',{p:P.pts})} · ${T('pass_end',{t:tLeft(P.end-Date.now())})}</span><button class="btn pri" id="qClaim" ${can&&!busy?'':'disabled'}>🎁 ${T('claim_all')}</button></div></div>`;
+ const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?T('share_again'):T('share_btn')}</button></div>`;
  const dr=rwTxt(P.dqR);
  h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,dr)).join('')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
  h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+'</div>';
@@ -1016,7 +1017,6 @@ function renderQuest(){
  for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i);
   h+=`<div class="${ok?'on':''}"><b>${i}</b><span>${f?'✓ ':''}${rwTxt(P.free[i-1])}</span><span class="${P.prem?'':'lock'}">${p?'✓ ':P.prem?'':'🔒 '}${rwTxt(P.paid[i-1])}</span></div>`}
  h+=`</div><p class="hint">${P.prem?T('pass_prem_on'):T('pass_prem_soon')}</p></div>`;
- const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?T('share_again'):T('share_btn')}</button></div>`;
  h+=`<p class="hint">${T('pass_hint')}</p>`;
  el.innerHTML=h;
  $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
