@@ -92,14 +92,13 @@ function giveNum(w: string): number | null {
 }
 const fmt = (n: number) => Math.floor(n).toLocaleString("uk-UA");
 const escH = (x: string) => String(x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!)); // 07.11 (критик): імена й ввід у HTML-повідомленнях
-const GIVE_HELP = "🎁 <b>/give</b> — видати гравцю (лише адмін)\n\n<code>/give 5000 ash</code> — собі\n<code>/give 1m gold @нік</code> або <code>/give 300 ash 123456789</code> — іншому\n<code>/give -100 ash @нік</code> — забрати\n\nЩо: ash (попіл), gold (золото), souls (іскри), shards (уламки), cat (самоцвіти), ess (есенція), key1…key10 (ключі тиру), mat1…mat4 (матеріали). Кількість: 5000, 50k, 2m, 1b.";
+const GIVE_HELP = "🎁 <b>/give</b> — видати гравцю (лише адмін)\n\n<code>/give 5000 ash</code> — собі\n<code>/give 1m gold @нік</code> або <code>/give 300 ash 123456789</code> — іншому\n<code>/give -100 ash @нік</code> — забрати\n\nЩо: ash (попіл), gold (золото), souls (іскри), shards (уламки), cat (самоцвіти), ess (есенція), key1…key10 (ключі тиру), mat1…mat4 (матеріали). Кількість: 5000, 50k, 2m, 1b (від 10 млн — лише з k/m/b).";
 async function give(chat: number, admin: number, text: string, msgId = 0) {
   const ws = text.trim().split(/\s+/).slice(1);
   if (!ws.length) { await tg("sendMessage", { chat_id: chat, text: GIVE_HELP, parse_mode: "HTML" }); return; }
   let amt: number | null = null, what: ReturnType<typeof giveWhat> = null, who = "";
   for (const w of ws) {
-    // id гравця — лише після кількості або назви ресурсу («/give gold 123456789» без кількості — не видача 123 млн, а підказка)
-    if (/^@/.test(w) || (/^\d{5,15}$/.test(w) && (amt !== null || what))) who = w;
+        if (/^@/.test(w) || /^\d{8,15}$/.test(w)) who = w; // 8+ цифр — завжди id гравця (кількість таку — через k/m/b), тож «/give 123456789 gold» не видасть 123 млн
     else if (amt === null && giveNum(w) !== null) amt = giveNum(w);
     else if (!what && giveWhat(w)) what = giveWhat(w);
     else { await tg("sendMessage", { chat_id: chat, text: `Не зрозумів «${escH(w)}».\n\n` + GIVE_HELP, parse_mode: "HTML" }); return; }

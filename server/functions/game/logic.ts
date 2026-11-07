@@ -550,10 +550,11 @@ export function junkIds(G: State) {
   return G.inv.filter((i) => i.r < 4 && !i.gm?.length && G.eq[i.slot] && itemScore(G, i, x) <= cur[i.slot]).map((i) => i.id);
 }
 // розбір прадавніх і вічних на Попіл (рішення Влада 03.11): лише з сумки, без каменів. Попелу менше, ніж коштує кування, тож петлі «Попіл → ключі → скрині → Попіл» немає
+export const upg = (i: Item) => (i.sr || 0) > 0 || (i.rr || 0) > 0; // річ, у яку вкладено зірки чи перекидання (07.11)
 export const RELIC_ASH: Record<number, number> = { 5: 5, 6: 15 };
 export function relicJunkIds(G: State) { // прадавні/вічні в сумці, гірші за надіте в тому ж слоті
   const x = heroCtx(G), cur: Record<string, number> = {}; for (const s of SLOTS) if (G.eq[s]) cur[s] = itemScore(G, G.eq[s]!, x);
-  return G.inv.filter((i) => i.r >= 5 && !i.gm?.length && G.eq[i.slot] && itemScore(G, i, x) <= cur[i.slot]).map((i) => i.id);
+  return G.inv.filter((i) => i.r >= 5 && !i.gm?.length && !upg(i) && G.eq[i.slot] && itemScore(G, i, x) <= cur[i.slot]).map((i) => i.id); // 07.11: речі із зірками/перекиданням — не «старі»
 }
 // Вдосконалення речі (04.11, рішення Влада): +1 рівень предмета за золото й уламки, до (найвищий етап − 15).
 // Симуляція 75 днів: межа «етап − 10» давала +12–15 етапів (розгін), «− 15» — +5–7, «− 20» — +2–4.
@@ -607,7 +608,7 @@ export function actEnchant(G: State, id?: number) {
   if (G.gold < c.gold) fail("no_gold");
   // легендарка: вказана або найслабша в сумці
   let leg = id ? G.inv.find((i) => i.id === Number(id) && i.r === 4 && !i.gm?.length) : undefined;
-  if (!leg) leg = G.inv.filter((i) => i.r === 4 && !i.gm?.length).sort((a, b) => itemScore(G, a) - itemScore(G, b))[0];
+  if (!leg) leg = G.inv.filter((i) => i.r === 4 && !i.gm?.length && !upg(i)).sort((a, b) => itemScore(G, a) - itemScore(G, b))[0];
   if (!leg) fail("no_legendary");
   takeItems(G, [leg!.id]);
   G.shards -= c.shards; G.gold -= c.gold; G.ench++;

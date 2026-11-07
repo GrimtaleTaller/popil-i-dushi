@@ -275,20 +275,20 @@ const refK=r=>((V.refine&&V.refine.m)||[0,0,0,1,2,5,15])[r]||1; // множни�
 function refCost(it){const R=V.refine||{g:300,sh:1};return{gold:Math.round(mobGold(it.il)*R.g*refK(it.r)),shards:Math.round(R.sh*it.il*refK(it.r))}}
 function refOk(it){const R=V.refine;return !!(R&&it&&it.r>=R.minR&&it.il<R.cap)}
 function findItem(id){return Object.values(G.eq).find(x=>x&&x.id===id)||G.inv.find(x=>x.id===id)}
-function refineDlg(id){const it=findItem(id);if(!it)return;const R=V.refine||{},A=V.afx;
+function refineDlg(id){const it=findItem(id);if(!it)return;const R=V.refine||{},A=V.afx,shown={};
  let body;if(it.r<(R.minR||3))body=`<p class="hint">${T('ref_rar')}</p>`;
  else if(it.il>=R.cap)body=`<p class="hint">${T('ref_cap_t',{n:R.cap})}</p>`;
  else{const c=refCost(it),k=1.16,cur=stSr(it),nx={...cur};for(const s of ['atk','hp','def'])if(cur[s])nx[s]=Math.round(cur[s]*k);
   body=`<p>${T('ref_txt',{n:R.cap})}</p><div class="st">${statLine(nx,cur)}</div><p><b>${T('lvl',{n:it.il})} → ${it.il+1}</b> · 💰${fmt(c.gold)} · 🔩${fmt(c.shards)}</p><p class="hint">${T('ref_have',{g:fmt(G.gold),s:fmt(G.shards)})}</p><div class="row"><button class="btn" id="rfMax">${T('ref_max')}</button></div>`}
  // властивості й зірки (05.11): легендарна й краще
- if(A&&A.n[it.r]){const rc=afCost(it),rr={gold:rc.gold*A.reroll.cost,shards:rc.shards*A.reroll.cost},sc={gold:rc.gold*A.star.cost,shards:rc.shards*A.star.cost},can=c=>G.gold>=c.gold&&G.shards>=c.shards,dup=starDup(it),sr=it.sr||0;
+ if(A&&A.n[it.r]){const rc=afCost(it),rr={gold:rc.gold*A.reroll.cost,shards:rc.shards*A.reroll.cost},sc={gold:rc.gold*A.star.cost,shards:rc.shards*A.star.cost},can=c=>G.gold>=c.gold&&G.shards>=c.shards,dup=starDup(it),sr=it.sr||0;shown.rr=rr.gold;shown.sc=sc.gold;shown.dup=dup&&dup.id;
   body+=`<div class="card ipanel"><h4>✦ ${T('af_title')}</h4>`+(it.af||[]).map((a,i)=>`<div class="afrow"><span>${afTxt(a)}</span><button class="btn mini" data-rr="${i}" ${can(rr)?'':'disabled'}>🎲 ${T('af_reroll')}</button></div>`).join('')+`<p class="hint">${T('af_cost',{g:fmt(rr.gold),s:fmt(rr.shards)})}</p></div>`;
   body+=`<div class="card ipanel"><h4>★ ${T('star_title')} ${stars(sr)}</h4>`+(sr>=A.star.max?`<p class="hint">${T('star_max')}</p>`:dup?`<p>${T('star_txt',{p:Math.round(A.star.step*100)})}</p>${(()=>{const ds=starDups(it);return ds.length>1?`<p class="hint">${T('star_pick')}</p><div class="duplist">${ds.slice(0,12).map((x,j)=>`<button class="chip dupc${j?'':' on'}" data-dup="${x.id}">${itemName(x)} ${T('lvl',{n:x.il})}${x.sr?' '+stars(x.sr):''}${x.af&&x.af.length?`<small>${x.af.map(afTxt).join(' · ')}</small>`:''}</button>`).join('')}</div>`:`<p class="hint">${T('star_use',{n:itemName(dup),l:dup.il})}</p>`})()}<div class="row"><button class="btn pri" id="stUp" ${can(sc)?'':'disabled'}>★ ${T('star_btn')} · 💰${fmt(sc.gold)} · 🔩${fmt(sc.shards)}</button></div>`:`<p class="hint">${T('star_none',{p:Math.round(A.star.step*100)})}</p>`)+`</div>`}
  const re=()=>setTimeout(()=>refineDlg(id),60);
  modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)} ${starsOf(it)}</h3>${body}`,refOk(it)?'⬆️ '+T('ref_btn')+' +1':null,()=>{if(refOk(it))act('refine',{id:it.id,n:1},r=>{haptic('light');toast(T('ref_done',{n:r.out.il}))})},()=>{const b=$('rfMax');if(b)b.onclick=()=>{queue.shift();showModal();act('refine',{id:it.id,n:0},r=>{haptic('heavy');toast(T('ref_done_n',{k:r.out.n,n:r.out.il,g:fmt(r.out.gold),s:fmt(r.out.shards)}))})};
-  document.querySelectorAll('#mbox [data-rr]').forEach(b=>b.onclick=()=>{const i=+b.dataset.rr;queue.shift();showModal();act('reroll',{id:it.id,i,max:afCost(it).gold*V.afx.reroll.cost},r=>{haptic('light');toast(T('af_rolled',{a:afTxt(r.out.old),b:afTxt(r.out.now)}));re()})});
+  document.querySelectorAll('#mbox [data-rr]').forEach(b=>b.onclick=()=>{const i=+b.dataset.rr;queue.shift();showModal();act('reroll',{id:it.id,i,max:shown.rr},r=>{haptic('light');toast(T('af_rolled',{a:afTxt(r.out.old),b:afTxt(r.out.now)}));re()})});
   document.querySelectorAll('#mbox .dupc').forEach(c=>c.onclick=()=>{document.querySelectorAll('#mbox .dupc').forEach(x=>x.classList.toggle('on',x===c))});
-  const st=$('stUp');if(st)st.onclick=()=>{const sel=document.querySelector('#mbox .dupc.on');queue.shift();showModal();act('star',sel?{id:it.id,src:+sel.dataset.dup,max:afCost(it).gold*V.afx.star.cost}:{id:it.id,max:afCost(it).gold*V.afx.star.cost},r=>{haptic('heavy');toast(T('star_done',{n:r.out.sr}));re()})}},'item');
+  const st=$('stUp');if(st)st.onclick=()=>{const sel=document.querySelector('#mbox .dupc.on');queue.shift();showModal();act('star',{id:it.id,src:sel?+sel.dataset.dup:shown.dup,max:shown.sc},r=>{haptic('heavy');toast(T('star_done',{n:r.out.sr}));re()})}},'item');
 }
 
 // Особисті ключі в сумці + передача соклановцю (04.11)
@@ -851,7 +851,7 @@ function renderRank(){
 // дія на сервері: блокує кнопки, показує помилки
 async function act(a,args,ok){
  if(busy)return;busy=true;renderBoss();
- try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e))}finally{busy=false;renderBoss();paintArena()}
+ try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50)}finally{busy=false;renderBoss();paintArena()}
 }
 
 // ---------- модалки ----------
