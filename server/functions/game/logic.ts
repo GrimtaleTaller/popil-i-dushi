@@ -84,7 +84,7 @@ export const mobXp = (s: number) => 6 * Math.pow(XPC.mob, s - 1);
 export const xpNeed = (l: number) => Math.floor(XPC.base * Math.pow(XPC.need, l - 1));
 export const gearScale = (il: number) => Math.pow(1.16, il - 1);
 
-export type Item = { id: number; slot: Slot; r: number; il: number; nm: number; st: Stats; nw?: number; gm?: string[]; af?: [string, number][]; sr?: number }; // gm — камені в гніздах, коди "a3"; af — властивості, sr — зірки (05.11)
+export type Item = { id: number; slot: Slot; r: number; il: number; nm: number; st: Stats; nw?: number; gm?: string[]; af?: [string, number][]; sr?: number; rr?: number }; // gm — камені в гніздах, коди "a3"; af — властивості, sr — зірки (05.11), rr — скільки разів перекидали (07.11)
 export type LogE = { t: number; k: string; a?: (string | number)[] };
 export type State = {
   v: 2;
@@ -1277,6 +1277,8 @@ export function marketTake(G: State, id: number, price: number, cur?: unknown) {
   const c = mcur(cur); price = mprice(price, c);
   const i = G.inv.findIndex((x) => x.id === Number(id)); if (i < 0) fail("no_item");
   const it = G.inv[i]; if (it.r < MARKET.minR) fail("market_rarity");
+  // 07.11 (критик, коло 2): зірки й перекидання оплачено від межі вдосконалення продавця — інакше слабший акаунт робить їх дешево для сильнішого
+  if ((it.sr || 0) > 0 || (it.rr || 0) > 0) fail("market_upg");
   if (it.r >= MARKET.ashOnlyR && c !== "ash") fail("market_ash_only");
   G.inv.splice(i, 1); delete it.nw;
   return { it, price, cur: c };
@@ -1518,6 +1520,8 @@ export function afOf(it?: Item) { const o = AF0(); for (const [k, v] of it?.af |
 export function afSum(G: State) { const o = AF0(); for (const s of SLOTS) { const f = afOf(G.eq[s]); for (const k in o) o[k as AfKey] += f[k as AfKey]; } return o; }
 const findAny = (G: State, id: number) => Object.values(G.eq).find((x) => x && x.id === id) || G.inv.find((x) => x.id === id) || (G.vault || []).find((x) => x.id === id);
 // 07.11 (критик): ціна — від рівня, до якого річ можна вдосконалити (не нижче), інакше зірки й перекидання робили на речі 5 рівня майже даром, а потім вдосконалювали
+// клієнт шле ціну, яку показав; якщо сервер рахує більше (старий клієнт у кеші, виріс рівень героя) — відмова, а не тихе списання
+export function priceGuard(cost: number, max: unknown) { const m = Number(max); if (!(m >= cost)) fail("price_changed"); }
 export const afBase = (it: Item, G?: State) => G ? { ...it, il: Math.max(it.il, refineCap(G)) } : it;
 export const starCost = (it: Item, G?: State) => { const c = refineCost(afBase(it, G)); return { gold: c.gold * STAR.cost, shards: c.shards * STAR.cost }; };
 export const rerollCost = (it: Item, G?: State) => { const c = refineCost(afBase(it, G)); return { gold: c.gold * REROLL.cost, shards: c.shards * REROLL.cost }; };
@@ -1528,25 +1532,26 @@ export function starDups(G: State, it: Item) {
     .sort((a, b) => (a.sr || 0) - (b.sr || 0) || a.il - b.il);
 }
 export const starDup = (G: State, it: Item) => starDups(G, it)[0];
-export function actStar(G: State, id: number, srcId?: number) {
+export function actStar(G: State, id: number, srcId?: unknown, max?: unknown) {
   const it = findAny(G, Number(id)); if (!it) fail("no_item");
   if (!AF_N[it!.r]) fail("star_rar");
   if ((it!.sr || 0) >= STAR.max) fail("star_max");
   // 07.11 (критик): дублікат обирає гравець; без вибору — найдешевший (без зірок, найнижчий рівень)
-  const ds = starDups(G, it!), src = srcId != null && Number.isFinite(Number(srcId)) ? ds.find((x) => x.id === Number(srcId)) : ds[0]; if (!src) fail("star_dup");
-  const c = starCost(it!, G); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
+  if (srcId != null && !Number.isInteger(Number(srcId))) fail("star_dup"); // передано, але не id — не підставляємо інший дублікат
+  const ds = starDups(G, it!), src = srcId != null ? ds.find((x) => x.id === Number(srcId)) : ds[0]; if (!src) fail("star_dup");
+  const c = starCost(it!, G); priceGuard(c.gold, max); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
   G.gold -= c.gold; G.shards -= c.shards;
   G.inv = G.inv.filter((x) => x.id !== src!.id); if (G.vault) G.vault = G.vault.filter((x) => x.id !== src!.id);
   it!.sr = (it!.sr || 0) + 1;
   log(G, "star", [it!.slot, it!.r, it!.sr]);
   return { sr: it!.sr, used: src!.id, gold: c.gold, shards: c.shards };
 }
-export function actReroll(G: State, id: number, idx: number) {
+export function actReroll(G: State, id: number, idx: number, max?: unknown) {
   const it = findAny(G, Number(id)); if (!it || !it.af) fail("no_item");
   idx = Math.floor(Number(idx)); if (!(idx >= 0 && idx < it!.af!.length)) fail("bad_idx");
-  const c = rerollCost(it!, G); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
+  const c = rerollCost(it!, G); priceGuard(c.gold, max); if (G.gold < c.gold) fail("no_gold"); if (G.shards < c.shards) fail("no_shards");
   G.gold -= c.gold; G.shards -= c.shards;
-  const old = it!.af![idx];
+  const old = it!.af![idx]; it!.rr = (it!.rr || 0) + 1;
   it!.af![idx] = rollAf(it!.r, it!.af!.filter((_, i) => i !== idx).map((x) => x[0]));
   bump(G, "up", 1);
   return { idx, old, now: it!.af![idx], gold: c.gold, shards: c.shards };

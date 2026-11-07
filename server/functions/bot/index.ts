@@ -16,8 +16,10 @@ async function secret() {
   return [...b].map((x) => x.toString(16).padStart(2, "0")).join("").slice(0, 48);
 }
 async function tg(method: string, body: Record<string, unknown>) {
+  try {
   const r = await fetch(`https://api.telegram.org/bot${TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return await r.json();
+  } catch (e) { console.error("tg", method, e); return { ok: false }; } // 07.11: збій мережі не обриває видачу на півдорозі
 }
 
 const TXT: Record<string, { hi: string; play: string; no: string; news: string }> = {
@@ -116,15 +118,17 @@ async function give(chat: number, admin: number, text: string, msgId = 0) {
   const p = ps[0] as { tg_id: number; username: string | null; first_name: string | null };
   const name = escH(`${p.first_name || ""}${p.username ? " (@" + p.username + ")" : ""} · ${p.tg_id}`.trim());
   // 07.11 (критик): повторна доставка того самого повідомлення Telegram (тайм-аут вебхука) не видає вдруге
-  const key = msgId ? `${chat}:${msgId}` : "";
-  if (key) {
-    const { data: dup } = await SB.from("ledger").select("id").eq("reason", "admin_grant").eq("delta->>msg", key).limit(1);
-    if (dup?.length) return;
-  }
+  // спершу «бронюємо» видачу рядком у ledger: з кількох однакових доставок перемагає рядок з найменшим id, решта нічого не видає
+  const key = msgId ? `${chat}:${msgId}` : `${chat}:t${Date.now()}`;
+  const { data: mine, error: ie } = await SB.from("ledger").insert({ player_id: p.tg_id, reason: "admin_grant", delta: { pending: true, by: admin, via: "bot", msg: key } }).select("id").single();
+  if (ie || !mine) { await tg("sendMessage", { chat_id: chat, text: `Не вдалося записати в журнал (ledger) — нічого не видано. ${escH(ie?.message || "")}`, parse_mode: "HTML" }); return; }
+  const { data: same, error: se } = await SB.from("ledger").select("id").eq("reason", "admin_grant").eq("delta->>msg", key).order("id").limit(1);
+  if (se || !same?.length || same[0].id !== mine.id) { await SB.from("ledger").delete().eq("id", mine.id); return; } // повтор того самого повідомлення
+  const unbook = () => SB.from("ledger").delete().eq("id", mine.id);
   // зміна стану під блокуванням версії (як на сервері гри)
   for (let i = 0; i < 6; i++) {
     const { data: row } = await SB.from("game_state").select("version,state").eq("player_id", p.tg_id).maybeSingle();
-    if (!row) { await tg("sendMessage", { chat_id: chat, text: `${name} ще не заходив у гру — нема куди видати.` }); return; }
+    if (!row) { await unbook(); await tg("sendMessage", { chat_id: chat, text: `${name} ще не заходив у гру — нема куди видати.`, parse_mode: "HTML" }); return; }
     const S = row.state as Record<string, any>;
     let before: number, after: number;
     if (what.k === "keys") {
@@ -142,13 +146,14 @@ async function give(chat: number, admin: number, text: string, msgId = 0) {
     if (!upd?.length) { await new Promise((r) => setTimeout(r, 150 + i * 150)); continue; }
     const d = after - before;
     const delta: Record<string, unknown> = what.k === "keys" ? { keys: { [what.t!]: d } } : what.k === "mats" ? { mats: { [what.t!]: d } } : { [what.k]: d };
-    const { error: le } = await SB.from("ledger").insert({ player_id: p.tg_id, reason: "admin_grant", delta: { ...delta, by: admin, via: "bot", ...(key ? { msg: key } : {}) } });
+    const { error: le } = await SB.from("ledger").update({ delta: { ...delta, by: admin, via: "bot", msg: key } }).eq("id", mine.id);
     const r = await tg("sendMessage", { chat_id: chat, parse_mode: "HTML",
       text: `✅ ${name}\n${what.nm}: ${fmt(before)} → <b>${fmt(after)}</b> (${d >= 0 ? "+" : ""}${fmt(d)})\nУ грі з'явиться за ~10 с.` + (le ? `\n⚠️ Запис у журнал (ledger) не вдався: ${escH(le.message)}` : "") });
     if (!r?.ok) await tg("sendMessage", { chat_id: chat, text: `✅ Видано (${what.nm} ${d >= 0 ? "+" : ""}${fmt(d)}, гравець ${p.tg_id}). Повторно не надсилай.` });
     return;
   }
-  await tg("sendMessage", { chat_id: chat, text: "Гравець саме грає й стан постійно змінюється — спробуй ще раз за кілька секунд." });
+  await unbook();
+  await tg("sendMessage", { chat_id: chat, text: "Гравець саме грає й стан постійно змінюється — нічого не видано, спробуй ще раз за кілька секунд." });
 }
 
 Deno.serve(async (req) => {

@@ -620,8 +620,8 @@ async function handle(user: TgUser, start: string | undefined, action: string, a
       case "arenaTicket": out = L.actArenaTicket(G, now); break;
       case "achClaim": out = L.actAchClaim(G); break;
       case "refine": out = L.actRefine(G, Number(args.id), Number(args.n ?? 1)); break;
-      case "star": out = L.actStar(G, Number(args.id), args.src == null ? undefined : Number(args.src)); break;
-      case "reroll": out = L.actReroll(G, Number(args.id), Number(args.i)); break;
+      case "star": out = L.actStar(G, Number(args.id), args.src ?? undefined, args.max); break;
+      case "reroll": out = L.actReroll(G, Number(args.id), Number(args.i), args.max); break;
       case "keyGive": {
         // особисті ключі (зокрема забрані зі складу клану) — іншому учаснику свого клану: списуємо під блокуванням версії, отримувачу — після запису
         const t = Math.floor(Number(args.t)), pid = Number(args.pid), n = Math.max(1, Math.min(1000, Math.floor(Number(args.n) || 1)));
