@@ -1025,7 +1025,7 @@ function renderQuest(){
  $('qShare').onclick=shareStory;
  if($('qBioCopy')){$('qBioCopy').onclick=()=>copyText(bioLink());$('qBioChk').onclick=()=>act('bio',{},r=>{toast('🔗 +⚱️'+r.out.ash);haptic('medium')})}
 }
-const SHARE_IMG=()=>new URL('assets/share2.jpg',location.href).href;
+const SHARE_N=6,SHARE_IMG=()=>new URL('assets/share/s'+(Math.floor(Date.now()/864e5)%SHARE_N+1)+'.jpg',location.href).href; // колесо картинок Stories: щодня інша (07.11)
 function shareStory(){
  const w=window.Telegram&&Telegram.WebApp,link=inviteLink(),txt=T('share_txt'),S=V.share||{};
  const done=()=>{if(!S.taken)setTimeout(()=>act('share',{},r=>toast('📣 +💰'+fmt(r.out.gold)+' +⚱️'+r.out.ash)),1200)};
