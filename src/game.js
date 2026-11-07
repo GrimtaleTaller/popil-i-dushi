@@ -251,7 +251,7 @@ function inviteLink(){return 'https://t.me/'+BOT+'?startapp=ref_'+myId()}
 function invite(){
  const link=inviteLink(),text=T('invite_text');
  const w=tg();
- if(w&&w.openTelegramLink){w.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(text));return}
+ if(w&&w.openTelegramLink){w.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(text+'\n'+link));return} // посилання — після тексту «…моє запрошення:»
  try{navigator.clipboard.writeText(link);toast(T('link_copied'))}catch(e){toast(link)}
 }
 function renderHero(){
