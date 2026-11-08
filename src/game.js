@@ -78,12 +78,27 @@ async function api(action,args){
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}
  const j=await r.json().catch(()=>({ok:false,err:'bad'}));
- if(!j.ok)throw new Error(j.err||'err');
+ if(!j.ok){if(j.err==='prelaunch'&&j.launch)lnchLock(j.launch);throw new Error(j.err||'err')}
  apply(j.view);
  return j;
 }
+// плашка відліку до старту (картка 6, 08.11): час старту й «зараз» — із сервера, годинник телефона не впливає
+let lnchAt=0,lnchOff=0,lnchIv=0;
+function lnchTick(){const el=$('lnch');if(!el)return;const left=lnchAt-(Date.now()+lnchOff);
+ if(!lnchAt||left<=0){el.hidden=true;document.body.classList.remove('haslnch');if(lnchIv){clearInterval(lnchIv);lnchIv=0}return}
+ const s=Math.floor(left/1e3),d=Math.floor(s/86400),p2=x=>String(x).padStart(2,'0');
+ $('lnchT').textContent=T('lnch_t')+' '+(d?d+' '+T('lnch_d')+' ':'')+p2(Math.floor(s%86400/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60);
+ const r=$('lnchR');if(r.dataset.l!==LANG){r.dataset.l=LANG;r.textContent=T('lnch_run')}
+ if(el.hidden){el.hidden=false;document.body.classList.add('haslnch')}}
+// між скиданням прогресу й стартом (картка 1): лише заставка з таймером, гра закрита; о старті — перезавантаження
+function lnchLock(l){let e=$('lnchLock');if(!e){e=document.createElement('div');e.id='lnchLock';e.className='lnchlock';e.innerHTML='<div><div class="big">🔥</div><h2>Grimtale</h2><p id="lnchLT"></p><p class="hint" id="lnchLR"></p></div>';document.body.appendChild(e)}
+ const off=l.now-Date.now(),p2=x=>String(x).padStart(2,'0');
+ const tk=()=>{const left=l.at-(Date.now()+off);if(left<=0){clearInterval(iv);location.reload();return}const s=Math.floor(left/1e3),d=Math.floor(s/86400);
+  $('lnchLT').textContent=T('lnch_t')+' '+(d?d+' '+T('lnch_d')+' ':'')+p2(Math.floor(s%86400/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60);$('lnchLR').textContent=T('lnch_run')};
+ if(window.__lnchIv)clearInterval(window.__lnchIv);const iv=setInterval(tk,1000);window.__lnchIv=iv;tk()}
+function lnchSet(l){if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
- V=v;G=v.s;H=v.hero;pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;lnchSet(v.launch);pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -493,6 +508,10 @@ function renderForge(){
 }
 const DNG=[{n:'Нора щурів',bg:'dbg1',reg:1},{n:'Вовче лігво',bg:'dbg2',reg:1},{n:'Склеп короля',bg:'dbg3',reg:2},{n:'Болотне капище',bg:'dbg4',reg:3},{n:'Вогняна кузня',bg:'dbg5',reg:4},{n:'Крижана печера',bg:'dbg6',reg:5},{n:'Затонулий храм',bg:'dbg7',reg:6},{n:'Зала дзеркал',bg:'dbg8',reg:7},{n:'Серце безодні',bg:'dbg9',reg:8},{n:'Трон попелу',bg:'dbg10',reg:8}]; // власні фони підземель (31.10)
 const MATN=['I','II','III','IV'];
+// матеріали «тир або вищі»: сервер бере спершу найнижчий доступний (takeMats); показуємо, що саме піде (08.11, Влад)
+function matUse(m,n){const M=G.mats||[],u=[];for(let i=m;i<4&&n>0;i++){const k=Math.min(n,M[i]||0);if(k){u.push([i,k]);n-=k}}return u}
+function matTxt(m,n){const u=matUse(m,n),hi=u.some(x=>x[0]>m);return '⛏️'+MATN[m]+(m<3?'+':'')+'×'+fmt(n)+(hi?` <span class="mhi">(${T('mat_use')}: ${u.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})</span>`:'')}
+function matAsk(m,n,go){const hi=matUse(m,n).filter(x=>x[0]>m);if(!hi.length)return go();modal(`<div class="big">⛏️</div><p>${T('mat_hi_ask',{m:MATN[m],u:hi.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})}</p>`,T('mat_hi_ok'),go,null,'matask')}
 const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');return d.toDateString()===n.toDateString()?p(d.getHours())+':'+p(d.getMinutes()):p(d.getDate())+'.'+p(d.getMonth()+1)};
 const dngD={}; // вибрана складність для кожного тиру
 function renderDng(){
@@ -573,7 +592,7 @@ function dngResult(o){
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
  haptic(o.full?'heavy':'medium');
 }
-function gateTxt(c){return '🔩'+fmt(c.shards)+(c.mat>=0?' · ⛏️'+MATN[c.mat]+'×'+c.matN:'')+(c.cat?' · 💎'+c.cat:'')}
+function gateTxt(c){return '🔩'+fmt(c.shards)+(c.mat>=0?' · '+matTxt(c.mat,c.matN):'')+(c.cat?' · 💎'+c.cat:'')}
 function gateOk(c){return G.shards>=c.shards&&(c.mat<0||((G.mats||[])[c.mat]||0)>=c.matN)&&G.cat>=c.cat}
 function renderTrain(){
  const TG=(V.train&&V.train.gate)||{};
@@ -636,7 +655,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if(a){const sp=P.act,b=(D.defs||{})[sp]||{},bv=(I.bonus||{})[sp]||0,nx=I.next,f=petEvoN(a.l);
   h+=`<div class="card petcard"><div class="petmain">${petIc(sp,1,a.l)}<div><h4>${T('pet_'+sp)} · ${T('pet_form',{f:ROM[f]})}</h4><div>${stars(a.s)} · ${T('lvl',{n:a.l})}/${C.maxLvl||30}</div><div class="up">${T('petb_'+b.b,{v:bv})}</div><div class="sub">${a.s<5?T('pet_dups',{d:a.d,n:C.dupStar||2}):T('pet_maxstar')}</div></div></div>`;
   if(nx){const ok=(G.mats||[]).slice(nx.mat).reduce((x,y)=>x+(y||0),0)>=nx.matN&&G.shards>=nx.shards&&G.cat>=nx.cat;
-   h+=`<p class="hint">${nx.cat?T('pet_evo_hint',{f:ROM[f+1]}):T('pet_feed_hint')}</p><div class="st">${T('pet_cost')}: ⛏️${MATN[nx.mat]}×${nx.matN} · 🔩${fmt(nx.shards)}${nx.cat?' · 💎1':''}</div><div class="row"><button class="btn pri" id="pFeed" ${ok?'':'disabled'}>${nx.cat?T('pet_evo_btn'):T('pet_feed')}</button>${nx.cat?'':`<button class="btn" id="pFeedM" ${ok?'':'disabled'}>${T('pet_feed_max')}</button>`}</div>`}
+   h+=`<p class="hint">${nx.cat?T('pet_evo_hint',{f:ROM[f+1]}):T('pet_feed_hint')}</p><div class="st">${T('pet_cost')}: ${matTxt(nx.mat,nx.matN)} · 🔩${fmt(nx.shards)}${nx.cat?' · 💎1':''}</div><div class="row"><button class="btn pri" id="pFeed" data-m="${nx.mat}" data-n="${nx.matN}" ${ok?'':'disabled'}>${nx.cat?T('pet_evo_btn'):T('pet_feed')}</button>${nx.cat?'':`<button class="btn" id="pFeedM" ${ok?'':'disabled'}>${T('pet_feed_max')}</button>`}</div>`}
   else h+=`<p class="hint">${T('max_reached')}</p>`;
   h+=`<div class="petfind"><span>🎒 ${T('pet_finds',{n:P.fn||0,m:C.findMax||3})}${(P.fn||0)<(C.findMax||3)&&I.findIn?' · '+T('pet_next',{t:hms(I.findIn)}):''}</span><button class="btn pri" id="pFind" ${P.fn?'':'disabled'}>${T('take')}</button></div></div>`;
   // вміння й спорядження пітомця (31.10)
@@ -645,7 +664,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
   h+=`<div class="card"><h4>${T('pg_t')}</h4><p class="hint">${T('pg_hint')}</p><div class="slots">`+PGSLOTS.map(s=>{const it=PE[s];return `<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):PGIC[s]}</div><div class="sn">${T('pslot_'+s)}</div>`+(it?`<div class="it" style="color:${RAR[it.r].c}">${RAR[it.r].n}</div><div class="sn">${T('lvl',{n:it.il})}${it.il>a.l?' ⚠️':''}</div><div class="sn">${pgSt(it)}</div><button class="btn" data-pgoff="${s}" style="margin-top:6px">${T('pg_take_off')}</button>`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}).join('')+`</div>`;
   if(sum.ab||sum.atk||sum.hp||sum.crit||sum.gold||sum.xp)h+=`<div class="st" style="margin-top:8px">${T('pg_sum')}: ${pgSt({st:sum})}</div>`;
   if(cost){const ok=(G.mats||[]).slice(cost.mat).reduce((x,y)=>x+(y||0),0)>=cost.matN&&G.shards>=cost.shards;
-   h+=`<h4 style="margin-top:12px">${T('pg_craft_t')}</h4><p class="hint">${T('pg_craft_hint',{l:a.l})}</p><div class="st">${T('pet_cost')}: ⛏️${MATN[cost.mat]}×${cost.matN} · 🔩${fmt(cost.shards)}</div><div class="row">`+PGSLOTS.map(s=>`<button class="btn pri" data-pgc="${s}" ${ok?'':'disabled'}>${PGIC[s]} ${T('pslot_'+s)}</button>`).join('')+`<button class="btn ${pgCat?'on':''}" id="pgCat" ${G.cat>0?'':'disabled'}>${T('pg_cat')} ${G.cat||0}</button></div>`}
+   h+=`<h4 style="margin-top:12px">${T('pg_craft_t')}</h4><p class="hint">${T('pg_craft_hint',{l:a.l})}</p><div class="st">${T('pet_cost')}: ${matTxt(cost.mat,cost.matN)} · 🔩${fmt(cost.shards)}</div><div class="row">`+PGSLOTS.map(s=>`<button class="btn pri" data-pgc="${s}" data-m="${cost.mat}" data-n="${cost.matN}" ${ok?'':'disabled'}>${PGIC[s]} ${T('pslot_'+s)}</button>`).join('')+`<button class="btn ${pgCat?'on':''}" id="pgCat" ${G.cat>0?'':'disabled'}>${T('pg_cat')} ${G.cat||0}</button></div>`}
   h+=`<h4 style="margin-top:12px">${T('pg_bag')} ${PI.length}/${GI.invMax||30}</h4>`;
   if(GI.best||GI.junk)h+=`<div class="row" style="margin-top:0;margin-bottom:8px">${GI.best?`<button class="btn pri" id="pgBest">${T('pg_best',{n:GI.best})}</button>`:''}${GI.junk?`<button class="btn" id="pgJunk">${T('pg_junk',{n:GI.junk})}</button>`:''}</div>`; // 05.11
   h+=PI.length?PI.map(it=>`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${T('pslot_'+it.slot)}</div><div class="sub">${it.sp?petIc(it.sp,0,(P.list[it.sp]||{}).l)+' ':''}${RAR[it.r].n} · ${T('lvl',{n:it.il})}${it.sp&&it.sp!==P.act?' · '+T('pg_for',{p:T('pet_'+it.sp)}):it.il>a.l?' · ⚠️ '+T('pg_inactive'):''}</div><div class="st">${pgSt(it)}</div></div><div class="acts"><button class="btn pri" data-pgeq="${it.id}" ${it.il>a.l||(it.sp&&it.sp!==P.act)?'disabled':''}>${T('pg_equip')}</button><button class="btn" data-pgdis="${it.id}">⚒️ ${T('pg_dis')}</button></div></div>`).join(''):`<p class="hint">${T('pg_bag_empty')}</p>`;
@@ -659,14 +678,15 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if(!a&&!P.inc&&!(P.eggs.c||P.eggs.r))h=`<div class="card"><h4>🐾 ${T('sub_pet')}</h4><p class="hint">${T('pet_intro')}</p></div>`+h;
  $('p-pet').innerHTML=h;const E=$('p-pet');
  const fd=n=>act('petFeed',{n},r=>{toast(T('pet_fed',{l:r.out.l}));haptic('light')});
- if($('pFeed'))$('pFeed').onclick=()=>fd(1);if($('pFeedM'))$('pFeedM').onclick=()=>fd(30);
+ const fdAsk=n=>{const b=$('pFeed');matAsk(+b.dataset.m,+b.dataset.n,()=>fd(n))};
+ if($('pFeed'))$('pFeed').onclick=()=>fdAsk(1);if($('pFeedM'))$('pFeedM').onclick=()=>fdAsk(30);
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
   modal(`<div class="big">${petIc(P.act,1,(P.list[P.act]||{}).l)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
  if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));
  if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},r=>{const o=r.out;modal(`<div class="big">${petIc(o.sp,1,(G.pet.list[o.sp]||{}).l)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')});
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
  if($('pgCat'))$('pgCat').onclick=()=>{pgCat=!pgCat;$('pgCat').classList.toggle('on',pgCat)};
- E.querySelectorAll('[data-pgc]').forEach(b=>b.onclick=()=>act('petCraft',{slot:b.dataset.pgc,cat:pgCat},r=>{const it=r.out.item;pgCat=pgCat&&G.cat>0;toast(`${RAR[it.r].n} ${T('pslot_'+it.slot)} · ${T('lvl',{n:it.il})}`);haptic(it.r>=3?'heavy':'light')}));
+ E.querySelectorAll('[data-pgc]').forEach(b=>b.onclick=()=>matAsk(+b.dataset.m,+b.dataset.n,()=>act('petCraft',{slot:b.dataset.pgc,cat:pgCat},r=>{const it=r.out.item;pgCat=pgCat&&G.cat>0;toast(`${RAR[it.r].n} ${T('pslot_'+it.slot)} · ${T('lvl',{n:it.il})}`);haptic(it.r>=3?'heavy':'light')})));
  E.querySelectorAll('[data-pgeq]').forEach(b=>b.onclick=()=>act('petEquip',{id:+b.dataset.pgeq},()=>haptic('light')));
  E.querySelectorAll('[data-pgoff]').forEach(b=>b.onclick=()=>act('petUnequip',{slot:b.dataset.pgoff},()=>haptic('light')));
  if($('pgBest'))$('pgBest').onclick=()=>act('petEquipBest',{},r=>{haptic('light');toast(T('equipped_n',{n:r.out.n}))});
@@ -998,7 +1018,7 @@ async function start(){
  if(!w&&!DEV){boot(T('only_tg'));return}
  boot(T('loading'));
  try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r)}
- catch(e){boot(errT(e),true)}
+ catch(e){if(e.message==='prelaunch'){boot();return}boot(errT(e),true)}
 }
 // ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
 function tLeft(ms){ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);return d?T('t_dh',{d,h}):h?T('t_hm',{h,m}):T('t_m',{m})}
