@@ -806,10 +806,15 @@ function renderShop(){
  }
  h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
   ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
+  <p class="hint">💵 ${T('usdt_hint')}</p>
   <p class="hint">${T('shop_support')}</p></div>`;
  if(S.ops&&S.ops.length)h+=opsHtml(S.ops); // «Мої операції» — у самому низу магазину (прохання Влада)
  el.innerHTML=h;
- el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>shopBuy(b.dataset.buy,b.dataset.m));
+ el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const k=b.dataset.buy,m=b.dataset.m;
+  // USDT у мережі TON: перед першою оплатою пояснюємо, що потрібно трохи GRAM на комісію і звідки списуються гроші (08.11, Влад: «А»)
+  let seen=false;try{seen=localStorage.getItem('gtUsdtHint')==='1'}catch(e){}
+  if(m==='usdt'&&!seen)modal(`<div class="big">💵</div><h3>${T('usdt_hint_t')}</h3><p class="hint">${T('usdt_hint')}</p>`,T('usdt_hint_ok'),()=>{try{localStorage.setItem('gtUsdtHint','1')}catch(e){}setTimeout(()=>shopBuy(k,m),50)});
+  else shopBuy(k,m)});
  el.querySelectorAll('[data-other]').forEach(b=>b.onclick=e=>{e.preventDefault();if(!soon)shopOther(b.dataset.other)});
  if($('shOff'))$('shOff').onclick=()=>tcUI&&tcUI.disconnect();
  if($('shRn'))$('shRn').onclick=renameAsk;
