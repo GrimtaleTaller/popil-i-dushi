@@ -816,7 +816,7 @@ function renderShop(){
 // «Інші способи»: GRAM з гаманця TON або інша монета через @CryptoBot (08.11, рішення Влада)
 const CP_IC={USDT:'₮',BTC:'₿',ETH:'Ξ',TON:'💎',TRX:'🔺',LTC:'Ł',BNB:'🟡',USDC:'🔵'};
 // «Інші способи оплати»: переказ на адресу гри в інших мережах (як у конкурентів; 08.11, рішення Влада) — список мереж зі шапки магазину
-const OTH_NET=[['usdt_trc20','₮','USDT · TRC20 (TRON)'],['usdt_bep20','₮','USDT · BEP20 (BSC)'],['sol','🟣','SOL · Solana']];
+const OTH_NET=[['usdt_trc20','<i class="nb nb-trx">T</i>','USDT · TRC20 (TRON)'],['usdt_bep20','<i class="nb nb-bsc">B</i>','USDT · BEP20 (BSC)'],['sol','<i class="nb nb-sol">S</i>','SOL · Solana']]; // значки мереж — власні кольорові кружки з літерою (08.11, прохання Влада)
 // «Інші способи оплати» під кнопками товару (08.11, рішення Влада: три кнопки в рядок, як у першому варіанті): мережі для переказу й гаманець TON
 function shopOther(k){
  const it=shopData.items.find(x=>x.k===k);if(!it)return;const on=shopData.nets||[],w=tcUI&&tcUI.account;
@@ -853,8 +853,8 @@ function shopWatch(id,n){ // перевіряємо блокчейн кожні 
 // рахунок на переказ: мережа, адреса, точна сума, таймер; перевіряємо самі кожні 15 с, «Я сплатив» — одразу
 let netIv=0;
 function netInvoice(o){
- const nm=(OTH_NET.find(x=>x[0]===o.net)||[0,'🪙',o.net])[2];
- const h=`<div class="big">🧾</div><h3>${T('net_t')}</h3><p class="hint" style="text-align:center">${esc(nm)}</p>
+ const nt=OTH_NET.find(x=>x[0]===o.net)||[0,'🪙',o.net],nm=nt[2];
+ const h=`<div class="big">🧾</div><h3>${T('net_t')}</h3><p class="hint" style="display:flex;justify-content:center;align-items:center;gap:8px">${nt[1]}<span>${esc(nm)}</span></p>
   <div class="netb"><span>${T('net_addr')}</span><code id="nAd">${esc(o.address)}</code><button class="btn" id="nAdC">📋</button></div>
   <div class="netb"><span>${T('net_sum')}</span><code id="nSu">${esc(o.amount)} ${o.coin}</code><button class="btn" id="nSuC">📋</button></div>
   <p class="hint" style="text-align:center">${T('net_exact')}</p><p class="hint" style="text-align:center"><b id="nTm"></b></p>
