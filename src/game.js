@@ -737,7 +737,7 @@ function adminHtml(){
 let csub='main',clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
 const roleT=r=>T('role_'+r);
 function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
-function clanAct(a,args){act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null})}
+function clanAct(a,args,cb){act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(cb)cb(r)})}
 function renderClan(){
  const el=$('p-clan');
  if(G.maxStage<(V.clanStage||5)){el.innerHTML=`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
@@ -783,10 +783,14 @@ function renderClan(){
  const AP=C.apps||[];
  if(lead&&AP.length)S.members+=`<div class="card"><h4>📨 ${T('clan_apps')} (${AP.length})</h4>`+AP.map(a=>`<div class="item" style="border-left-color:#4f93f2"><div class="ic">👤</div><div class="info"><div class="nm">${esc(a.name)}</div><div class="sub">${T('lvl',{n:a.lvl})} · ${T('stage',{n:a.stage})} · ${T('power',{n:fmt(a.power)})}</div></div><div class="acts"><button class="btn pri" data-ay="${a.id}">✓</button><button class="btn" data-an="${a.id}">✖</button></div></div>`).join('')+'</div>';
  const CL=C.clan;
+ // посилання на Telegram-групу клану (картка 5): лише t.me, скарга — адміну
+ if(CL.tg)S.members+=`<div class="card"><h4>💬 ${T('clan_tg_t')}</h4><div class="row"><button class="btn pri" id="cTgGo">${T('clan_tg_open')}</button><button class="btn" id="cTgRep">⚠️ ${T('clan_tg_rep')}</button></div></div>`;
  if(C.role==='leader')S.members+=`<div class="card"><h4>⚙️ ${T('clan_set')}</h4><div class="chips" id="cMode">${['open','apply','closed'].map(m=>`<button data-cm="${m}" class="${(clanModeSel||CL.mode)===m?'act':''}">${T('clan_mode_'+m)}</button>`).join('')}</div>
   <p class="hint">${T('clan_mode_hint_'+(clanModeSel||CL.mode))}</p>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_stage')}</span><input id="cMs" class="inp" type="number" min="0" max="80" inputmode="numeric" value="${CL.minStage||0}" style="flex:1"></div>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_power')}</span><input id="cMp" class="inp" type="number" min="0" inputmode="numeric" value="${CL.minPower||0}" style="flex:1"></div>
+  <div class="row" style="align-items:center"><span style="flex:1">${T('clan_tg_t')}</span><input id="cTg" class="inp" type="text" maxlength="60" placeholder="t.me/назва_групи" value="${esc(CL.tg||'')}" style="flex:1"></div>
+  <p class="hint">${T('clan_tg_hint')}</p>
   <div class="row"><button class="btn pri" id="cSet">${T('save')}</button></div></div>`;
  else S.members+=`<p class="hint">${T('clan_mode_'+CL.mode)}${CL.minStage?' · '+T('stage',{n:CL.minStage}):''}${CL.minPower?' · 💪 '+fmt(CL.minPower):''}</p>`;
  S.members+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
@@ -806,7 +810,9 @@ function renderClan(){
  el.querySelectorAll('[data-ay]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.ay,ok:true}));
  el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.an,ok:false}));
  el.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{clanModeSel=b.dataset.cm;renderClan()});
- if($('cSet'))$('cSet').onclick=()=>{const m=clanModeSel||C.clan.mode;clanModeSel=null;clanAct('clanSettings',{mode:m,minStage:+$('cMs').value||0,minPower:+$('cMp').value||0});toast(T('saved'))};
+ if($('cSet'))$('cSet').onclick=()=>{const m=clanModeSel||C.clan.mode;clanModeSel=null;clanAct('clanSettings',{mode:m,minStage:+$('cMs').value||0,minPower:+$('cMp').value||0,tg:$('cTg')?$('cTg').value.trim():undefined},()=>toast(T('saved')))};
+ if($('cTgGo'))$('cTgGo').onclick=()=>{const u=C.clan.tg;if(!/^https:\/\/t\.me\//.test(u||''))return;const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')};
+ if($('cTgRep'))$('cTgRep').onclick=()=>modal(`<div class="big">⚠️</div><p>${T('clan_tg_rep_ask')}</p>`,T('clan_tg_rep'),()=>act('clanReport',{clan:C.clan.id},()=>toast(T('clan_tg_rep_done'))),null,'crep');
  if($('cGiveAll'))$('cGiveAll').onclick=()=>{$('cGive').value=Math.floor(G.gold)};
  const haveRes=k=>k==='sh'?Math.floor(G.shards||0):Math.floor((G.mats||[])[+k[1]]||0);
  el.querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{resK=b.dataset.rk;renderClan()});
