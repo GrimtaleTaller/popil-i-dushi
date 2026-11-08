@@ -88,7 +88,7 @@ function lnchTick(){const el=$('lnch');if(!el)return;const left=lnchAt-(Date.now
  if(!lnchAt||left<=0){el.hidden=true;document.body.classList.remove('haslnch');if(lnchIv){clearInterval(lnchIv);lnchIv=0}return}
  const s=Math.floor(left/1e3),d=Math.floor(s/86400),p2=x=>String(x).padStart(2,'0');
  $('lnchT').textContent=T('lnch_t')+' '+(d?d+' '+T('lnch_d')+' ':'')+p2(Math.floor(s%86400/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60);
- const r=$('lnchR');if(r.dataset.l!==LANG){r.dataset.l=LANG;r.textContent=T('lnch_run')}
+ const r=$('lnchR');if(r.dataset.l!==LANG){r.dataset.l=LANG;r.textContent=T('lnch_note');$('lnchChT').textContent=T('lnch_ch')}
  if(el.hidden){el.hidden=false;document.body.classList.add('haslnch')}}
 // між скиданням прогресу й стартом (картка 1): лише заставка з таймером, гра закрита; о старті — перезавантаження
 function lnchLock(l){let e=$('lnchLock');if(!e){e=document.createElement('div');e.id='lnchLock';e.className='lnchlock';e.innerHTML='<div><div class="big">🔥</div><h2>Grimtale</h2><p id="lnchLT"></p><p class="hint" id="lnchLR"></p><p><button class="btn pri" id="lnchLCh"></button></p></div>';document.body.appendChild(e);$('lnchLCh').textContent='📣 '+T('lnch_ch');$('lnchLCh').onclick=openCh}
