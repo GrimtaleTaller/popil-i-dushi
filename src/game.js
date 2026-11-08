@@ -457,7 +457,7 @@ function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.i
  modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),null,()=>{},()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),'gempick')} // 05.11: замість «Скасувати» внизу довгого списку — ✕ і тап поза вікном
 function bindGem(){const P=$('p-forge');
  // злиття в клітинці — усі доступні; якщо бракує матеріалу свого рівня й підуть вищі — спершу питаємо (matAsk, як у тренуванні)
- P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{const k=b.dataset.gm,c=gmCfg().cost[+k[1]-1];matAsk(c.mat,(+b.dataset.x||1)*c.matN,()=>act('gemMerge',{k,n:0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}))});
+ P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{const k=b.dataset.gm,c=gmCfg().cost[+k[1]-1];const x=+b.dataset.x||1;matAsk(c.mat,x*c.matN,hi=>act('gemMerge',{k,n:x,hi},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}))});
  if($('gmAll'))$('gmAll').onclick=()=>{const A=gmCfg().all;if(!A||!A.n)return;
   modal(`<div class="big">◆</div><h3>${T('gem_all')}</h3><p>${T('gem_all_q',{n:plT('gem_all_n',A.n)})}</p><p class="gmspend">${T('gem_spend')}: ${gmSpend(A)}</p>`,T('gem_all_ok'),()=>act('gemMergeAll',{},r=>{toast(T('gem_all_done',{n:plT('gem_all_n',r.out.n)}));haptic('light')}),null,'gemmall')};
  P.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>gemPick(+b.dataset.gi));
@@ -544,7 +544,7 @@ function feedHi(l,want){const M=(G.mats||[]).slice(),hi={};let sh=G.shards,done=
   if(M.slice(c.mat).reduce((a,b)=>a+(b||0),0)<c.matN||sh<c.sh)break;let n=c.matN;for(let i=c.mat;i<4&&n>0;i++){const k=Math.min(n,M[i]||0);M[i]-=k;n-=k;if(k&&i>c.mat)hi[i]=(hi[i]||0)+k}
   sh-=c.sh;l++;done++;if(c.cat)break}
  return Object.keys(hi).map(i=>[+i,hi[i]])}
-function matAsk(m,n,go){const hi=matUse(m,n).filter(x=>x[0]>m);if(!hi.length)return go();modal(`<div class="big">⛏️</div><p>${T('mat_hi_ask',{m:MATN[m],u:hi.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})}</p>`,T('mat_hi_ok'),go,null,'matask')}
+function matAsk(m,n,go){const hi=matUse(m,n).filter(x=>x[0]>m);if(!hi.length)return go(false);modal(`<div class="big">⛏️</div><p>${T('mat_hi_ask',{m:MATN[m],u:hi.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})}</p>`,T('mat_hi_ok'),()=>go(true),null,'matask')} // go(true) — гравець погодився на вищі матеріали
 const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');return d.toDateString()===n.toDateString()?p(d.getHours())+':'+p(d.getMinutes()):p(d.getDate())+'.'+p(d.getMonth()+1)};
 const dngD={}; // вибрана складність для кожного тиру
 function renderDng(){
