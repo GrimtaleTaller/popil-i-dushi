@@ -813,19 +813,21 @@ function renderShop(){
  el.querySelectorAll('[data-other]').forEach(b=>b.onclick=e=>{e.preventDefault();if(!soon)shopOther(b.dataset.other)});
  if($('shOff'))$('shOff').onclick=()=>tcUI&&tcUI.disconnect();
  if($('shRn'))$('shRn').onclick=renameAsk;
- el.querySelectorAll('[data-reop]').forEach(b=>b.onclick=()=>{const o=S.ops.find(x=>x.id===+b.dataset.reop);if(o&&o.address)netInvoice({id:o.id,net:o.net,address:o.address,amount:o.amount,coin:o.coin,until:o.until})});
+ el.querySelectorAll('[data-reop]').forEach(b=>b.onclick=()=>{const o=S.ops.find(x=>x.id===+b.dataset.reop);if(o&&o.address)netInvoice({id:o.id,net:o.net,address:o.address,amount:o.amount,coin:o.coin,usd:o.usd,until:o.until})});
  // поки є неоплачені/непідтверджені операції — оновлюємо список кожні 20 с (сервер сам перевіряє мережу)
  clearTimeout(opsT);if(S.ops&&S.ops.some(o=>o.st==='new'||o.st==='wait'))opsT=setTimeout(()=>{if(tab==='shop'&&!busy)api('shopInfo').then(r=>{shopData=r.out;dirty.shop=1;flush()}).catch(()=>{})},20000);
 }
 // «Інші способи»: GRAM з гаманця TON або інша монета через @CryptoBot (08.11, рішення Влада)
 const CP_IC={USDT:'₮',BTC:'₿',ETH:'Ξ',TON:'💎',TRX:'🔺',LTC:'Ł',BNB:'🟡',USDC:'🔵'};
 // «Інші способи оплати»: переказ на адресу гри в інших мережах (як у конкурентів; 08.11, рішення Влада) — список мереж зі шапки магазину
-const OTH_NET=[['usdt_trc20','<i class="nb nb-trx">T</i>','USDT · TRC20 (TRON)'],['usdt_bep20','<i class="nb nb-bsc">B</i>','USDT · BEP20 (BSC)'],['sol','<i class="nb nb-sol">S</i>','SOL · Solana']]; // значки мереж — власні кольорові кружки з літерою (08.11, прохання Влада)
+// «Інші способи оплати»: спершу монета, мережа дрібно (08.11, рішення Влада: як у конкурентів — гравець має бачити, ЩО саме надсилати)
+const OTH_NET=[['usdt_trc20','<i class="nb nb-usdt">₮</i>','USDT','TRON (TRC20)'],['usdt_bep20','<i class="nb nb-usdt">₮</i>','USDT','BSC (BEP20)'],['trx','<i class="nb nb-trx">T</i>','TRX','TRON'],['sol','<i class="nb nb-sol">S</i>','SOL','Solana']];
+const netName=n=>{const x=OTH_NET.find(y=>y[0]===n);return x?x[2]+' · '+x[3]:n};
 // «Інші способи оплати» під кнопками товару (08.11, рішення Влада: три кнопки в рядок, як у першому варіанті): мережі для переказу й гаманець TON
 function shopOther(k){
  const it=shopData.items.find(x=>x.k===k);if(!it)return;const on=shopData.nets||[],w=tcUI&&tcUI.account;
  const h=`<div class="big">🪙</div><h3>${T('shop_other_t')}</h3><p class="hint" style="text-align:center">${T('shop_i_'+k)} · $${it.usd.toFixed(2)} · ${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</p>
-  <div class="othl">${OTH_NET.map(([n,ic,l])=>`<button class="btn" data-pm="${n}"${on.includes(n)?'':' disabled'}>${ic} ${l}${on.includes(n)?'':' · '+T('shop_soon_s')}</button>`).join('')}</div>
+  <div class="othl">${OTH_NET.map(([n,ic,c,nt])=>{const mn=(shopData.mins||{})[n]||0,low=mn&&it.usd<mn&&!V.isAdmin,ok=on.includes(n)&&!low;return `<button class="btn oth" data-pm="${n}"${ok?'':' disabled'}>${ic}<span><b>${c}</b><small>${T('net_w')} ${nt}</small></span><em>${!on.includes(n)?T('shop_soon_s'):mn?T('from_usd',{x:mn}):''}</em></button>`}).join('')}</div>
   <p class="hint">${on.length?T('shop_oth_hint'):T('shop_oth_soon')}</p>
   <div class="pmw"><span>${T('shop_wallet_t')}</span><button class="btn" id="pmW">${w?shortAddr(w.address)+' ▾':T('shop_wallet_conn')}</button></div>`;
  modal(h,null,null,()=>{
@@ -857,11 +859,14 @@ function shopWatch(id,n){ // перевіряємо блокчейн кожні 
 // рахунок на переказ: мережа, адреса, точна сума, таймер; перевіряємо самі кожні 15 с, «Я сплатив» — одразу
 let netIv=0;
 function netInvoice(o){
- const nt=OTH_NET.find(x=>x[0]===o.net)||[0,'🪙',o.net],nm=nt[2];
- const h=`<div class="big">🧾</div><h3>${T('net_t')}</h3><p class="hint" style="display:flex;justify-content:center;align-items:center;gap:8px">${nt[1]}<span>${esc(nm)}</span></p>
+ const nt=OTH_NET.find(x=>x[0]===o.net)||[0,'🪙',o.coin,o.net];
+ const h=`<div class="big">🧾</div><h3>${T('net_t')}</h3>
+  ${o.usd?`<div class="netb netu"><span>${T('net_usd')}</span><b>$${Number(o.usd).toFixed(2)}</b></div>`:''}
+  <div class="netb"><span>${T('net_coin')}</span><b class="nbc">${nt[1]} ${o.coin}</b></div>
+  <div class="netb"><span>${T('net_net')}</span><b>${esc(nt[3])}</b></div>
   <div class="netb"><span>${T('net_addr')}</span><code id="nAd">${esc(o.address)}</code><button class="btn" id="nAdC">📋</button></div>
   <div class="netb"><span>${T('net_sum')}</span><code id="nSu">${esc(o.amount)} ${o.coin}</code><button class="btn" id="nSuC">📋</button></div>
-  <p class="hint" style="text-align:center">${T('net_exact')}</p><p class="hint" style="text-align:center"><b id="nTm"></b></p>
+  <p class="netw">⚠️ ${T('net_only',{c:o.coin})}</p><p class="hint" style="text-align:center">${T('net_exact')}</p><p class="hint" style="text-align:center"><b id="nTm"></b></p>
   <div class="row"><button class="btn pri" id="nPaid">${T('net_paid')}</button></div>`;
  const stop=()=>{clearInterval(netIv);netIv=0};
  const chk=(manual)=>api('shopCheck',{id:o.id}).then(r=>{if(r.out.status==='paid'){stop();queue.shift();showModal();toast(T('shop_ok_t'));shopPaid()}else if(manual)toast(T('net_wait'))}).catch(e=>manual&&toast(errT(e)));
@@ -872,7 +877,7 @@ function netInvoice(o){
 }
 let opsT=0;
 const OPS_ST={new:['🕓','op_new'],wait:['⏳','op_wait'],paid:['✅','op_paid'],refunded:['↩️','op_ref'],expired:['⌛','op_exp'],late:['⚠️','op_late']};
-const opM=o=>o.m==='stars'?'⭐ Stars':o.m==='gram'?'💎 GRAM':o.m==='usdt'?'💵 USDT (TON)':o.m==='net'?((OTH_NET.find(x=>x[0]===o.net)||[0,'',o.net])[2]):o.m;
+const opM=o=>o.m==='stars'?'⭐ Stars':o.m==='gram'?'💎 GRAM':o.m==='usdt'?'💵 USDT · TON':o.m==='net'?netName(o.net):o.m;
 function opsHtml(ops){
  return `<div class="card"><h4>🧾 ${T('ops_t')}</h4><div class="ops">${ops.map(o=>{const st=OPS_ST[o.st]||['•',o.st];return `<div class="op op-${o.st}"><div><b>${T('shop_i_'+o.item)}</b><small>${esc(opM(o))} · $${o.usd.toFixed(2)} · ${dt(o.at)}</small></div><span>${st[0]} ${T(st[1])}</span>${o.st==='new'&&o.address?`<button class="btn" data-reop="${o.id}">${T('op_open')}</button>`:''}</div>`}).join('')}</div>
   ${ops.some(o=>o.st==='late')?`<p class="hint">${T('op_late_h')}</p>`:''}</div>`;

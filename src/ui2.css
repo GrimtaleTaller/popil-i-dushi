@@ -293,3 +293,7 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .ops{display:flex;flex-direction:column;gap:6px}.op{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#ffffff08;border:1px solid #ffffff12}
 .op>div{flex:1;min-width:0}.op b{display:block;font-size:13px}.op small{display:block;font-size:11px;color:var(--mut,#a99)}.op>span{font-size:12px;font-weight:700;white-space:nowrap}
 .op-paid>span{color:#6fcf7f}.op-wait>span,.op-new>span{color:var(--gold)}.op-expired>span,.op-late>span{color:#d07a6a}.op .btn{flex:none;padding:5px 9px;font-size:12px}
+.othl .btn.oth{justify-content:flex-start;padding:9px 12px}.othl .oth span{flex:1;text-align:left;line-height:1.2}.othl .oth b{display:block;font-size:15px}.othl .oth small{font-size:11px;color:var(--mut,#a99);font-weight:500}
+.othl .oth em{font-style:normal;font-size:12px;color:#c9a96a;white-space:nowrap}.nb-usdt{background:#26a17b}
+.netb b{flex:1;text-align:center;color:#f3e6c8}.netu b{font-size:20px;color:var(--gold)}.nbc{display:flex;justify-content:center;align-items:center;gap:6px}
+.netw{margin:8px 0;padding:8px 10px;border-radius:10px;background:#c0563a22;border:1px solid #c0563a66;color:#f0b8a8;font-size:12.5px;font-weight:600;text-align:center}
