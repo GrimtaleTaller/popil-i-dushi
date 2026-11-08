@@ -288,3 +288,8 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .nb{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-style:normal;font-weight:800;font-size:11px;color:#fff;vertical-align:-4px;margin-right:4px}
 .nb-trx{background:#e5202a}.nb-bsc{background:#f0b90b;color:#1a1408}.nb-sol{background:linear-gradient(135deg,#9945ff,#14f195)}
 .othl .btn{display:flex;align-items:center;gap:8px}.othl .nb,.nb{vertical-align:middle;margin:0;flex:none}
+/* довгі сповіщення переносяться, а не обрізаються (08.11) */
+.toast{white-space:normal;max-width:calc(100vw - 32px);width:max-content;text-align:center;border-radius:14px;line-height:1.3}
+.ops{display:flex;flex-direction:column;gap:6px}.op{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#ffffff08;border:1px solid #ffffff12}
+.op>div{flex:1;min-width:0}.op b{display:block;font-size:13px}.op small{display:block;font-size:11px;color:var(--mut,#a99)}.op>span{font-size:12px;font-weight:700;white-space:nowrap}
+.op-paid>span{color:#6fcf7f}.op-wait>span,.op-new>span{color:var(--gold)}.op-expired>span,.op-late>span{color:#d07a6a}.op .btn{flex:none;padding:5px 9px;font-size:12px}

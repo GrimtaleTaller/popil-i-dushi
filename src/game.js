@@ -794,6 +794,7 @@ function renderShop(){
  let h=`<div class="card"><h4>🛒 ${T('shop_t')}</h4><p class="hint">${T('shop_hint')}</p><div class="resg"><div><span>💰 ${T('shop_pool')}</span><b>$${S.pool.toFixed(2)}</b></div>${vipActive()?`<div><span>👑 VIP</span><b>${dt(G.vip)}</b></div>`:''}</div>
   ${soon?`<p class="hint" style="color:var(--gold)">${T('shop_soon_t')}</p>`:''}
   ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
+ if(S.ops&&S.ops.length)h+=opsHtml(S.ops);
  for(const it of S.items){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||'');
   h+=`<div class="card shopc"><h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4><p class="hint">${desc}</p>
@@ -812,6 +813,9 @@ function renderShop(){
  el.querySelectorAll('[data-other]').forEach(b=>b.onclick=e=>{e.preventDefault();if(!soon)shopOther(b.dataset.other)});
  if($('shOff'))$('shOff').onclick=()=>tcUI&&tcUI.disconnect();
  if($('shRn'))$('shRn').onclick=renameAsk;
+ el.querySelectorAll('[data-reop]').forEach(b=>b.onclick=()=>{const o=S.ops.find(x=>x.id===+b.dataset.reop);if(o&&o.address)netInvoice({id:o.id,net:o.net,address:o.address,amount:o.amount,coin:o.coin,until:o.until})});
+ // поки є неоплачені/непідтверджені операції — оновлюємо список кожні 20 с (сервер сам перевіряє мережу)
+ clearTimeout(opsT);if(S.ops&&S.ops.some(o=>o.st==='new'||o.st==='wait'))opsT=setTimeout(()=>{if(tab==='shop'&&!busy)api('shopInfo').then(r=>{shopData=r.out;dirty.shop=1;flush()}).catch(()=>{})},20000);
 }
 // «Інші способи»: GRAM з гаманця TON або інша монета через @CryptoBot (08.11, рішення Влада)
 const CP_IC={USDT:'₮',BTC:'₿',ETH:'Ξ',TON:'💎',TRX:'🔺',LTC:'Ł',BNB:'🟡',USDC:'🔵'};
@@ -843,7 +847,7 @@ async function shopBuy(item,m,asset){
   const addr=await tcWallet();if(!addr){toast(errT(new Error('no_wallet')));return}
   const r=await api('shopBuy',{item,m,wallet:addr});
   try{await tcUI.sendTransaction(r.out.tx)}catch(e){toast(T('shop_cancel'));return}
-  toast(T('shop_wait'));shopWatch(r.out.id,0);
+  api('shopClaim',{id:r.out.id}).then(x=>{if(x.out.n){toast(T('shop_ok_t'));shopPaid()}else{toast(T('op_claimed'));shopData=x.out;dirty.shop=1;flush()}}).catch(()=>{});shopWatch(r.out.id,0);
  }catch(e){toast(errT(e))}
 }
 function shopWatch(id,n){ // перевіряємо блокчейн кожні 6 с до 3 хв; далі зарахує sync
@@ -862,9 +866,16 @@ function netInvoice(o){
  const stop=()=>{clearInterval(netIv);netIv=0};
  const chk=(manual)=>api('shopCheck',{id:o.id}).then(r=>{if(r.out.status==='paid'){stop();queue.shift();showModal();toast(T('shop_ok_t'));shopPaid()}else if(manual)toast(T('net_wait'))}).catch(e=>manual&&toast(errT(e)));
  modal(h,null,null,()=>{
-  $('nAdC').onclick=()=>copyText(o.address);$('nSuC').onclick=()=>copyText(String(o.amount));$('nPaid').onclick=()=>chk(true);
+  $('nAdC').onclick=()=>copyText(o.address);$('nSuC').onclick=()=>copyText(String(o.amount));$('nPaid').onclick=()=>{stop();queue.shift();showModal();api('shopClaim',{id:o.id}).then(r=>{const x=r.out;if(x.n){toast(T('shop_ok_t'));shopPaid()}else{toast(T('op_claimed'));shopData=x;dirty.shop=1;flush()}}).catch(e=>toast(errT(e)))};
   stop();let n=0;const tick=()=>{const e=$('nTm');if(!e){stop();return}const l=Math.max(0,o.until-Date.now()),m=Math.floor(l/6e4),s2=Math.floor(l%6e4/1e3);e.textContent=T('net_left',{t:m+':'+String(s2).padStart(2,'0')});if(l<=0){stop();e.textContent=T('net_over')}else if(++n%15===0)chk(false)};tick();netIv=setInterval(tick,1000);
  },'net');
+}
+let opsT=0;
+const OPS_ST={new:['🕓','op_new'],wait:['⏳','op_wait'],paid:['✅','op_paid'],refunded:['↩️','op_ref'],expired:['⌛','op_exp'],late:['⚠️','op_late']};
+const opM=o=>o.m==='stars'?'⭐ Stars':o.m==='gram'?'💎 GRAM':o.m==='usdt'?'💵 USDT (TON)':o.m==='net'?((OTH_NET.find(x=>x[0]===o.net)||[0,'',o.net])[2]):o.m;
+function opsHtml(ops){
+ return `<div class="card"><h4>🧾 ${T('ops_t')}</h4><div class="ops">${ops.map(o=>{const st=OPS_ST[o.st]||['•',o.st];return `<div class="op op-${o.st}"><div><b>${T('shop_i_'+o.item)}</b><small>${esc(opM(o))} · $${o.usd.toFixed(2)} · ${dt(o.at)}</small></div><span>${st[0]} ${T(st[1])}</span>${o.st==='new'&&o.address?`<button class="btn" data-reop="${o.id}">${T('op_open')}</button>`:''}</div>`}).join('')}</div>
+  ${ops.some(o=>o.st==='late')?`<p class="hint">${T('op_late_h')}</p>`:''}</div>`;
 }
 function renameAsk(){
  modal(`<div class="big">✏️</div><h3>${T('rename_t')}</h3><p class="hint">${T('rename_hint')}</p><input id="rnIn" maxlength="16" value="${esc0(G.nick||'')}" style="width:100%">`,T('save'),()=>{const v=($('rnIn').value||'').trim();if(v.length<2){toast(errT(new Error('bad_name')));return false}act('rename',{name:v},r=>{toast(T('rename_done',{n:esc(r.out.nick)}));shopReload()})});
