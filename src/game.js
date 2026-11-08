@@ -93,8 +93,8 @@ function lnchTick(){const el=$('lnch');if(!el)return;const left=lnchAt-(Date.now
 // між скиданням прогресу й стартом (картка 1): лише заставка з таймером, гра закрита; о старті — перезавантаження
 function lnchLock(l){let e=$('lnchLock');if(!e){e=document.createElement('div');e.id='lnchLock';e.className='lnchlock';e.innerHTML='<div><div class="big">🔥</div><h2>Grimtale</h2><p id="lnchLT"></p><p class="hint" id="lnchLR"></p></div>';document.body.appendChild(e)}
  const off=l.now-Date.now(),p2=x=>String(x).padStart(2,'0');
- const tk=()=>{const left=l.at-(Date.now()+off);if(left<=0){clearInterval(iv);location.reload();return}const s=Math.floor(left/1e3),d=Math.floor(s/86400);
-  $('lnchLT').textContent=T('lnch_t')+' '+(d?d+' '+T('lnch_d')+' ':'')+p2(Math.floor(s%86400/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60);$('lnchLR').textContent=T('lnch_run')};
+ const tk=()=>{const left=l.at-(Date.now()+off);if(left<=0){clearInterval(iv);setTimeout(()=>location.reload(),Math.random()*20e3);return} // 0–20 с розкиду, щоб усі не прийшли в ту саму секундуconst s=Math.floor(left/1e3),d=Math.floor(s/86400);
+  $('lnchLT').textContent=T('lnch_t')+' '+(d?d+' '+T('lnch_d')+' ':'')+p2(Math.floor(s%86400/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60);$('lnchLR').textContent=T('lnch_run2')};
  if(window.__lnchIv)clearInterval(window.__lnchIv);const iv=setInterval(tk,1000);window.__lnchIv=iv;tk()}
 function lnchSet(l){if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
@@ -537,7 +537,13 @@ const DNG=[{n:'Нора щурів',bg:'dbg1',reg:1},{n:'Вовче лігво',
 const MATN=['I','II','III','IV'];
 // матеріали «тир або вищі»: сервер бере спершу найнижчий доступний (takeMats); показуємо, що саме піде (08.11, Влад)
 function matUse(m,n){const M=G.mats||[],u=[];for(let i=m;i<4&&n>0;i++){const k=Math.min(n,M[i]||0);if(k){u.push([i,k]);n-=k}}return u}
-function matTxt(m,n){const u=matUse(m,n),hi=u.some(x=>x[0]>m);return '⛏️'+MATN[m]+(m<3?'+':'')+'×'+fmt(n)+(hi?` <span class="mhi">(${T('mat_use')}: ${u.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})</span>`:'')}
+function matTxt(m,n){const u=matUse(m,n),hi=u.some(x=>x[0]>m),have=u.reduce((a,x)=>a+x[1],0);return '⛏️'+MATN[m]+(m<3?'+':'')+'×'+fmt(n)+(have<n?` <span class="mhi">(${T('mat_lack',{n:fmt(n-have)})})</span>`:hi?` <span class="mhi">(${T('mat_use')}: ${u.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})</span>`:'')}
+// годування «до максимуму»: повторюємо цикл сервера (actPetFeed), щоб спитати про всі вищі матеріали, які піде (критик 08.11)
+function feedHi(l,want){const M=(G.mats||[]).slice(),hi={};let sh=G.shards,done=0;
+ while(done<want&&l<30){const c={mat:Math.min(2,Math.floor(l/10)),matN:5+l,sh:15*l,cat:(l===10||l===20)?1:0};if(c.cat&&done)break;
+  if(M.slice(c.mat).reduce((a,b)=>a+(b||0),0)<c.matN||sh<c.sh)break;let n=c.matN;for(let i=c.mat;i<4&&n>0;i++){const k=Math.min(n,M[i]||0);M[i]-=k;n-=k;if(k&&i>c.mat)hi[i]=(hi[i]||0)+k}
+  sh-=c.sh;l++;done++;if(c.cat)break}
+ return Object.keys(hi).map(i=>[+i,hi[i]])}
 function matAsk(m,n,go){const hi=matUse(m,n).filter(x=>x[0]>m);if(!hi.length)return go();modal(`<div class="big">⛏️</div><p>${T('mat_hi_ask',{m:MATN[m],u:hi.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})}</p>`,T('mat_hi_ok'),go,null,'matask')}
 const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');return d.toDateString()===n.toDateString()?p(d.getHours())+':'+p(d.getMinutes()):p(d.getDate())+'.'+p(d.getMonth()+1)};
 const dngD={}; // вибрана складність для кожного тиру
@@ -620,7 +626,7 @@ function dngResult(o){
  haptic(o.full?'heavy':'medium');
 }
 function gateTxt(c){return '🔩'+fmt(c.shards)+(c.mat>=0?' · '+matTxt(c.mat,c.matN):'')+(c.cat?' · 💎'+c.cat:'')}
-function gateOk(c){return G.shards>=c.shards&&(c.mat<0||((G.mats||[])[c.mat]||0)>=c.matN)&&G.cat>=c.cat}
+function gateOk(c){return G.shards>=c.shards&&(c.mat<0||(G.mats||[]).slice(c.mat).reduce((a,b)=>a+(b||0),0)>=c.matN)&&G.cat>=c.cat} // сервер бере «тир або вищі» (takeMats)
 function renderTrain(){
  const TG=(V.train&&V.train.gate)||{};
  let h='';for(const u of UPG){const l=G.up[u.k],mx=u.max&&l>=u.max,gc=TG[u.k];
@@ -633,7 +639,7 @@ function renderTrain(){
   h+='</div>'}
  h+=`<p class="hint">${T('train_hint')} ${T('train_cap_hint')} ${T('gate_hint')}</p>`;
  $('p-train').innerHTML=h;
- $('p-train').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>act('upgrade',{k:b.dataset.up,n:+b.dataset.n},r=>{haptic(r.out.gate?'heavy':'light');if(r.out.n>1)toast('+'+r.out.n+' · 💰'+fmt(r.out.cost))}));renderTrainBtns();
+ $('p-train').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const go=()=>act('upgrade',{k:b.dataset.up,n:+b.dataset.n},r=>{haptic(r.out.gate?'heavy':'light');if(r.out.n>1)toast('+'+r.out.n+' · 💰'+fmt(r.out.cost))});const gc=b.dataset.gate&&((V.train&&V.train.gate)||{})[b.dataset.up];if(gc&&gc.mat>=0)matAsk(gc.mat,gc.matN,go);else go()});renderTrainBtns();
 }
 function renderTrainBtns(){const TG=(V.train&&V.train.gate)||{};$('p-train').querySelectorAll('[data-up]').forEach(b=>{const u=UPG.find(x=>x.k===b.dataset.up);const l=G.up[u.k];b.disabled=busy||G.gold<u.cost(l)||(b.dataset.gate&&(!TG[u.k]||!gateOk(TG[u.k])))})}
 const LOGT={
@@ -708,7 +714,8 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if(!a&&!P.inc&&!(P.eggs.c||P.eggs.r))h=`<div class="card"><h4>🐾 ${T('sub_pet')}</h4><p class="hint">${T('pet_intro')}</p></div>`+h;
  $('p-pet').innerHTML=h;const E=$('p-pet');
  const fd=n=>act('petFeed',{n},r=>{toast(T('pet_fed',{l:r.out.l}));haptic('light')});
- const fdAsk=n=>{const b=$('pFeed');matAsk(+b.dataset.m,+b.dataset.n,()=>fd(n))};
+ const fdAsk=n=>{const b=$('pFeed');if(n===1)return matAsk(+b.dataset.m,+b.dataset.n,()=>fd(n));const a=(G.pet.list[G.pet.act]||{}).l||1,hi=feedHi(a,n);if(!hi.length)return fd(n);
+  modal(`<div class="big">⛏️</div><p>${T('mat_hi_ask',{m:MATN[Math.min(2,Math.floor(a/10))],u:hi.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})}</p>`,T('mat_hi_ok'),()=>fd(n),null,'matask')};
  if($('pFeed'))$('pFeed').onclick=()=>fdAsk(1);if($('pFeedM'))$('pFeedM').onclick=()=>fdAsk(30);
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
   modal(`<div class="big">${petFrame(P.act,(P.list[P.act]||{}).l,(P.list[P.act]||{}).s,1)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
@@ -819,7 +826,7 @@ function renderClan(){
   <p class="hint">${T('clan_mode_hint_'+(clanModeSel||CL.mode))}</p>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_stage')}</span><input id="cMs" class="inp" type="number" min="0" max="80" inputmode="numeric" value="${CL.minStage||0}" style="flex:1"></div>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_power')}</span><input id="cMp" class="inp" type="number" min="0" inputmode="numeric" value="${CL.minPower||0}" style="flex:1"></div>
-  <div class="row" style="align-items:center"><span style="flex:1">${T('clan_tg_t')}</span><input id="cTg" class="inp" type="text" maxlength="60" placeholder="t.me/назва_групи" value="${esc(CL.tg||'')}" style="flex:1"></div>
+  <div class="row" style="align-items:center"><span style="flex:1">${T('clan_tg_t')}</span><input id="cTg" class="inp" type="text" maxlength="64" placeholder="t.me/назва_групи" value="${esc(CL.tg||'')}" style="flex:1"></div>
   <p class="hint">${T('clan_tg_hint')}</p>
   <div class="row"><button class="btn pri" id="cSet">${T('save')}</button></div></div>`;
  else S.members+=`<p class="hint">${T('clan_mode_'+CL.mode)}${CL.minStage?' · '+T('stage',{n:CL.minStage}):''}${CL.minPower?' · 💪 '+fmt(CL.minPower):''}</p>`;
