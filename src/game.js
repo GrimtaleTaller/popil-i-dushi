@@ -866,7 +866,7 @@ function netInvoice(o){
   <div class="netb"><span>${T('net_net')}</span><b>${esc(nt[3])}</b></div>
   <div class="netb"><span>${T('net_addr')}</span><code id="nAd">${esc(o.address)}</code><button class="btn" id="nAdC">📋</button></div>
   <div class="netb"><span>${T('net_sum')}</span><code id="nSu">${esc(o.amount)} ${o.coin}</code><button class="btn" id="nSuC">📋</button></div>
-  <p class="netw">⚠️ ${T('net_only',{c:o.coin})}</p><p class="hint" style="text-align:center">${T('net_exact')}</p><p class="hint" style="text-align:center"><b id="nTm"></b></p>
+  <p class="netw">⚠️ ${T('net_only2',{c:o.coin,n:esc(nt[3])})}</p><p class="hint" style="text-align:center">${T('net_exact')}</p><p class="hint" style="text-align:center"><b id="nTm"></b></p>
   <div class="row"><button class="btn pri" id="nPaid">${T('net_paid')}</button></div>`;
  const stop=()=>{clearInterval(netIv);netIv=0};
  const chk=(manual)=>api('shopCheck',{id:o.id}).then(r=>{if(r.out.status==='paid'){stop();queue.shift();showModal();toast(T('shop_ok_t'));shopPaid()}else if(manual)toast(T('net_wait'))}).catch(e=>manual&&toast(errT(e)));

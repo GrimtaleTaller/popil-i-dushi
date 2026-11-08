@@ -241,3 +241,6 @@ Object.assign(window.I18N.ru.t,{net_w:'сеть',from_usd:'от ${x}',net_usd:'�
 Object.assign(window.I18N.uk.err,{shop_min:'Для цієї покупки цей спосіб оплати недоступний — сума замала'});
 Object.assign(window.I18N.en.err,{shop_min:'This payment method isn’t available for such a small purchase'});
 Object.assign(window.I18N.ru.err,{shop_min:'Для этой покупки этот способ оплаты недоступен — сумма слишком мала'});
+Object.assign(window.I18N.uk.t,{net_only2:'Надсилай лише {c} у мережі {n}. Будь-яка інша монета чи мережа не зарахується.'});
+Object.assign(window.I18N.en.t,{net_only2:'Send only {c} on the {n} network. Any other coin or network won’t be credited.'});
+Object.assign(window.I18N.ru.t,{net_only2:'Отправляй только {c} в сети {n}. Любая другая монета или сеть не зачислится.'});
