@@ -773,7 +773,7 @@ function renderProfile(){
 // ---------- магазин (08.11, варіант А): Stars і крипто в мережі TON ----------
 let shopData=null,shopBusy=false,tcUI=null,tcLoading=null,shopPoll=0;
 const SHOP_DESC={vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
-const shortAddr=a=>a?String(a).slice(0,4)+'…'+String(a).slice(-4):'';
+const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function loadTC(){ // TON Connect вантажимо лише тоді, коли гравець обирає оплату криптою
  if(tcUI)return Promise.resolve(tcUI);
@@ -781,7 +781,9 @@ function loadTC(){ // TON Connect вантажимо лише тоді, коли
  return tcLoading;
 }
 async function tcWallet(){const ui=await loadTC();if(ui.account&&ui.account.address)return ui.account.address;
- await ui.openModal();return await new Promise(res=>{const off=ui.onStatusChange(w=>{off();res(w&&w.account?w.account.address:null)});setTimeout(()=>res(ui.account?ui.account.address:null),180e3)})}
+ await ui.openModal();return await new Promise(res=>{let done=false;const fin=a=>{if(done)return;done=true;off1();off2();res(a)};
+  const off1=ui.onStatusChange(w=>fin(w&&w.account?w.account.address:null));
+  const off2=ui.onModalStateChange?ui.onModalStateChange(st=>{if(st&&st.status==='closed')setTimeout(()=>fin(ui.account?ui.account.address:null),300)}):()=>{}})} // закрив вікно без підключення — не чекаємо (критик 08.11)
 function shopReload(){shopData=null;dirty.shop=1;flush()}
 function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
 function renderShop(){
@@ -803,7 +805,7 @@ function renderShop(){
     <p class="hint shpool">⭐ ${T('shop_pool_add',{x:it.pool.stars.toFixed(2)})} · 💎/💵 ${T('shop_pool_add',{x:it.pool.crypto.toFixed(2)})}</p>`}</div>`;
  }
  h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
-  ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(tcUI.wallet&&tcUI.wallet.account?tcUI.wallet.account.address:w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
+  ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
   <p class="hint">${T('shop_support')}</p></div>`;
  el.innerHTML=h;
  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>shopBuy(b.dataset.buy,b.dataset.m));
