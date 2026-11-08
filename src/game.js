@@ -798,29 +798,38 @@ function renderShop(){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||'');
   h+=`<div class="card shopc"><h4>${T('shop_i_'+it.k)}</h4><p class="hint">${desc}</p>
    ${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
-   ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
-    <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
-    <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 $${it.usd.toFixed(2)}</button>
-    <button class="btn" data-other="${it.k}"${soon?' disabled':''}>🪙 ${T('shop_other')}</button></div>
-    <p class="hint shpool">⭐ ${T('shop_pool_add',{x:it.pool.stars.toFixed(2)})} · 💵/🪙 ${T('shop_pool_add',{x:it.pool.crypto.toFixed(2)})}</p>`}</div>`;
+   ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb"><button class="btn pri" data-pay="${it.k}"${soon?' disabled':''}>⭐ ${it.stars} · $${it.usd.toFixed(2)}</button></div>
+    <p class="hint shpool">${T('shop_pool_add',{x:it.pool.crypto.toFixed(2)})}</p>`}</div>`;
  }
  h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
   ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
   <p class="hint">${T('shop_support')}</p></div>`;
  el.innerHTML=h;
- el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>shopBuy(b.dataset.buy,b.dataset.m));
- el.querySelectorAll('[data-other]').forEach(b=>b.onclick=()=>shopOther(b.dataset.other));
+ el.querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>shopPay(b.dataset.pay));
  if($('shOff'))$('shOff').onclick=()=>tcUI&&tcUI.disconnect();
  if($('shRn'))$('shRn').onclick=renameAsk;
 }
 // «Інші способи»: GRAM з гаманця TON або інша монета через @CryptoBot (08.11, рішення Влада)
 const CP_IC={USDT:'₮',BTC:'₿',ETH:'Ξ',TON:'💎',TRX:'🔺',LTC:'Ł',BNB:'🟡',USDC:'🔵'};
-function shopOther(k){
- const it=shopData.items.find(x=>x.k===k);if(!it)return;const cpl=shopData.cp||[];
- const h=`<div class="big">🪙</div><h3>${T('shop_other_t')}</h3><p class="hint">${T('shop_i_'+k)} · $${it.usd}</p>
-  ${it.gram?`<p class="hint" style="margin:10px 0 4px">${T('shop_via_wallet')}</p><div class="row shopb"><button class="btn" data-oth="gram">💎 ${it.gram} GRAM</button></div>`:''}
-  ${cpl.length?`<p class="hint" style="margin:10px 0 4px">${T('shop_via_cp')}</p><div class="row shopb cpl">${cpl.map(a=>`<button class="btn" data-oth="cp:${a}">${CP_IC[a]||'🪙'} ${a==='TON'?'GRAM':a}</button>`).join('')}</div><p class="hint">${T('shop_cp_hint')}</p>`:`<p class="hint">${T('shop_cp_soon')}</p>`}`;
- modal(h,null,null,()=>document.querySelectorAll('#mbox [data-oth]').forEach(b=>b.onclick=()=>{const v=b.dataset.oth;queue.shift();showModal();if(v==='gram')shopBuy(k,'gram');else shopBuy(k,'cpay',v.slice(3))}),'oth');
+// «Інші способи оплати»: переказ на адресу гри в інших мережах (як у конкурентів; 08.11, рішення Влада) — список мереж зі шапки магазину
+const OTH_NET=[['usdt_trc20','₮','USDT · TRC20 (TRON)'],['usdt_bep20','₮','USDT · BEP20 (BSC)'],['bnb','🟡','BNB · BSC'],['sol','🟣','SOL · Solana'],['eth','Ξ','ETH · Ethereum']];
+// вікно вибору оплати (08.11, за референсом Влада): Stars, GRAM, USDT (TON), «Інші способи оплати ▼», гаманець для оплати
+function shopPay(k){
+ const it=shopData.items.find(x=>x.k===k);if(!it)return;const on=shopData.nets||[],w=tcUI&&tcUI.account;
+ const h=`<h3 style="margin-top:0">${T('shop_pick_t')}</h3><p class="hint" style="text-align:center">${T('shop_i_'+k)} · ${T('shop_pool_add',{x:it.pool.crypto.toFixed(2)})}</p>
+  <div class="paym">
+   <button class="pm pm-st" data-pm="stars"><span>⭐ Telegram Stars</span><b>★ ${it.stars}</b></button>
+   ${it.gram?`<button class="pm pm-cr" data-pm="gram"><span>💎 GRAM</span><b>${it.gram} · $${it.usd.toFixed(2)}</b></button>`:''}
+   <button class="pm pm-cr" data-pm="usdt"><span>₮ USDT (TON)</span><b>$${it.usd.toFixed(2)}</b></button>
+   <button class="pm pm-oth" id="pmOth">${T('shop_other_link')} ▾</button>
+   <div class="othl" id="pmOthL" hidden>${OTH_NET.map(([n,ic,l])=>`<button class="btn" data-pm="net:${n}"${on.includes(n)?'':' disabled'}>${ic} ${l}${on.includes(n)?'':' · '+T('shop_soon_s')}</button>`).join('')}<p class="hint">${on.length?T('shop_oth_hint'):T('shop_oth_soon')}</p></div>
+  </div>
+  <div class="pmw"><span>${T('shop_wallet_t')}</span><button class="btn" id="pmW">${w?shortAddr(w.address)+' ▾':T('shop_wallet_conn')}</button></div>`;
+ modal(h,null,null,()=>{
+  $('pmOth').onclick=()=>{const l=$('pmOthL');l.hidden=!l.hidden};
+  $('pmW').onclick=async()=>{try{const ui=await loadTC();if(ui.account){await ui.disconnect()}await tcWallet()}catch(e){}queue.shift();showModal();shopPay(k)};
+  document.querySelectorAll('#mbox [data-pm]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const v=b.dataset.pm;queue.shift();showModal();if(v.startsWith('net:'))shopBuy(k,'net',v.slice(4));else shopBuy(k,v)});
+ },'pay');
 }
 async function shopBuy(item,m,asset){
  if(busy)return;

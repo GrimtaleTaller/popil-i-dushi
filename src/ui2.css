@@ -272,3 +272,12 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .lvl{position:relative}.lvl.vip::after{content:'👑';position:absolute;top:-9px;right:-7px;font-size:12px;filter:drop-shadow(0 0 3px #f2c14e88)}
 .shopc .shopb{flex-wrap:wrap;gap:6px}.shopc .shopb .btn{flex:1 1 30%;min-width:90px;white-space:nowrap}
 .shopc .shpool{font-size:11px;color:#c9a96a;margin-top:4px}
+.shopc .shoth{margin:6px 0 0;text-align:center;font-size:12px}.shopc .shoth a{color:var(--gold);text-decoration:none;opacity:.85}
+.othl{display:flex;flex-direction:column;gap:6px;margin:10px 0}.othl .btn{text-align:left}.othl .btn[disabled]{opacity:.45}
+.paym{display:flex;flex-direction:column;gap:9px;margin:12px 0}
+.paym .pm{display:flex;justify-content:space-between;align-items:center;width:100%;padding:14px 16px;border-radius:14px;border:0;font:inherit;font-weight:700;font-size:16px;cursor:pointer;color:#fff}
+.paym .pm-st{background:linear-gradient(90deg,#7b4fd0,#a77cf0);box-shadow:0 4px 18px #7b4fd055}
+.paym .pm-cr{background:linear-gradient(90deg,#c0563a,#e08a3c);color:#1a0f0a}
+.paym .pm-oth{background:transparent;border:1px solid #ffffff22;color:var(--gold);font-weight:600;font-size:14px;justify-content:center}
+.pmw{border-top:1px solid #ffffff14;padding-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}.pmw span{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut,#a99)}
+.othl[hidden]{display:none}
