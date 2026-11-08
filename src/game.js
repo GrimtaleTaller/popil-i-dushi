@@ -102,7 +102,7 @@ const GAME_CHAT='https://t.me/GRIMTALECHAT'; // чат гравців (08.11)
 function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CHAT);else window.open(GAME_CHAT,'_blank','noopener')}
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
- V=v;G=v.s;H=v.hero;lnchSet(v.launch);pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -189,7 +189,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,clan:1,market:1};
+const dirty={quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,shop:1,clan:1,market:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?(?:span|i|b|small)(?:\s+(?:class|style)="[^"<>]*")*\s*>)/g,'&lt;'); /* 07.11 (критик): лише class/style, без onclick тощо */ /* 05.11: значок каменя має <i> (рівень) — раніше він показувався як текст */e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -676,7 +676,7 @@ const LOGT={
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):`<div class="empty">${T('log_empty')}</div>`)+'</div>'}
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,clan:renderClan,market:renderMarket})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,shop:renderShop,clan:renderClan,market:renderMarket})[tab]()}}
 
 // ---------- профіль ----------
 let profData=null,profBusy=false,adminData=null;
@@ -751,7 +751,7 @@ function renderProfile(){
   <div><span>${T('clan')}</span><b>${P.clan?esc(P.clan):'—'}</b></div><div><span>🏆 ${T('top_rating')}</span><b>${P.arena.rating} (${P.arena.w}/${P.arena.l})</b></div></div></div>`;
  h+=`<div class="card"><h4>👥 ${T('refs')}</h4><p class="hint">${T('refs_hint',{a:R.pct[0],b:R.pct[1],c:R.pct[2]})}</p>
   <div class="arenah"><div><b>${R.n1}</b><span>${T('ref_lvl',{n:1})} · ${R.pct[0]}%</span></div><div><b>${R.n2}</b><span>${T('ref_lvl',{n:2})} · ${R.pct[1]}%</span></div><div><b>${R.n3}</b><span>${T('ref_lvl',{n:3})} · ${R.pct[2]}%</span></div></div>
-  <div class="reflink">${esc(link)}</div><div class="row"><button class="btn pri" id="pInv">${T('invite')}</button><button class="btn" id="pCopy">📋 ${T('copy')}</button></div>
+  ${P.refUsd>0?`<p class="hint">💵 ${T('ref_usd',{n:P.refUsd.toFixed(2)})}</p>`:''}<div class="reflink">${esc(link)}</div><div class="row"><button class="btn pri" id="pInv">${T('invite')}</button><button class="btn" id="pCopy">📋 ${T('copy')}</button></div>
   ${R.list.length?'<div class="rank" style="margin-top:8px">'+R.list.map(x=>`<div><b>👤</b><span>${esc(x.name)}</span><i style="color:var(--mut);font-weight:600">${T('lvl',{n:x.lvl})} · ${T('stage',{n:x.stage})}</i></div>`).join('')+'</div>':`<p class="hint">${T('no_refs')}</p>`}</div>`;
  h+=`<div class="card"><h4>📈 ${T('stats')}</h4><div class="resg">
   <div><span>${T('max_stage')}</span><b>${G.maxStage}</b></div><div><span>${T('kills')}</span><b>${fmt(G.tot.kills)}</b></div>
@@ -769,6 +769,68 @@ function renderProfile(){
  $('pInv').onclick=invite;$('pCopy').onclick=()=>copyText(link);
  $('pRef').onclick=()=>{profData=null;adminData=null;renderProfile()};
  if(V.isAdmin&&!adminData)api('admin').then(r=>{adminData=r.out;dirty.prof=1}).catch(e=>toast(errT(e)));
+}
+// ---------- магазин (08.11, варіант А): Stars і крипто в мережі TON ----------
+let shopData=null,shopBusy=false,tcUI=null,tcLoading=null,shopPoll=0;
+const SHOP_DESC={vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
+const shortAddr=a=>a?String(a).slice(0,4)+'…'+String(a).slice(-4):'';
+function vipActive(){return (G&&G.vip||0)>Date.now()}
+function loadTC(){ // TON Connect вантажимо лише тоді, коли гравець обирає оплату криптою
+ if(tcUI)return Promise.resolve(tcUI);
+ if(!tcLoading)tcLoading=new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://unpkg.com/@tonconnect/ui@2/dist/tonconnect-ui.min.js';sc.onload=()=>{try{tcUI=new TON_CONNECT_UI.TonConnectUI({manifestUrl:new URL('tonconnect-manifest.json',location.href).href});tcUI.onStatusChange(()=>{dirty.shop=1;flush()});ok(tcUI)}catch(e){no(e)}};sc.onerror=()=>{tcLoading=null;no(new Error('net'))};document.head.appendChild(sc)});
+ return tcLoading;
+}
+async function tcWallet(){const ui=await loadTC();if(ui.account&&ui.account.address)return ui.account.address;
+ await ui.openModal();return await new Promise(res=>{const off=ui.onStatusChange(w=>{off();res(w&&w.account?w.account.address:null)});setTimeout(()=>res(ui.account?ui.account.address:null),180e3)})}
+function shopReload(){shopData=null;dirty.shop=1;flush()}
+function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
+function renderShop(){
+ const el=$('p-shop');if(!el)return;
+ if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
+  if(!shopBusy){shopBusy=true;api('shopInfo').then(r=>{shopData=r.out}).catch(e=>toast(errT(e))).finally(()=>{shopBusy=false;dirty.shop=1;flush()})}return}
+ const S=shopData,soon=V.launch&&!V.isAdmin,w=tcUI&&tcUI.account;
+ let h=`<div class="card"><h4>🛒 ${T('shop_t')}</h4><p class="hint">${T('shop_hint')}</p><div class="resg"><div><span>💰 ${T('shop_pool')}</span><b>$${S.pool.toFixed(2)}</b></div>${vipActive()?`<div><span>👑 VIP</span><b>${dt(G.vip)}</b></div>`:''}</div>
+  ${soon?`<p class="hint" style="color:var(--gold)">${T('shop_soon_t')}</p>`:''}
+  ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
+ for(const it of S.items){
+  const done=it.left===0,desc=T(SHOP_DESC[it.k]||'');
+  h+=`<div class="card shopc"><h4>${T('shop_i_'+it.k)}</h4><p class="hint">${desc}</p>
+   ${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
+   ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
+    <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
+    ${it.gram?`<button class="btn" data-buy="${it.k}" data-m="gram"${soon?' disabled':''}>💎 ${it.gram} GRAM</button>`:''}
+    <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 ${it.usd} USDT</button></div>
+    <p class="hint shpool">⭐ ${T('shop_pool_add',{x:it.pool.stars.toFixed(2)})} · 💎/💵 ${T('shop_pool_add',{x:it.pool.crypto.toFixed(2)})}</p>`}</div>`;
+ }
+ h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
+  ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(tcUI.wallet&&tcUI.wallet.account?tcUI.wallet.account.address:w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
+  <p class="hint">${T('shop_support')}</p></div>`;
+ el.innerHTML=h;
+ el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>shopBuy(b.dataset.buy,b.dataset.m));
+ if($('shOff'))$('shOff').onclick=()=>tcUI&&tcUI.disconnect();
+ if($('shRn'))$('shRn').onclick=renameAsk;
+}
+async function shopBuy(item,m){
+ if(busy)return;
+ try{
+  if(m==='stars'){
+   const r=await api('shopBuy',{item,m});const w=tg();
+   if(!w||!w.openInvoice){window.open(r.out.link,'_blank','noopener');return}
+   w.openInvoice(r.out.link,st=>{if(st==='paid'){toast(T('shop_ok_t'));shopPaid();setTimeout(sync,3000)}else if(st==='failed')toast(T('shop_fail'));else if(st==='cancelled')toast(T('shop_cancel'))});
+   return;
+  }
+  const addr=await tcWallet();if(!addr){toast(errT(new Error('no_wallet')));return}
+  const r=await api('shopBuy',{item,m,wallet:addr});
+  try{await tcUI.sendTransaction(r.out.tx)}catch(e){toast(T('shop_cancel'));return}
+  toast(T('shop_wait'));shopWatch(r.out.id,0);
+ }catch(e){toast(errT(e))}
+}
+function shopWatch(id,n){ // перевіряємо блокчейн кожні 6 с до 3 хв; далі зарахує sync
+ clearTimeout(shopPoll);
+ shopPoll=setTimeout(()=>api('shopCheck',{id}).then(r=>{if(r.out.status==='paid'){toast(T('shop_ok_t'));shopPaid()}else if(n<30)shopWatch(id,n+1);else modal(`<div class="big">⏳</div><p>${T('shop_pending')}</p>`,'OK')}).catch(()=>{if(n<30)shopWatch(id,n+1)}),6000);
+}
+function renameAsk(){
+ modal(`<div class="big">✏️</div><h3>${T('rename_t')}</h3><p class="hint">${T('rename_hint')}</p><input id="rnIn" maxlength="16" value="${esc0(G.nick||'')}" style="width:100%">`,T('save'),()=>{const v=($('rnIn').value||'').trim();if(v.length<2){toast(errT(new Error('bad_name')));return false}act('rename',{name:v},r=>{toast(T('rename_done',{n:esc(r.out.nick)}));shopReload()})});
 }
 function adminHtml(){
  const A=adminData;if(!A)return `<div class="card"><h4>🛠️ ${T('admin')}</h4><p class="hint">${T('loading')}</p></div>`;
@@ -940,6 +1002,7 @@ function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show')
 let dailyShown='';
 function afterSync(r){
  const p=r.prog;
+ if(G&&(G.buyN||0)>(G.buySeen||0)){modal(`<div class="big">🎁</div><h3>${T('shop_ok_t')}</h3><p>${T('shop_ok')}</p>`,'OK',null,null,'buy');api('buySeen').catch(()=>{});shopData=null}
  if(r.news)showNews(r.news);
  if(r.reward)modal(`<div class="big">🏆</div><h3>${T('reward_t')}</h3><p>${T('reward_txt',{a:fmt(r.reward)})}</p>`,T('claim'));
  if(p&&p.offline&&p.sec>=60&&p.kills>0){const h=Math.floor(p.sec/3600),m=Math.floor(p.sec%3600/60);
@@ -1152,12 +1215,12 @@ function wbResult(o){
 // головні вкладки й підвкладки
 const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'quest'};
 // 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Пітомець, Тренування, Журнал, Профіль — у вікні героя на весь екран
-const groupOf=t=>['bag','market','pet','train','log','prof'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'?'quest':t;
+const groupOf=t=>['bag','market','shop','pet','train','log','prof'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'?'quest':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 // «Герой» (Спорядження / Пітомець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
 // Підвкладки й панелі героя переносяться в шторку й повертаються назад при закритті. Закрити: ✕, тап по затемненню, свайп униз по шапці.
-let prevTab='hero';const HERO_PANES=['bag','market','pet','train','log','prof'];
+let prevTab='hero';const HERO_PANES=['bag','market','shop','pet','train','log','prof'];
 function heroSheet(open){
  let sh=$('hsheet');
  if(!sh){sh=document.createElement('div');sh.id='hsheet';sh.innerHTML=`<div class="hs-bg"></div><div class="hs-box"><div class="hs-head"><div class="hs-t"><b id="hsTitle"></b><span id="hsSub"></span></div><div class="hs-cur" id="hsCur"></div><button class="mx" id="hsX">✕</button></div><div class="hs-body" id="hsBody"></div></div>`;document.body.appendChild(sh);
@@ -1180,7 +1243,7 @@ function heroSheet(open){
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['shop','sub_shop'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:tab;e.style.display='flex';
  e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');
