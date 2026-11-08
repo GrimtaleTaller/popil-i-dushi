@@ -200,7 +200,7 @@ function gemStat(k,il){const g=gemP(k),C=gemCfg(),v=Math.pow(1.16,il-1)*C.m[g.l-
 function fullSt(it){const g=gemSum(it),o={},st=stSr(it);for(const k of ['atk','hp','def','crit'])if((st[k]||0)+g[k])o[k]=(st[k]||0)+g[k];return o}
 function stSr(it){if(!it.sr)return it.st;const m=1+((V&&V.afx&&V.afx.star.step)||0.08)*it.sr,o={...it.st};for(const k of ['atk','hp','def'])if(o[k])o[k]=Math.round(o[k]*m);return o} // характеристики з урахуванням зірок (05.11)
 function gemSum(it){const o={atk:0,hp:0,def:0,crit:0};for(const k of it.gm||[]){const s=gemStat(k,it.il);for(const x in s)o[x]+=s[x]}return o}
-const gemIc=(k,big)=>{const g=gemP(k);return `<span class="gem${big?' big':''}" style="--gc:${GEMC[g.t]}">◆<i>${ROM[g.l-1]}</i></span>`};
+const gemIc=(k,big)=>{const g=gemP(k);return `<span class="gem gimg${big?' big':''}" style="--gc:${GEMC[g.t]};background-image:url(assets/gems/${g.t}${g.l}.webp?v=1)"><i>${ROM[g.l-1]}</i></span>`}; // 08.11: намальовані камені (Higgsfield), фоном — щоб працювало й у toast
 const gemName=k=>{const g=gemP(k);return T('gem_'+g.t)+' '+ROM[g.l-1]};
 const gemTxt=(k,il)=>{const s=gemStat(k,il),x=Object.keys(s)[0];return '+'+(x==='crit'?s[x].toFixed(1)+'%':fmt(s[x]))+' '+STATN[x]};
 const sockN=it=>gemCfg().sockets[it.r]||0;
@@ -268,7 +268,7 @@ function myId(){const w=tg();return w&&w.initDataUnsafe&&w.initDataUnsafe.user?w
 function bioLink(){return 't.me/'+BOT+'?startapp=ref_'+myId()}
 function inviteLink(){return 'https://t.me/'+BOT+'?startapp=ref_'+myId()}
 function invite(){
- const link=inviteLink(),text=T('invite_text');
+ const link=inviteLink(),IV=['invite_text','invite_text2','invite_text3'];let ivn=0;try{ivn=(+localStorage.getItem('gt_iv')||0)%3;localStorage.setItem('gt_iv',ivn+1)}catch(e){ivn=Math.floor(Math.random()*3)} const text=T(IV[ivn]); // 08.11: тексти 3, 9, 10 по черзі, мовою гри гравця
  const w=tg();
  if(w&&w.openTelegramLink){w.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(text+'\n'+link));return} // посилання — після тексту «…моє запрошення:»
  try{navigator.clipboard.writeText(link);toast(T('link_copied'))}catch(e){toast(link)}
@@ -512,15 +512,18 @@ function renderForge(){
  const myths=[...SLOTS.map(s=>G.eq[s]).filter(i=>i&&i.r===5),...G.inv.filter(i=>i.r===5)],A=F.ast;
  const mOf=s=>myths.filter(i=>i.slot===s);
  if(!aSlot||!mOf(aSlot).length)aSlot=SLOTS.find(s=>mOf(s).length)||aSlot||'weapon';
- const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aEx=aIt?astExtra(aIt):{gold:0,shards:0},aOk=aIt&&G.cat>=A.cat&&(G.ess||0)>=A.ess&&G.souls>=aSo&&G.gold>=aEx.gold&&G.shards>=aEx.shards,eqA=G.eq[aSlot];
+ const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aEx=aIt?astExtra(aIt):{gold:0,shards:0},eqA=G.eq[aSlot];
+ // 08.11 (варіант Ж): 2 прадавні з сумки в жертву (найслабші, спершу без зірок і перекидань, без каменів) + 📜 Сувій
+ const aNeed=A.sac||2,aScr=G.scroll||0,aSac=G.inv.filter(i=>i.r===5&&(!aIt||i.id!==aIt.id)&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b)).slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
+ const aOk=aIt&&aScr>=1&&aSac.length>=aNeed&&G.souls>=aSo&&G.gold>=aEx.gold&&G.shards>=aEx.shards;
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
   ${AM.length?`${AM.length>1?`<p class="hint">${T('ast_one')}</p>`:''}<div class="anvil ast">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b>${eqA&&eqA.id===it.id?`<em class="aon">${T('ast_on')}</em>`:''}${it.gm&&it.gm.length?`<em class="agm">◆${it.gm.length}</em>`:''}</div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*RAR[6].m/RAR[5].m))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
-   <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.souls,aSo,'🔥')} · ${resC(G.cat,A.cat,'💎')} · ${resC(G.ess||0,A.ess,'✦')}</span></div>${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
-  <p class="hint">${T('ast_keep')}</p>
+   <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.souls,aSo,'🔥')} · ${resC(aScr,1,'📜')}</span></div><div class="chrow"><span class="sub">${T('ast_sac',{n:aNeed})}</span><span>${aSac.length>=aNeed?aSac.map((i,k)=>`<span class="gic r5" style="width:30px;height:30px;position:relative" title="${k?'':T('ast_burn1')}">${gearArt(i.slot,i.r,i.nm)}${k?'':'<i style="position:absolute;right:-4px;bottom:-4px;font-style:normal;font-size:12px">🔥</i>'}</span>`).join(' '):`<em class="lack">${T('ast_sac_lack',{n:aNeed-aSac.length})}</em>`}</span></div>${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
+  <p class="hint">${T('ast_keep')}</p><p class="hint">📜 ${T('ast_scroll_src',{n:aScr})}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
  if(fsub==='gem')h+=gemPane();
  $('p-forge').innerHTML=h;
@@ -534,7 +537,8 @@ function renderForge(){
  if($('mMaxB'))$('mMaxB').onclick=()=>{mN=Math.min(Math.max(need,maxN),need+maxExtra);renderForge()};
  $('p-forge').querySelectorAll('[data-as]').forEach(b=>b.onclick=()=>{aSlot=b.dataset.as;aSel=null;renderForge()});
  $('p-forge').querySelectorAll('[data-asel]').forEach(b=>b.onclick=()=>{aSel=+b.dataset.asel;renderForge()});
- if($('astGo'))$('astGo').onclick=()=>{if(aIt)act('astral',{id:aIt.id},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else toast(T('ast_fail',{c:r.out.chance}))})};
+ if($('astGo'))$('astGo').onclick=()=>{if(!aIt)return;const go=()=>act('astral',{id:aIt.id,sac:aSac.map(i=>i.id)},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else{const b=(r.out.burned||[])[0];toast(T('ast_fail2',{c:r.out.chance,s:b&&SLOT[b.slot]?SLOT[b.slot].n:''}))}});
+  if(aSacUp)modal(`<h3>${T('ast_up_t')}</h3><p>${T('ast_up_d')}</p>`,T('ast_up_ok'),()=>{go()});else go()}; // 08.11 (критик): річ із зірками чи перекиданнями в жертву — лише після підтвердження
  if($('myth'))$('myth').onclick=()=>{const ids=LGs.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
 }
 const DNG=[{n:'Нора щурів',bg:'dbg1',reg:1},{n:'Вовче лігво',bg:'dbg2',reg:1},{n:'Склеп короля',bg:'dbg3',reg:2},{n:'Болотне капище',bg:'dbg4',reg:3},{n:'Вогняна кузня',bg:'dbg5',reg:4},{n:'Крижана печера',bg:'dbg6',reg:5},{n:'Затонулий храм',bg:'dbg7',reg:6},{n:'Зала дзеркал',bg:'dbg8',reg:7},{n:'Серце безодні',bg:'dbg9',reg:8},{n:'Трон попелу',bg:'dbg10',reg:8}]; // власні фони підземель (31.10)
@@ -617,14 +621,14 @@ function dngPlay(o){
 // підсумок серії заходів
 function dngBatch(o){
  const d=DNG[o.t-1],g=o.gain;
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+${g.scroll}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
  modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
  haptic('heavy');
 }
 function dngResult(o){
  const d=DNG[o.t-1],g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?T('boss'):T('room',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
  modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
  haptic(o.full?'heavy':'medium');
@@ -667,6 +671,7 @@ const LOGT={
  arena:a=>T('log_arena',{r:T(a[0]?'pvp_win':'pvp_lose'),n:esc(a[1]),d:(a[2]>=0?'+':'')+a[2]}),
  gate:a=>T('log_gate',{s:(UPG.find(u=>u.k===a[0])||{n:a[0]}).n,n:a[1]}),
  dng:a=>T('log_dng',{d:DNG[a[0]-1].n,r:T(a[1]?'log_dng_ok':'log_dng_fail'),c:a[2]}),
+ scroll:a=>`<span style="color:${RAR[6].c}">📜 ${a[0]?T('log_scroll_d',{t:a[1]}):T('log_scroll_w')}</span>`,
  astral:a=>a[0]?`<span style="color:${RAR[6].c}">${T('log_ast_ok',{s:SLOT[a[1]].n})}</span>`:T('log_ast_fail',{c:a[2]}),
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
@@ -1083,7 +1088,7 @@ function renderQuest(){
  const dr=rwTxt(P.dqR);
  const BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
  h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_hint',{l:bioLink()})}</p><div class="row" style="gap:8px"><button class="btn" id="qBioCopy">📋 ${T('bio_copy')}</button><button class="btn pri" id="qBioChk">🔗 ${T('bio_check')}</button></div>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
- h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+'</div>';
+ h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`<p class="hint">${P.wb?'✅ ':''}${T('wq_all')}</p></div>`; // 08.11: усі завдання тижня → Сувій вічності
  h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#</b><span>${T('pass_free')}</span><span>👑 ${T('pass_paid')}</span></div>`;
  for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i);
   h+=`<div class="${ok?'on':''}"><b>${i}</b><span>${f?'✓ ':''}${rwTxt(P.free[i-1])}</span><span class="${P.prem?'':'lock'}">${p?'✓ ':P.prem?'':'🔒 '}${rwTxt(P.paid[i-1])}</span></div>`}
