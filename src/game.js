@@ -416,11 +416,35 @@ function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.sh
 function dismantle(ids){act('dismantle',{ids,mode:G.dismode},r=>toast(disMsg(r.out)))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
 let mSlot=null,mN=3,fsub='res',gemSel=null,aSlot=null,aSel=null;
-function gemPane(){const C=gemCfg(),GM=G.gems||{};
+// ── Камені: злиття (картка 2, макет A «компактна таблиця», 08.11) ──
+// Правило й ціни — із сервера (V.gem.merge): need однакових каменів рівня l → 1 рівня l+1 (до V);
+// ціна — матеріал рівня каменів «або вищий» (як у тренуванні й кормі пітомця) × matN і уламки sh. all — розрахунок «злити все» від сервера.
+const gmCfg=()=>gemCfg().merge||{need:3,cost:[1,2,3,4].map(()=>({mat:0,matN:0,sh:0})),all:null}; // старий сервер: 3 → 1 безкоштовно
+const matsFrom=m=>(G.mats||[]).slice(m).reduce((a,b)=>a+(b||0),0);
+function gmInfo(k){const M=gmCfg(),l=+k[1],n=(G.gems||{})[k]||0;if(l>=gemCfg().max)return{n,max:1,x:0,lack:[]};
+ const c=M.cost[l-1],hm=matsFrom(c.mat),sh=G.shards||0,x=Math.min(Math.floor(n/M.need),c.matN?Math.floor(hm/c.matN):1e9,c.sh?Math.floor(sh/c.sh):1e9),lack=[];
+ if(n<M.need)lack.push({k:'gem',v:M.need-n});if(hm<c.matN)lack.push({k:'mat',v:c.matN-hm,m:c.mat});if(sh<c.sh)lack.push({k:'sh',v:c.sh-sh});
+ return{n,c,x,lack}}
+const gmMat=m=>'⛏️'+MATN[m]+(m<3?'+':'');
+const gmPrice=c=>c.matN||c.sh?`${gmMat(c.mat)}×${fmt(c.matN)}<br>🔩${fmt(c.sh)}`:'';
+const gmLack=x=>x.k==='gem'?T('gem_lack',{n:x.v}):x.k==='mat'?gmMat(x.m)+' −'+fmt(x.v):'🔩 −'+fmt(x.v);
+// множина «1 злиття / 2 злиття / 5 злиттів»: форми через | у перекладі
+const plT=(k,n)=>{const f=T(k).split('|');let i;if(LANG==='en')i=n===1?0:2;else{const m=n%10,h=n%100;i=m===1&&h!==11?0:m>=2&&m<=4&&(h<12||h>14)?1:2}return(f[i]||f[f.length-1]).replace('{n}',fmt(n))};
+const gmSpend=A=>[...A.mats.map((v,i)=>v?`⛏️${MATN[i]}×${fmt(v)}`:'').filter(Boolean),A.sh?'🔩'+fmt(A.sh):''].filter(Boolean).join(' · ');
+function gemMergeCard(){const M=gmCfg(),A=M.all,Mt=G.mats||[],mx=gemCfg().max;
+ let h=`<div class="card"><h4>◆ ${T('gem_title')}</h4><p class="hint">${T('gem_merge_hint',{n:M.need})}</p>
+ <div class="gmres"><span class="sub">${T('gem_have')}</span>${MATN.map((x,i)=>`<span>⛏️${x} <b>${fmt(Mt[i]||0)}</b></span>`).join('')}<span>🔩 <b>${fmt(G.shards||0)}</b></span></div>`;
+ if(A)h+=`<button class="btn pri big gmall" id="gmAll" ${A.n?'':'disabled'}>⬆ ${T('gem_all')}${A.n?' · '+plT('gem_all_n',A.n):''}</button>${A.n?`<div class="gmspend">${T('gem_spend')}: ${gmSpend(A)}</div>`:''}`;
+ h+=`<div class="gmA"><div class="gmA-h"><span></span>${GEMS.map(t=>`<b style="color:${GEMC[t]}">${T('gem_'+t)}<small>${T('gem_st_'+t)}</small></b>`).join('')}</div>`;
+ for(let l=1;l<=mx;l++){const c=l<mx?M.cost[l-1]:null;
+  h+=`<div class="gmA-r"><span class="gmA-l"><b>${ROM[l-1]}</b>${c?`<small>→${ROM[l]}</small><small class="pr">${gmPrice(c)}</small>`:`<small>${T('gem_max')}</small>`}</span>`+
+   GEMS.map(t=>{const k=t+l,I=gmInfo(k);return `<div class="gmA-c${I.n?'':' dim'}${I.x?' ok':''}">${gemIc(k,1)}<b>${I.n}</b>${I.max?'':I.x?`<button class="btn mini" data-gm="${k}" data-x="${I.x}">${T('gem_merge_btn')}${I.x>1?' ×'+I.x:''}</button>`:I.n?`<em class="lack">${gmLack(I.lack[0])}</em>`:''}</div>`}).join('')+'</div>'}
+ return h+'</div></div>'}
+function gemPane(){const C=gemCfg();
  const all=[...SLOTS.map(s=>G.eq[s]).filter(Boolean),...G.inv.filter(i=>sockN(i))].filter(i=>sockN(i));
  if(gemSel&&!all.some(i=>i.id===gemSel))gemSel=null;
- let h=`<div class="card"><h4>◆ ${T('gem_title')}</h4><p class="hint">${T('gem_hint',{p:C.pts})}</p><div class="gemg">`+GEMS.map(t=>`<div class="gemrow"><span class="gname" style="color:${GEMC[t]}">${T('gem_'+t)}</span>`+[1,2,3,4,5].map(l=>{const k=t+l,n=GM[k]||0;return `<div class="gcell ${n?'':'dim'}">${gemIc(k)}<b>${n}</b>${l<C.max&&n>=3?`<button class="btn mini" data-gm="${k}">⬆${Math.floor(n/3)}</button>`:''}</div>`}).join('')+'</div>').join('')+`</div><p class="hint">${T('gem_merge_hint')}</p></div>`;
- h+=`<div class="card"><h4>${T('gem_items')}</h4><p class="hint">${T('gem_items_hint',{o:C.out.join(' / ')})}</p>`;
+ let h=gemMergeCard();
+ h+=`<div class="card"><h4>${T('gem_items')}</h4><p class="hint">${T('gem_hint',{p:C.pts})}</p><p class="hint">${T('gem_items_hint',{o:C.out.join(' / ')})}</p>`;
  {const lo=[...G.inv,...(G.vault||[])].filter(i=>i.gm&&i.gm.length),gn=lo.reduce((a,i)=>a+i.gm.length,0),gc=lo.reduce((a,i)=>a+i.gm.reduce((b,k)=>b+C.out[gemP(k).l-1],0),0);
   if(gn)h+=`<div class="row" style="margin-top:0"><button class="btn" id="gOutAll" data-n="${gn}" data-c="${gc}" data-i="${lo.length}">◆ ${T('gem_out_all',{n:gn})} · ⚱️${fmt(gc)}</button></div>`} // витягнути всі камені з невдягнених речей (05.11)
  if(!all.length)h+=`<p class="hint">${T('gem_no_items')}</p>`;
@@ -432,7 +456,10 @@ function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.i
  const ks=Object.keys(GM).filter(k=>GM[k]>0).sort((a,b)=>b[1]-a[1]||GEMS.indexOf(a[0])-GEMS.indexOf(b[0]));
  modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),null,()=>{},()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),'gempick')} // 05.11: замість «Скасувати» внизу довгого списку — ✕ і тап поза вікном
 function bindGem(){const P=$('p-forge');
- P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>act('gemMerge',{k:b.dataset.gm,n:0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}));
+ // злиття в клітинці — усі доступні; якщо бракує матеріалу свого рівня й підуть вищі — спершу питаємо (matAsk, як у тренуванні)
+ P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{const k=b.dataset.gm,c=gmCfg().cost[+k[1]-1];matAsk(c.mat,(+b.dataset.x||1)*c.matN,()=>act('gemMerge',{k,n:0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}))});
+ if($('gmAll'))$('gmAll').onclick=()=>{const A=gmCfg().all;if(!A||!A.n)return;
+  modal(`<div class="big">◆</div><h3>${T('gem_all')}</h3><p>${T('gem_all_q',{n:plT('gem_all_n',A.n)})}</p><p class="gmspend">${T('gem_spend')}: ${gmSpend(A)}</p>`,T('gem_all_ok'),()=>act('gemMergeAll',{},r=>{toast(T('gem_all_done',{n:plT('gem_all_n',r.out.n)}));haptic('light')}),null,'gemmall')};
  P.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>gemPick(+b.dataset.gi));
  if($('gOutAll'))$('gOutAll').onclick=()=>{const d=$('gOutAll').dataset,c=+d.c,ok=(G.ash||0)>=c;
   modal(`<div class="big">◆</div><h3>${T('gem_out_all',{n:d.n})}</h3><p>${T('gem_out_all_q',{i:d.i,c:fmt(c)})}</p><p class="hint">${T('gem_have_ash',{a:fmt(G.ash||0)})}</p>`,ok?T('gem_out_btn',{c:fmt(c)}):null,()=>{if(ok)act('gemRemoveAll',{},r=>{haptic('light');toast(T('gem_out_all_ok',{n:r.out.n,c:fmt(r.out.cost)}))})},null,'gemall')};
@@ -647,13 +674,16 @@ const PGSLOTS=['saddle','parmor','phelmet'],PGIC={saddle:SLOTIMG('saddle'),parmo
 const pgSt=it=>[['ab','pg_ab'],['atk','pg_atk'],['hp','pg_hp'],['def','pg_def'],['crit','pg_crit'],['xp','pg_xp'],['gold','pg_gold']].filter(([k])=>it.st[k]).map(([k,t])=>T(t,{v:it.st[k]})).join(' · ');
 const petImg=(sp,l)=>IMG('pet_'+sp+(1+petEvoN(l||1)));
 const petIc=(sp,big,l)=>PETIC[sp]?`<img class="pet-ic${big?' big':''}" src="${petImg(sp,l)}" alt="">`:`<span class="pet-ic${big?' big':''}">❔</span>`,eggIc=e=>`<span class="egg ${e==='r'?'r':''}">🥚</span>`;
+// рамка пітомця за зірками (картка 3, варіант B, 08.11): товста градієнтна рамка, ромби в кутах, стрічка з зірками внизу.
+// ★1 сіра · ★2 зелена · ★3 синя · ★4 фіолетова · ★5 золота з м'яким сяйвом; колір — CSS-змінна --pf у класі .s1…s5
+const petFrame=(sp,l,s,big)=>{s=Math.max(1,Math.min(5,s||1));return `<span class="pfB s${s}${big?' big':''}"><span class="pfB-in"><img src="${petImg(sp,l)}" alt=""></span><i class="o1"></i><i class="o2"></i><i class="o3"></i><i class="o4"></i><span class="pfst">${'★'.repeat(s)}</span></span>`};
 const petEvoN=l=>l>=20?2:l>=10?1:0,stars=(s,m=5)=>'<span class="stars">'+'★'.repeat(s)+'<i>'+'★'.repeat(m-s)+'</i></span>';
 const hms=ms=>{const m=Math.ceil(ms/60000),h=Math.floor(m/60);return h?T('t_hm',{h,m:m%60}):T('t_m',{m})};
 function petFighter(){const e=$('petf');if(!e)return;const P=G&&G.pet;if(P&&P.act){const p=P.list[P.act];e.innerHTML=`<img src="${petImg(P.act,p.l)}" alt="">`;e.className='petf evo'+petEvoN(p.l);e.style.display=''}else e.style.display='none'}
 function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn:0},D=V.pet||{},I=D.info||{},C=D.cfg||{},now=Date.now();
  let h='';const a=P.act&&P.list[P.act];
  if(a){const sp=P.act,b=(D.defs||{})[sp]||{},bv=(I.bonus||{})[sp]||0,nx=I.next,f=petEvoN(a.l);
-  h+=`<div class="card petcard"><div class="petmain">${petIc(sp,1,a.l)}<div><h4>${T('pet_'+sp)} · ${T('pet_form',{f:ROM[f]})}</h4><div>${stars(a.s)} · ${T('lvl',{n:a.l})}/${C.maxLvl||30}</div><div class="up">${T('petb_'+b.b,{v:bv})}</div><div class="sub">${a.s<5?T('pet_dups',{d:a.d,n:C.dupStar||2}):T('pet_maxstar')}</div></div></div>`;
+  h+=`<div class="card petcard"><div class="petmain">${petFrame(sp,a.l,a.s,1)}<div><h4>${T('pet_'+sp)} · ${T('pet_form',{f:ROM[f]})}</h4><div>${stars(a.s)} · ${T('lvl',{n:a.l})}/${C.maxLvl||30}</div><div class="up">${T('petb_'+b.b,{v:bv})}</div><div class="sub">${a.s<5?T('pet_dups',{d:a.d,n:C.dupStar||2}):T('pet_maxstar')}</div></div></div>`;
   if(nx){const ok=(G.mats||[]).slice(nx.mat).reduce((x,y)=>x+(y||0),0)>=nx.matN&&G.shards>=nx.shards&&G.cat>=nx.cat;
    h+=`<p class="hint">${nx.cat?T('pet_evo_hint',{f:ROM[f+1]}):T('pet_feed_hint')}</p><div class="st">${T('pet_cost')}: ${matTxt(nx.mat,nx.matN)} · 🔩${fmt(nx.shards)}${nx.cat?' · 💎1':''}</div><div class="row"><button class="btn pri" id="pFeed" data-m="${nx.mat}" data-n="${nx.matN}" ${ok?'':'disabled'}>${nx.cat?T('pet_evo_btn'):T('pet_feed')}</button>${nx.cat?'':`<button class="btn" id="pFeedM" ${ok?'':'disabled'}>${T('pet_feed_max')}</button>`}</div>`}
   else h+=`<p class="hint">${T('max_reached')}</p>`;
@@ -674,16 +704,16 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if(P.inc){const left=Math.max(0,P.inc.at-now);h+=`<div class="petinc">${eggIc(P.inc.e)}<div><b>${T(P.inc.e==='r'?'egg_r':'egg_c')}</b><div class="sub">${left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed" ${G.ash>=I.speed?'':'disabled'}>⚡ ⚱️${I.speed}</button>`:`<button class="btn pri" id="pClaim">${T('pet_claim')}</button>`}</div>`}
  h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&!P.inc?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||144e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||432e5)/36e5)})}</p></div>`;
  // колекція
- h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc ${P.act===sp?'act':''}" data-pset="${sp}">${petIc(sp,0,p.l)}<b>${T('pet_'+sp)}</b>${stars(p.s)}<small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
+ h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc pfc ${P.act===sp?'act':''}" data-pset="${sp}">${P.act===sp?`<em class="pact">${T('pet_active')}</em>`:''}${petFrame(sp,p.l,p.s,0)}<b>${T('pet_'+sp)}</b><small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
  if(!a&&!P.inc&&!(P.eggs.c||P.eggs.r))h=`<div class="card"><h4>🐾 ${T('sub_pet')}</h4><p class="hint">${T('pet_intro')}</p></div>`+h;
  $('p-pet').innerHTML=h;const E=$('p-pet');
  const fd=n=>act('petFeed',{n},r=>{toast(T('pet_fed',{l:r.out.l}));haptic('light')});
  const fdAsk=n=>{const b=$('pFeed');matAsk(+b.dataset.m,+b.dataset.n,()=>fd(n))};
  if($('pFeed'))$('pFeed').onclick=()=>fdAsk(1);if($('pFeedM'))$('pFeedM').onclick=()=>fdAsk(30);
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
-  modal(`<div class="big">${petIc(P.act,1,(P.list[P.act]||{}).l)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
+  modal(`<div class="big">${petFrame(P.act,(P.list[P.act]||{}).l,(P.list[P.act]||{}).s,1)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
  if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));
- if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},r=>{const o=r.out;modal(`<div class="big">${petIc(o.sp,1,(G.pet.list[o.sp]||{}).l)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')});
+ if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},r=>{const o=r.out;modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')});
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
  if($('pgCat'))$('pgCat').onclick=()=>{pgCat=!pgCat;$('pgCat').classList.toggle('on',pgCat)};
  E.querySelectorAll('[data-pgc]').forEach(b=>b.onclick=()=>matAsk(+b.dataset.m,+b.dataset.n,()=>act('petCraft',{slot:b.dataset.pgc,cat:pgCat},r=>{const it=r.out.item;pgCat=pgCat&&G.cat>0;toast(`${RAR[it.r].n} ${T('pslot_'+it.slot)} · ${T('lvl',{n:it.il})}`);haptic(it.r>=3?'heavy':'light')})));
