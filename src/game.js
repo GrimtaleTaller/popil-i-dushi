@@ -796,13 +796,12 @@ function renderShop(){
   ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
  for(const it of S.items){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||'');
-  h+=`<div class="card shopc"><h4>${T('shop_i_'+it.k)}</h4><p class="hint">${desc}</p>
+  h+=`<div class="card shopc"><h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4><p class="hint">${desc}</p>
    ${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
    ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
     ${it.gram?`<button class="btn" data-buy="${it.k}" data-m="gram"${soon?' disabled':''}>💎 ${it.gram} GRAM</button>`:''}
     <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 ${it.usd.toFixed(2)} USDT</button></div>
-    <p class="hint shpool">${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</p>
     <button class="btn shoth" data-other="${it.k}"${soon?' disabled':''}>${T('shop_other_link')} ›</button>`}</div>`;
  }
  h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>

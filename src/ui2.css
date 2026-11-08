@@ -284,3 +284,4 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .netb{display:flex;align-items:center;gap:8px;background:#ffffff0a;border:1px solid #ffffff14;border-radius:12px;padding:8px 10px;margin:8px 0}
 .netb span{font-size:11px;color:var(--mut,#a99);min-width:62px}.netb code{flex:1;word-break:break-all;font-size:13px;color:#f3e6c8}.netb .btn{flex:none;padding:6px 10px}
 .shopc .btn.shoth{display:block;width:100%;margin:8px 0 0;padding:8px;border:1px solid #f2c14e55;border-radius:12px;background:#f2c14e0d;color:var(--gold);font-size:13px;font-weight:600;text-align:center}
+.shopc h4.shh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.shopc h4.shh em{font-style:normal;font-size:12px;font-weight:600;color:#c9a96a;white-space:nowrap}
