@@ -794,7 +794,6 @@ function renderShop(){
  let h=`<div class="card"><h4>🛒 ${T('shop_t')}</h4><p class="hint">${T('shop_hint')}</p><div class="resg"><div><span>💰 ${T('shop_pool')}</span><b>$${S.pool.toFixed(2)}</b></div>${vipActive()?`<div><span>👑 VIP</span><b>${dt(G.vip)}</b></div>`:''}</div>
   ${soon?`<p class="hint" style="color:var(--gold)">${T('shop_soon_t')}</p>`:''}
   ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
- if(S.ops&&S.ops.length)h+=opsHtml(S.ops);
  for(const it of S.items){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||'');
   h+=`<div class="card shopc"><h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4><p class="hint">${desc}</p>
@@ -808,6 +807,7 @@ function renderShop(){
  h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
   ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
   <p class="hint">${T('shop_support')}</p></div>`;
+ if(S.ops&&S.ops.length)h+=opsHtml(S.ops); // «Мої операції» — у самому низу магазину (прохання Влада)
  el.innerHTML=h;
  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>shopBuy(b.dataset.buy,b.dataset.m));
  el.querySelectorAll('[data-other]').forEach(b=>b.onclick=e=>{e.preventDefault();if(!soon)shopOther(b.dataset.other)});
