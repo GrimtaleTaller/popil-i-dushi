@@ -204,3 +204,5 @@ body.hs-open{overflow:hidden}
 .duplist .dupc{display:block;text-align:left;width:100%;padding:7px 10px;border-radius:10px;background:var(--glass,#ffffff0d);border:1px solid #e2b97a33;color:inherit;font:inherit}
 .duplist .dupc.on{border-color:var(--gold,#f5d58a);box-shadow:0 0 0 1px var(--gold,#f5d58a) inset}
 .duplist .dupc small{display:block;color:#c9a0ff;font-size:11px;margin-top:2px}
+/* довгі вікна (вікно речі з властивостями й зірками) прокручуються всередині (08.11) */
+.mbox{max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
