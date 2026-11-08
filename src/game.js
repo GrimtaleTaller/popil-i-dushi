@@ -802,8 +802,8 @@ function renderShop(){
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
     ${it.gram?`<button class="btn" data-buy="${it.k}" data-m="gram"${soon?' disabled':''}>💎 ${it.gram} GRAM</button>`:''}
     <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 ${it.usd.toFixed(2)} USDT</button></div>
-    <p class="hint shpool">⭐ ${T('shop_pool_add',{x:it.pool.stars.toFixed(2)})} · 💎/💵 ${T('shop_pool_add',{x:it.pool.crypto.toFixed(2)})}</p>
-    <p class="shoth"><a href="#" data-other="${it.k}">${T('shop_other_link')} ›</a></p>`}</div>`;
+    <p class="hint shpool">${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</p>
+    <button class="btn shoth" data-other="${it.k}"${soon?' disabled':''}>${T('shop_other_link')} ›</button>`}</div>`;
  }
  h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
   ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
@@ -817,11 +817,11 @@ function renderShop(){
 // «Інші способи»: GRAM з гаманця TON або інша монета через @CryptoBot (08.11, рішення Влада)
 const CP_IC={USDT:'₮',BTC:'₿',ETH:'Ξ',TON:'💎',TRX:'🔺',LTC:'Ł',BNB:'🟡',USDC:'🔵'};
 // «Інші способи оплати»: переказ на адресу гри в інших мережах (як у конкурентів; 08.11, рішення Влада) — список мереж зі шапки магазину
-const OTH_NET=[['usdt_trc20','₮','USDT · TRC20 (TRON)'],['usdt_bep20','₮','USDT · BEP20 (BSC)'],['bnb','🟡','BNB · BSC'],['sol','🟣','SOL · Solana'],['eth','Ξ','ETH · Ethereum']];
+const OTH_NET=[['usdt_trc20','₮','USDT · TRC20 (TRON)'],['usdt_bep20','₮','USDT · BEP20 (BSC)'],['sol','🟣','SOL · Solana']];
 // «Інші способи оплати» під кнопками товару (08.11, рішення Влада: три кнопки в рядок, як у першому варіанті): мережі для переказу й гаманець TON
 function shopOther(k){
  const it=shopData.items.find(x=>x.k===k);if(!it)return;const on=shopData.nets||[],w=tcUI&&tcUI.account;
- const h=`<div class="big">🪙</div><h3>${T('shop_other_t')}</h3><p class="hint" style="text-align:center">${T('shop_i_'+k)} · $${it.usd.toFixed(2)}</p>
+ const h=`<div class="big">🪙</div><h3>${T('shop_other_t')}</h3><p class="hint" style="text-align:center">${T('shop_i_'+k)} · $${it.usd.toFixed(2)} · ${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</p>
   <div class="othl">${OTH_NET.map(([n,ic,l])=>`<button class="btn" data-pm="${n}"${on.includes(n)?'':' disabled'}>${ic} ${l}${on.includes(n)?'':' · '+T('shop_soon_s')}</button>`).join('')}</div>
   <p class="hint">${on.length?T('shop_oth_hint'):T('shop_oth_soon')}</p>
   <div class="pmw"><span>${T('shop_wallet_t')}</span><button class="btn" id="pmW">${w?shortAddr(w.address)+' ▾':T('shop_wallet_conn')}</button></div>`;
