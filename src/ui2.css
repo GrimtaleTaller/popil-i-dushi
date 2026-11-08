@@ -281,3 +281,5 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .paym .pm-oth{background:transparent;border:1px solid #ffffff22;color:var(--gold);font-weight:600;font-size:14px;justify-content:center}
 .pmw{border-top:1px solid #ffffff14;padding-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}.pmw span{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut,#a99)}
 .othl[hidden]{display:none}
+.netb{display:flex;align-items:center;gap:8px;background:#ffffff0a;border:1px solid #ffffff14;border-radius:12px;padding:8px 10px;margin:8px 0}
+.netb span{font-size:11px;color:var(--mut,#a99);min-width:62px}.netb code{flex:1;word-break:break-all;font-size:13px;color:#f3e6c8}.netb .btn{flex:none;padding:6px 10px}

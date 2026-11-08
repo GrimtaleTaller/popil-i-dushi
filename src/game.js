@@ -839,6 +839,7 @@ async function shopBuy(item,m,asset){
    w.openInvoice(r.out.link,st=>{if(st==='paid'){toast(T('shop_ok_t'));shopPaid();setTimeout(sync,3000)}else if(st==='failed')toast(T('shop_fail'));else if(st==='cancelled')toast(T('shop_cancel'))});
    return;
   }
+  if(m==='net'){const r=await api('shopBuy',{item,m,asset});netInvoice(r.out);return}
   if(m==='cpay'){const r=await api('shopBuy',{item,m,asset});const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(r.out.link);else window.open(r.out.link,'_blank','noopener');toast(T('shop_wait_cp'));shopWatch(r.out.id,0);return}
   const addr=await tcWallet();if(!addr){toast(errT(new Error('no_wallet')));return}
   const r=await api('shopBuy',{item,m,wallet:addr});
@@ -849,6 +850,22 @@ async function shopBuy(item,m,asset){
 function shopWatch(id,n){ // перевіряємо блокчейн кожні 6 с до 3 хв; далі зарахує sync
  clearTimeout(shopPoll);
  shopPoll=setTimeout(()=>api('shopCheck',{id}).then(r=>{if(r.out.status==='paid'){toast(T('shop_ok_t'));shopPaid()}else if(n<30)shopWatch(id,n+1);else modal(`<div class="big">⏳</div><p>${T('shop_pending')}</p>`,'OK')}).catch(()=>{if(n<30)shopWatch(id,n+1)}),6000);
+}
+// рахунок на переказ: мережа, адреса, точна сума, таймер; перевіряємо самі кожні 15 с, «Я сплатив» — одразу
+let netIv=0;
+function netInvoice(o){
+ const nm=(OTH_NET.find(x=>x[0]===o.net)||[0,'🪙',o.net])[2];
+ const h=`<div class="big">🧾</div><h3>${T('net_t')}</h3><p class="hint" style="text-align:center">${esc(nm)}</p>
+  <div class="netb"><span>${T('net_addr')}</span><code id="nAd">${esc(o.address)}</code><button class="btn" id="nAdC">📋</button></div>
+  <div class="netb"><span>${T('net_sum')}</span><code id="nSu">${esc(o.amount)} ${o.coin}</code><button class="btn" id="nSuC">📋</button></div>
+  <p class="hint" style="text-align:center">${T('net_exact')}</p><p class="hint" style="text-align:center"><b id="nTm"></b></p>
+  <div class="row"><button class="btn pri" id="nPaid">${T('net_paid')}</button></div>`;
+ const stop=()=>{clearInterval(netIv);netIv=0};
+ const chk=(manual)=>api('shopCheck',{id:o.id}).then(r=>{if(r.out.status==='paid'){stop();queue.shift();showModal();toast(T('shop_ok_t'));shopPaid()}else if(manual)toast(T('net_wait'))}).catch(e=>manual&&toast(errT(e)));
+ modal(h,null,null,()=>{
+  $('nAdC').onclick=()=>copyText(o.address);$('nSuC').onclick=()=>copyText(String(o.amount));$('nPaid').onclick=()=>chk(true);
+  stop();let n=0;const tick=()=>{const e=$('nTm');if(!e){stop();return}const l=Math.max(0,o.until-Date.now()),m=Math.floor(l/6e4),s2=Math.floor(l%6e4/1e3);e.textContent=T('net_left',{t:m+':'+String(s2).padStart(2,'0')});if(l<=0){stop();e.textContent=T('net_over')}else if(++n%15===0)chk(false)};tick();netIv=setInterval(tick,1000);
+ },'net');
 }
 function renameAsk(){
  modal(`<div class="big">✏️</div><h3>${T('rename_t')}</h3><p class="hint">${T('rename_hint')}</p><input id="rnIn" maxlength="16" value="${esc0(G.nick||'')}" style="width:100%">`,T('save'),()=>{const v=($('rnIn').value||'').trim();if(v.length<2){toast(errT(new Error('bad_name')));return false}act('rename',{name:v},r=>{toast(T('rename_done',{n:esc(r.out.nick)}));shopReload()})});
