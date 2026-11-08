@@ -91,12 +91,14 @@ function lnchTick(){const el=$('lnch');if(!el)return;const left=lnchAt-(Date.now
  const r=$('lnchR');if(r.dataset.l!==LANG){r.dataset.l=LANG;r.textContent=T('lnch_run')}
  if(el.hidden){el.hidden=false;document.body.classList.add('haslnch')}}
 // між скиданням прогресу й стартом (картка 1): лише заставка з таймером, гра закрита; о старті — перезавантаження
-function lnchLock(l){let e=$('lnchLock');if(!e){e=document.createElement('div');e.id='lnchLock';e.className='lnchlock';e.innerHTML='<div><div class="big">🔥</div><h2>Grimtale</h2><p id="lnchLT"></p><p class="hint" id="lnchLR"></p></div>';document.body.appendChild(e)}
+function lnchLock(l){let e=$('lnchLock');if(!e){e=document.createElement('div');e.id='lnchLock';e.className='lnchlock';e.innerHTML='<div><div class="big">🔥</div><h2>Grimtale</h2><p id="lnchLT"></p><p class="hint" id="lnchLR"></p><p><button class="btn pri" id="lnchLCh"></button></p></div>';document.body.appendChild(e);$('lnchLCh').textContent='📣 '+T('lnch_ch');$('lnchLCh').onclick=openCh}
  const off=l.now-Date.now(),p2=x=>String(x).padStart(2,'0');
- const tk=()=>{const left=l.at-(Date.now()+off);if(left<=0){clearInterval(iv);setTimeout(()=>location.reload(),Math.random()*20e3);return} // 0–20 с розкиду, щоб усі не прийшли в ту саму секундуconst s=Math.floor(left/1e3),d=Math.floor(s/86400);
+ const tk=()=>{const left=l.at-(Date.now()+off);if(left<=0){clearInterval(iv);setTimeout(()=>location.reload(),Math.random()*20e3);return} /* 0–20 с розкиду, щоб усі не прийшли в ту саму секунду */const s=Math.floor(left/1e3),d=Math.floor(s/86400);
   $('lnchLT').textContent=T('lnch_t')+' '+(d?d+' '+T('lnch_d')+' ':'')+p2(Math.floor(s%86400/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60);$('lnchLR').textContent=T('lnch_run2')};
  if(window.__lnchIv)clearInterval(window.__lnchIv);const iv=setInterval(tk,1000);window.__lnchIv=iv;tk()}
-function lnchSet(l){if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
+const GAME_CH='https://t.me/GRIMTALENEWS'; // канал новин гри (картка 6)
+function openCh(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CH);else window.open(GAME_CH,'_blank','noopener')}
+function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  V=v;G=v.s;H=v.hero;lnchSet(v.launch);pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
