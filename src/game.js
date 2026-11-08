@@ -98,6 +98,8 @@ function lnchLock(l){let e=$('lnchLock');if(!e){e=document.createElement('div');
  if(window.__lnchIv)clearInterval(window.__lnchIv);const iv=setInterval(tk,1000);window.__lnchIv=iv;tk()}
 const GAME_CH='https://t.me/GRIMTALENEWS'; // канал новин гри (картка 6)
 function openCh(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CH);else window.open(GAME_CH,'_blank','noopener')}
+const GAME_CHAT='https://t.me/GRIMTALECHAT'; // чат гравців (08.11)
+function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CHAT);else window.open(GAME_CHAT,'_blank','noopener')}
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  V=v;G=v.s;H=v.hero;lnchSet(v.launch);pend={gold:0,xp:0,kills:0};
@@ -751,10 +753,12 @@ function renderProfile(){
   <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
   <div><span>${T('dng_runs')}</span><b>${(G.dng&&G.dng.runs)||0}</b></div><div><span>${T('power',{n:''}).trim()}</span><b>${fmt(H.power)}</b></div></div></div>`;
  if(V.isAdmin)h+=adminHtml();
+ h+=`<div class="card"><h4>📢 ${T('comm')}</h4><div class="row" style="margin:0"><button class="btn" id="pCh">📣 ${T('lnch_ch')}</button><button class="btn" id="pChat">💬 ${T('chat_pl')}</button></div></div>`;
  h+=`<div class="card"><h4>🔔 ${T('ntf')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${T('ntf_hint')}</span><button class="btn" id="pNtf">${G.ntf===0?T('ntf_off'):T('ntf_on')}</button></div></div>`;
  h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button><button class="btn" id="pTut">${T('tut_restart')}</button></div>`;
  el.innerHTML=h;
  $('pTut').onclick=tutRestart;
+ $('pCh').onclick=openCh;$('pChat').onclick=openChat;
  $('pNtf').onclick=()=>act('notify',{on:G.ntf===0},()=>{dirty.prof=1});
  $('cpId').onclick=e=>{e.preventDefault();copyText(String(P.id))};
  $('pInv').onclick=invite;$('pCopy').onclick=()=>copyText(link);
