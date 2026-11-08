@@ -189,7 +189,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,shop:1,clan:1,market:1};
+const dirty={tasks:1,quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,shop:1,clan:1,market:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?(?:span|i|b|small)(?:\s+(?:class|style)="[^"<>]*")*\s*>)/g,'&lt;'); /* 07.11 (критик): лише class/style, без onclick тощо */ /* 05.11: значок каменя має <i> (рівень) — раніше він показувався як текст */e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -662,7 +662,7 @@ const LOGT={
  daily:a=>T('log_daily',{n:a[0]}),
  reward:a=>T('log_reward',{a:fmt(a[0])}),relic:a=>T('relic_done',{n:a[0],a:a[1]}),refine:a=>T('log_ref',{s:SLOT[a[0]]?SLOT[a[0]].n:a[0],n:a[2],k:a[3]}),
  star:a=>'★ '+(SLOT[a[0]]?SLOT[a[0]].n:a[0])+' → '+'★'.repeat(a[2]||0),
- pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
+ pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
  pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
@@ -676,7 +676,7 @@ const LOGT={
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):`<div class="empty">${T('log_empty')}</div>`)+'</div>'}
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,shop:renderShop,clan:renderClan,market:renderMarket})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({tasks:renderTasks,quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,shop:renderShop,clan:renderClan,market:renderMarket})[tab]()}}
 
 // ---------- профіль ----------
 let profData=null,profBusy=false,adminData=null;
@@ -1205,10 +1205,10 @@ function renderQuest(){
  const can=P.lv>P.f.length||(P.prem&&P.lv>P.p.length),inLv=P.lv>=P.max?P.per:P.pts-P.lv*P.per;
  let h=`<div class="card"><h4>🎟️ ${T('pass_title')} · ${T('pass_lv',{l:P.lv,m:P.max})}</h4><div class="bar" style="height:10px"><i style="width:${P.lv>=P.max?100:inLv/P.per*100}%;background:linear-gradient(90deg,#b98a3e,#f2c14e)"></i></div>
  <div class="row" style="align-items:center;margin:6px 0 0"><span class="hint" style="flex:2;margin:0">${T('pass_pts',{p:P.pts})} · ${T('pass_end',{t:tLeft(P.end-Date.now())})}</span><button class="btn pri" id="qClaim" ${can&&!busy?'':'disabled'}>🎁 ${T('claim_all')}</button></div></div>`;
- const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?T('share_again'):T('share_btn')}</button></div>`;
+ 
  const dr=rwTxt(P.dqR);
  const BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
- h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_hint',{l:bioLink()})}</p><div class="row" style="gap:8px"><button class="btn" id="qBioCopy">📋 ${T('bio_copy')}</button><button class="btn pri" id="qBioChk">🔗 ${T('bio_check')}</button></div>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
+ h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_in_tasks')}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
  h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`<p class="hint">${P.wb?'✅ ':''}${T('wq_all')}</p></div>`; // 08.11: усі завдання тижня → Сувій вічності
  h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#</b><span>${T('pass_free')}</span><span>👑 ${T('pass_paid')}</span></div>`;
  for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i);
@@ -1217,8 +1217,30 @@ function renderQuest(){
  h+=`<p class="hint">${T('pass_hint')}</p>`;
  el.innerHTML=h;
  $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
- $('qShare').onclick=shareStory;
+}
+// ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
+let adCtl=null,adLoading=false;
+function adsgram(cb){if(window.Adsgram)return cb();if(adLoading)return;adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;cb()};sc.onerror=()=>{adLoading=false;toast(T('ad_err'))};document.head.appendChild(sc)}
+function watchAd(){const K=V.tasks;if(!K||!K.block)return toast(T('ad_soon'));
+ adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){toast(T('ad_wait'));setTimeout(()=>sync(),3000);setTimeout(()=>sync(),9000)}}).catch(()=>toast(T('ad_none')))}catch(e){toast(T('ad_err'))}})}
+const SUB_N={news:'@GRIMTALENEWS',chat:'@GRIMTALECHAT',pay:'@GRIMTALEPAYOUTS'};
+function tgOpen(u){const w=window.Telegram&&Telegram.WebApp;if(/^https:\/\/t\.me\//.test(u)&&w&&w.openTelegramLink)w.openTelegramLink(u);else if(w&&w.openLink)w.openLink(u);else window.open(u,'_blank')}
+function renderTasks(){
+ const K=V.tasks,el=$('p-tasks');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
+ const A=K.ads,keyTxt=A.tier?'🗝️'+T('tier',{n:A.tier}):chestIc(2);
+ let h=`<p class="hint">${T('tk_hint')}</p>`;
+ h+=`<div class="card"><h4>📺 ${T('ad_t')}</h4><p class="hint" style="margin:0 0 6px">${T('ad_hint',{c:chestIc(1)+'×'+A.ch,n:A.keyEvery,k:keyTxt})}</p><div class="bar"><i style="width:${A.n/A.max*100}%;background:#f2c14e"></i></div><div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('ad_cnt',{n:A.n,m:A.max})}</span><button class="btn pri" id="tkAd" ${A.n<A.max?'':'disabled'}>▶️ ${T('ad_btn')}</button></div></div>`;
+ const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?'✅ '+T('share_again'):T('share_btn')}</button></div>`;
+ const BI=V.bio||{};h+=`<div class="card"><h4>🔗 ${T('q_bio')} · ⚱️${BI.ash||10}</h4>`+(BI.taken?`<p class="hint">✅ ${T('tk_done_today')}</p>`:`<p class="hint" style="margin:0 0 6px">${T('bio_hint',{l:bioLink()})}</p><div class="row" style="gap:8px"><button class="btn" id="qBioCopy">📋 ${T('bio_copy')}</button><button class="btn pri" id="qBioChk">🔗 ${T('bio_check')}</button></div>`)+`</div>`;
+ h+=`<div class="card"><h4>📢 ${T('sub_t')}</h4><p class="hint" style="margin:0 0 6px">${T('sub_hint',{a:K.subAsh})}</p>`+K.subs.map(x=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.ok?'✅':'📢'} ${SUB_N[x.k]||x.chat}</span>${x.ok?`<span class="hint" style="margin:0">⚱️${K.subAsh}</span>`:`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div>`).join('')+`</div>`;
+ if(K.ptn.length){h+=`<div class="card"><h4>🤝 ${T('ptn_t')}</h4>`+K.ptn.map(p=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0">${p.ok?'✅':'🎯'} ${esc(p.t[LANG]||p.t.en||p.id)} <span class="hint">· ${chestIc(1)}×${p.ch}${p.key?' +🗝️×'+p.key:''}</span></span>${p.ok?'':`<button class="btn" style="flex:0 0 auto" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`}</div>`).join('')+`</div>`}
+ el.innerHTML=h;
+ $('tkAd').onclick=watchAd;$('qShare').onclick=shareStory;
  if($('qBioCopy')){$('qBioCopy').onclick=()=>copyText(bioLink());$('qBioChk').onclick=()=>act('bio',{},r=>{toast('🔗 +⚱️'+r.out.ash);haptic('medium')})}
+ el.querySelectorAll('[data-sgo]').forEach(b=>b.onclick=()=>tgOpen('https://t.me/'+b.dataset.sgo.replace('@','')));
+ el.querySelectorAll('[data-sck]').forEach(b=>b.onclick=()=>act('subCheck',{k:b.dataset.sck},r=>{toast('📢 +⚱️'+r.out.ash);haptic('medium')}));
+ el.querySelectorAll('[data-pgo]').forEach(b=>b.onclick=()=>{const p=K.ptn.find(x=>x.id===b.dataset.pgo);tgOpen(p.url);act('ptnOpen',{id:p.id})});
+ el.querySelectorAll('[data-pck]').forEach(b=>b.onclick=()=>act('ptnCheck',{id:b.dataset.pck},r=>{toast('🎯 +'+r.out.ch+'🧰'+(r.out.keyN?' +🗝️×'+r.out.keyN:''));haptic('medium')}));
 }
 const SHARE_N=6,SHARE_IMG=()=>new URL('assets/share/s'+(Math.floor(Date.now()/864e5)%SHARE_N+1)+'.jpg',location.href).href; // колесо картинок Stories: щодня інша (07.11)
 function shareStory(){
@@ -1273,7 +1295,7 @@ function wbResult(o){
 // головні вкладки й підвкладки
 const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'quest'};
 // 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Пітомець, Тренування, Журнал, Профіль — у вікні героя на весь екран
-const groupOf=t=>['bag','market','shop','pet','train','log','prof'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'?'quest':t;
+const groupOf=t=>['bag','market','shop','pet','train','log','prof'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 // «Герой» (Спорядження / Пітомець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
@@ -1301,7 +1323,7 @@ function heroSheet(open){
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['shop','sub_shop'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['quest','sub_pass'],['tasks','sub_tasks'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['shop','sub_shop'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:tab;e.style.display='flex';
  e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');
