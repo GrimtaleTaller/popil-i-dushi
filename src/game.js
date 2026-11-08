@@ -800,19 +800,29 @@ function renderShop(){
    ${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
    ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
-    ${it.gram?`<button class="btn" data-buy="${it.k}" data-m="gram"${soon?' disabled':''}>💎 ${it.gram} GRAM</button>`:''}
-    <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 ${it.usd} USDT</button></div>
-    <p class="hint shpool">⭐ ${T('shop_pool_add',{x:it.pool.stars.toFixed(2)})} · 💎/💵 ${T('shop_pool_add',{x:it.pool.crypto.toFixed(2)})}</p>`}</div>`;
+    <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 $${it.usd.toFixed(2)}</button>
+    <button class="btn" data-other="${it.k}"${soon?' disabled':''}>🪙 ${T('shop_other')}</button></div>
+    <p class="hint shpool">⭐ ${T('shop_pool_add',{x:it.pool.stars.toFixed(2)})} · 💵/🪙 ${T('shop_pool_add',{x:it.pool.crypto.toFixed(2)})}</p>`}</div>`;
  }
  h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
   ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
   <p class="hint">${T('shop_support')}</p></div>`;
  el.innerHTML=h;
  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>shopBuy(b.dataset.buy,b.dataset.m));
+ el.querySelectorAll('[data-other]').forEach(b=>b.onclick=()=>shopOther(b.dataset.other));
  if($('shOff'))$('shOff').onclick=()=>tcUI&&tcUI.disconnect();
  if($('shRn'))$('shRn').onclick=renameAsk;
 }
-async function shopBuy(item,m){
+// «Інші способи»: GRAM з гаманця TON або інша монета через @CryptoBot (08.11, рішення Влада)
+const CP_IC={USDT:'₮',BTC:'₿',ETH:'Ξ',TON:'💎',TRX:'🔺',LTC:'Ł',BNB:'🟡',USDC:'🔵'};
+function shopOther(k){
+ const it=shopData.items.find(x=>x.k===k);if(!it)return;const cpl=shopData.cp||[];
+ const h=`<div class="big">🪙</div><h3>${T('shop_other_t')}</h3><p class="hint">${T('shop_i_'+k)} · $${it.usd}</p>
+  ${it.gram?`<p class="hint" style="margin:10px 0 4px">${T('shop_via_wallet')}</p><div class="row shopb"><button class="btn" data-oth="gram">💎 ${it.gram} GRAM</button></div>`:''}
+  ${cpl.length?`<p class="hint" style="margin:10px 0 4px">${T('shop_via_cp')}</p><div class="row shopb cpl">${cpl.map(a=>`<button class="btn" data-oth="cp:${a}">${CP_IC[a]||'🪙'} ${a==='TON'?'GRAM':a}</button>`).join('')}</div><p class="hint">${T('shop_cp_hint')}</p>`:`<p class="hint">${T('shop_cp_soon')}</p>`}`;
+ modal(h,null,null,()=>document.querySelectorAll('#mbox [data-oth]').forEach(b=>b.onclick=()=>{const v=b.dataset.oth;queue.shift();showModal();if(v==='gram')shopBuy(k,'gram');else shopBuy(k,'cpay',v.slice(3))}),'oth');
+}
+async function shopBuy(item,m,asset){
  if(busy)return;
  try{
   if(m==='stars'){
@@ -821,6 +831,7 @@ async function shopBuy(item,m){
    w.openInvoice(r.out.link,st=>{if(st==='paid'){toast(T('shop_ok_t'));shopPaid();setTimeout(sync,3000)}else if(st==='failed')toast(T('shop_fail'));else if(st==='cancelled')toast(T('shop_cancel'))});
    return;
   }
+  if(m==='cpay'){const r=await api('shopBuy',{item,m,asset});const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(r.out.link);else window.open(r.out.link,'_blank','noopener');toast(T('shop_wait_cp'));shopWatch(r.out.id,0);return}
   const addr=await tcWallet();if(!addr){toast(errT(new Error('no_wallet')));return}
   const r=await api('shopBuy',{item,m,wallet:addr});
   try{await tcUI.sendTransaction(r.out.tx)}catch(e){toast(T('shop_cancel'));return}
