@@ -298,3 +298,6 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .netb b{flex:1;text-align:center;color:#f3e6c8}.netu b{font-size:20px;color:var(--gold)}.nbc{display:flex;justify-content:center;align-items:center;gap:6px}
 .netw{margin:8px 0;padding:8px 10px;border-radius:10px;background:#c0563a22;border:1px solid #c0563a66;color:#f0b8a8;font-size:12.5px;font-weight:600;text-align:center}
 .dcard.swc{border-color:#4f7d3c;box-shadow:0 0 14px rgba(90,170,70,.22)}.dcard.swc .th b{font-size:26px}
+
+/* 09.11: дії в Сумці — компактна сітка 2 колонки (кнопка автопродажу була на всю ширину) */
+.bagact{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 8px}.bagact .btn{padding:7px 8px;font-size:13px;line-height:1.2;white-space:normal;min-height:0}.bagact .btn.wide{grid-column:1/-1}.bagact .btn.on{border-color:var(--gold);color:var(--gold)}
