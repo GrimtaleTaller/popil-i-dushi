@@ -296,9 +296,9 @@ function renderHero(){
 // Вдосконалення речі (04.11): +1 рівень предмета за золото й уламки, до (найвищий етап − 15)
 const refK=r=>((V.refine&&V.refine.m)||[0,0,0,1,2,5,15])[r]||1; // множник ціни за рідкістю (04.11: вічна в 7,5 раза дорожча за легендарку)
 function refCost(it){const R=V.refine||{g:300,sh:1};return{gold:Math.round(mobGold(it.il)*R.g*refK(it.r)),shards:Math.round(R.sh*it.il*refK(it.r))}}
-function refOk(it){const R=V.refine;return !!(R&&it&&it.r>=R.minR&&it.il<R.cap)}
+function refOk(it){const R=V.refine;return !!(R&&it&&it.r>=R.minR&&it.il<(R.capL??R.cap))} // capL — не вище рівня героя (09.11)
 function findItem(id){return Object.values(G.eq).find(x=>x&&x.id===id)||G.inv.find(x=>x.id===id)}
-function refineDlg(id){const it=findItem(id);if(!it)return;const R=V.refine||{},A=V.afx,shown={};
+function refineDlg(id){const it=findItem(id);if(!it)return;const R0=V.refine||{},R={...R0,cap:R0.capL??R0.cap},A=V.afx,shown={};
  let body;if(it.r<(R.minR||3))body=`<p class="hint">${T('ref_rar')}</p>`;
  else if(it.il>=R.cap)body=`<p class="hint">${T('ref_cap_t',{n:R.cap})}</p>`;
  else{const c=refCost(it),k=1.16,cur=stSr(it),nx={...cur};for(const s of ['atk','hp','def'])if(cur[s])nx[s]=Math.round(cur[s]*k);
@@ -354,7 +354,7 @@ function renderBag(){
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
-   <div class="acts"><button class="btn pri" data-eq="${it.id}">${T('equip')}</button>${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
+   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
