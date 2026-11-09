@@ -55,9 +55,9 @@ const SLOT={
 const RAR=[{n:'Звичайний',c:'#a3abb5',m:1},{n:'Незвичайний',c:'#56c271',m:1.5},{n:'Рідкісний',c:'#4f93f2',m:2.2},{n:'Епічний',c:'#ad66f5',m:3.2},{n:'Легендарний',c:'#f2a33a',m:5},{n:'Міфічний',c:'#e8455a',m:9},{n:'Астральний',c:'#3fd0d4',m:83}];
 const STATN={atk:'Атака',hp:'Здоров’я',def:'Захист',crit:'Крит'};
 const UPG=[
- {k:'atk',n:'Сила удару',ic:'⚔️',d:'+атака',val:l=>3*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l),max:100,pct:1},
- {k:'hp',n:'Витривалість',ic:'❤️',d:'+здоров’я',val:l=>15*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l),max:100,pct:1},
- {k:'def',n:'Загартування',ic:'🛡️',d:'+захист',val:l=>1.2*l*Math.pow(1.06,l),cost:l=>25*Math.pow(1.16,l),max:100,pct:1},
+ {k:'atk',n:'Сила удару',ic:'⚔️',d:'+атака',val:l=>2.4*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l),max:100,pct:1},
+ {k:'hp',n:'Витривалість',ic:'❤️',d:'+здоров’я',val:l=>12*l*Math.pow(1.06,l),cost:l=>15*Math.pow(1.15,l),max:100,pct:1},
+ {k:'def',n:'Загартування',ic:'🛡️',d:'+захист',val:l=>0.96*l*Math.pow(1.06,l),cost:l=>25*Math.pow(1.16,l),max:100,pct:1},
  {k:'crit',n:'Холодний розрахунок',ic:'🎯',d:'+0,5% шанс криту (макс. 25%)',val:l=>0.5*Math.min(l,50),cost:l=>40*Math.pow(1.22,l),max:50}
 ];
 const WAVES=10,BOSS_TIME=30,INV_MAX=40;
