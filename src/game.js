@@ -943,7 +943,7 @@ function adminHtml(){
 let csub='main',clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
 const roleT=r=>T('role_'+r);
 function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
-function clanAct(a,args,cb){act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(cb)cb(r)})}
+function clanAct(a,args,cb){return act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(cb)cb(r)})}
 function renderClan(){
  const el=$('p-clan');
  if(G.maxStage<(V.clanStage||5)){el.innerHTML=`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
@@ -1028,7 +1028,7 @@ function renderClan(){
  if($('cAshGo'))$('cAshGo').onclick=()=>{const a=Math.floor(+$('cAsh').value||0);if(a<1)return;if(a>(G.ash||0)){toast(ERR.no_ash+': ⚱️'+fmtX(G.ash));return}clanAct('clanGiveAsh',{amt:a})};
  if($('cGiveGo'))$('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
- el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>clanAct('clanCraft',{t:craftT,n:+b.dataset.cn}));
+ el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const n=+b.dataset.cn,t=craftT,bs=el.querySelectorAll('[data-cn]');bs.forEach(x=>x.disabled=true);b.textContent='⏳';haptic('light');clanAct('clanCraft',{t,n},()=>toast(T('craft_ok',{n,t,k:((clanData&&clanData.clan&&clanData.clan.keys)||{})[t]||n})))?.finally?.(()=>{dirty.clan=1;flush()})}); // 09.11 (відео Влада): відповідь ~1–2 с без жодного відгуку — тепер ⏳, кнопки блокуються, підтвердження
  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>clanAct('clanKick',{pid:+b.dataset.ck}));
  el.querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>clanAct('clanRole',{pid:+b.dataset.cr,role:b.dataset.r}));
  if($('cRef'))$('cRef').onclick=()=>{clanData=null;renderClan()};
