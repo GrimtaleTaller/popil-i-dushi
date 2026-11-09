@@ -554,11 +554,41 @@ function feedHi(l,want){const M=(G.mats||[]).slice(),hi={};let sh=G.shards,done=
  return Object.keys(hi).map(i=>[+i,hi[i]])}
 function matAsk(m,n,go){const hi=matUse(m,n).filter(x=>x[0]>m);if(!hi.length)return go(false);modal(`<div class="big">⛏️</div><p>${T('mat_hi_ask',{m:MATN[m],u:hi.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})}</p>`,T('mat_hi_ok'),()=>go(true),null,'matask')} // go(true) — гравець погодився на вищі матеріали
 const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');return d.toDateString()===n.toDateString()?p(d.getHours())+':'+p(d.getMinutes()):p(d.getDate())+'.'+p(d.getMonth()+1)};
+// ---------- Болото відьми (09.11): поверхи, хвилі монстрів підряд і Відьма Мара; Сувій вічності — лише з Відьми ----------
+const SWM=[['sw_m1','sw_mire'],['sw_m2','sw_mavka'],['sw_m3','sw_toad'],['sw_m4','sw_scare'],['sw_m5','sw_wisp'],['sw_m6','sw_cat']],SWB=['sw_boss','sw_witch'];
+let swF=0; // вибраний поверх (0 — найвищий доступний)
+function swampCard(){
+ const S=V.swamp;if(!S)return'';
+ const head=`<div class="th" style="background-image:url(${IMG('sw_bg')})"><b>🧙</b></div>`;
+ if(!S.open)return `<div class="dcard lock swc">${head}<div class="info"><div class="nm">${T('sw_name')}</div><div class="sub">${T('sw_lock',{n:S.lvl})}</div><div class="sub">${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100)})}</div></div></div>`;
+ const FL=S.floors||[];if(!FL.length)return'';
+ if(!FL.some(x=>x.f===swF))swF=FL[0].f;
+ const c=FL.find(x=>x.f===swF),rw=c.rw,e=c.est,ec=e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e',my=V.hero.power,ok=my>=c.need,isNew=c.f>S.f;
+ const can=!busy&&(S.left>0||(G.ash||0)>=S.pay);
+ return `<div class="dcard swc">${head}<div class="info">
+  <div class="nm">${T('sw_name')} <span class="sub">· ${T('sw_floor',{n:c.f})}${isNew?' · '+T('sw_new'):''}</span></div>
+  <div class="sub">${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100)})}</div>
+  <div class="chips diffs">${FL.slice().reverse().map(x=>`<button data-swf="${x.f}" class="${x.f===c.f?'act':''}">${x.f>S.f?'🆕 ':''}${x.f}</button>`).join('')}</div>
+  <div class="rw">🪙${fmt(rw.gold)} · ${chestIc(rw.chestG)}×${rw.chests} · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls} · 💠${Math.round(rw.gemChance*100)}% · <span style="color:${RAR[6].c}">📜${Math.round(rw.scroll*100)}%</span>${isNew?` · ⚱️+${rw.ashFirst}`:''}</div>
+  <div class="sub need ${ok?'ok':'bad'}">💪 ${T('need_power',{n:fmt(c.need),m:fmt(my)})}${ok?' ✓':' · '+T('need_short',{n:fmt(c.need-my)})}</div>
+  <div class="sub">${T('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span> · ${T('sw_left',{n:S.left,m:S.free})}</div>
+  <button class="btn pri" id="swGo" data-f="${c.f}" ${can?'':'disabled'}>${S.left>0?T('enter_free'):T('enter',{p:fmt(S.pay)})}</button>
+  ${S.wins?`<div class="sub">${T('sw_stats',{w:S.wins,r:S.runs,s:S.sc})}</div>`:''}
+ </div></div>`;
+}
+function swResult(o){
+ const g=o.gain;
+ const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?'👑 '+T(SWB[0]):T('sw_wave',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
+ const rw=[g.scroll?`<span style="color:${RAR[6].c}"><b>📜 ${T('r_scroll')} +1!</b></span>`:'',g.gold?`🪙 <b>+${fmt(g.gold)}</b>`:'',g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T('sw_floor',{n:o.f})}: ${T(o.win?'sw_win':'sw_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.win&&!g.scroll?`<p class="hint">${T('sw_noscroll')}</p>`:''}`,T('ok'));
+ document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*300));
+ haptic(o.win?'heavy':'medium');
+}
 const dngD={}; // вибрана складність для кожного тиру
 function renderDng(){
  const D=V.dng,tr=T;
  const left=D.left!=null?D.left:5,daily=D.daily||5;
- let h=`<p class="hint" style="margin-top:0">${T('dng_hint',{r:D.rooms,d:daily})}</p><p class="hint">${T('chest_hint')}</p><div class="chestbar" style="background:var(--panel);border-color:var(--line)">🏰<span>${T('dng_left',{n:left,m:daily})}</span></div>`;
+ let h=swampCard()+`<p class="hint" style="margin-top:0">${T('dng_hint',{r:D.rooms,d:daily})}</p><p class="hint">${T('chest_hint')}</p><div class="chestbar" style="background:var(--panel);border-color:var(--line)">🏰<span>${T('dng_left',{n:left,m:daily})}</span></div>`;
  if(G.maxStage<D.unlockStage)h+=`<div class="empty">${T('dng_unlock',{n:D.unlockStage})}</div>`;
  for(const T of D.tiers){const d=DNG[T.t-1],DF=T.diffs||[{d:1,open:T.open,rw:T.rw,est:T.est}];
   if(!dngD[T.t]||!DF[dngD[T.t]-1]||!DF[dngD[T.t]-1].open)dngD[T.t]=Math.max(1,...DF.filter(x=>x.open).map(x=>x.d));
@@ -574,22 +604,25 @@ function renderDng(){
   </div></div>`}
  $('p-dng').innerHTML=h;
  $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dng,d:+b.dataset.d},r=>dngPlay(r.out)));
+ $('p-dng').querySelectorAll('[data-swf]').forEach(b=>b.onclick=()=>{swF=+b.dataset.swf;renderDng()});
+ if($('swGo'))$('swGo').onclick=()=>act('swamp',{f:+$('swGo').dataset.f},r=>{r.out.sw=1;dngPlay(r.out)});
  $('p-dng').querySelectorAll('[data-dngn]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dngn,d:+b.dataset.d,n:10},r=>dngBatch(r.out)));
  $('p-dng').querySelectorAll('[data-dt]').forEach(b=>b.onclick=()=>{const t=+b.dataset.dt,k=+b.dataset.dd,x=(V.dng.tiers[t-1].diffs||[])[k-1];
   if(!x||!x.open){toast(T('diff_lock',{n:T('diff_'+(k-1))}));return}dngD[t]=k;renderDng()});
 }
 // ---------- підземелля на весь екран: відтворення бою, порахованого сервером ----------
 function dngPlay(o){
- if(!o.rooms||!o.rooms[0]||!o.rooms[0].ev){dngResult(o);return}
- const d=DNG[o.t-1],R=REGIONS[(d.reg-1)%REGIONS.length],timers=[];let done=false;
+ const sw=!!o.sw,res=sw?swResult:dngResult,NR=sw?o.rooms.length&&V.swamp?V.swamp.rooms+1:7:6;
+ if(!o.rooms||!o.rooms[0]||!o.rooms[0].ev){res(o);return}
+ const d=sw?{n:T('sw_name'),bg:'sw_bg'}:DNG[o.t-1],R=sw?{mobs:SWM.map(x=>[T(x[0]),x[1]]),boss:[T(SWB[0]),SWB[1]]}:REGIONS[(d.reg-1)%REGIONS.length],timers=[];let done=false;
  const el=document.createElement('div');el.className='dngv';el.id='dngv';
  el.innerHTML=`<div class="dv-bg" style="background-image:url(${IMG(d.bg)})"></div>
-  <div class="dv-top"><div><b>${esc(d.n)} · ${T('tier',{n:o.t})}${o.d>1?' · '+T('diff_'+o.d):''}</b><span id="dvRoom"></span></div><button class="btn" id="dvSkip">${T('skip')} ⏭</button></div>
-  <div class="dv-rooms">${o.rooms.map((x,i)=>`<i id="dvR${i}" class="${x.boss?'b':''}"></i>`).join('')}${o.rooms.length<6?Array.from({length:6-o.rooms.length},(_,k)=>`<i class="${o.rooms.length+k===5?'b':''}"></i>`).join(''):''}</div>
+  <div class="dv-top"><div><b>${esc(d.n)} · ${sw?T('sw_floor',{n:o.f}):T('tier',{n:o.t})}${!sw&&o.d>1?' · '+T('diff_'+o.d):''}</b><span id="dvRoom"></span></div><button class="btn" id="dvSkip">${T('skip')} ⏭</button></div>
+  <div class="dv-rooms">${o.rooms.map((x,i)=>`<i id="dvR${i}" class="${x.boss?'b':''}"></i>`).join('')}${o.rooms.length<NR?Array.from({length:NR-o.rooms.length},(_,k)=>`<i class="${o.rooms.length+k===NR-1?'b':''}"></i>`).join(''):''}</div>
   <div class="dv-f"><div class="f hero"><div class="sprite" id="dvH"><img alt="" src="${IMG('hero')}"></div><div class="fname">${esc(T('hero_name'))}</div><div class="hpb"><i id="dvHh"></i></div></div>
   <div class="f mob"><div class="sprite" id="dvM"></div><div class="fname" id="dvMn"></div><div class="hpb"><i id="dvMh"></i></div></div></div>`;
  document.body.appendChild(el);
- const fin=()=>{if(done)return;done=true;timers.forEach(clearTimeout);el.remove();dngResult(o)};
+ const fin=()=>{if(done)return;done=true;timers.forEach(clearTimeout);el.remove();res(o)};
  $('dvSkip').onclick=fin;
  const at=(ms,f)=>timers.push(setTimeout(()=>{if(!done)f()},ms));
  const fl=(txt,cls,side)=>{const e=document.createElement('div');e.className='dmg '+cls;e.textContent=txt;e.style.left=(side==='m'?60+Math.random()*20:12+Math.random()*20)+'%';e.style.top=(42+Math.random()*8)+'%';el.appendChild(e);setTimeout(()=>e.remove(),800)};
@@ -599,7 +632,7 @@ function dngPlay(o){
  let t=300;
  o.rooms.forEach((x,i)=>{
   const mob=x.boss?R.boss:R.mobs[i%R.mobs.length],start=t;
-  at(start,()=>{$('dvRoom').textContent=x.boss?T('boss'):T('room',{n:i+1});const r=$('dvR'+i);if(r)r.classList.add('cur');
+  at(start,()=>{$('dvRoom').textContent=x.boss?T('boss'):T(sw?'sw_wave':'room',{n:i+1});const r=$('dvR'+i);if(r)r.classList.add('cur');
    const m=$('dvM');m.className='sprite'+(x.boss?' big':'');m.innerHTML=`<img alt="" src="${IMG(mob[1])}">`;void m.offsetWidth;m.classList.add('appear');
    $('dvMn').textContent=(x.boss?'👑 ':'')+mob[0];$('dvMh').style.width='100%';$('dvHh').style.width=Math.max(0,x.hp0/o.heroHp*100)+'%'});
   let hp=x.hp0,fh=x.foeHp;
@@ -671,7 +704,7 @@ const LOGT={
  arena:a=>T('log_arena',{r:T(a[0]?'pvp_win':'pvp_lose'),n:esc(a[1]),d:(a[2]>=0?'+':'')+a[2]}),
  gate:a=>T('log_gate',{s:(UPG.find(u=>u.k===a[0])||{n:a[0]}).n,n:a[1]}),
  dng:a=>T('log_dng',{d:DNG[a[0]-1].n,r:T(a[1]?'log_dng_ok':'log_dng_fail'),c:a[2]}),
- scroll:a=>`<span style="color:${RAR[6].c}">📜 ${a[0]?T('log_scroll_d',{t:a[1]}):T('log_scroll_w')}</span>`,
+ scroll:a=>`<span style="color:${RAR[6].c}">📜 ${a[0]===2?T('log_scroll_sw',{f:a[1]}):a[0]?T('log_scroll_d',{t:a[1]}):T('log_scroll_w')}</span>`,swamp:a=>T(a[1]?'log_sw_win':'log_sw_lose',{f:a[0],n:a[2]}),
  astral:a=>a[0]?`<span style="color:${RAR[6].c}">${T('log_ast_ok',{s:SLOT[a[1]].n})}</span>`:T('log_ast_fail',{c:a[2]}),
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };

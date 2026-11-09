@@ -297,3 +297,4 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .othl .oth em{font-style:normal;font-size:12px;color:#c9a96a;white-space:nowrap}.nb-usdt{background:#26a17b}
 .netb b{flex:1;text-align:center;color:#f3e6c8}.netu b{font-size:20px;color:var(--gold)}.nbc{display:flex;justify-content:center;align-items:center;gap:6px}
 .netw{margin:8px 0;padding:8px 10px;border-radius:10px;background:#c0563a22;border:1px solid #c0563a66;color:#f0b8a8;font-size:12.5px;font-weight:600;text-align:center}
+.dcard.swc{border-color:#4f7d3c;box-shadow:0 0 14px rgba(90,170,70,.22)}.dcard.swc .th b{font-size:26px}
