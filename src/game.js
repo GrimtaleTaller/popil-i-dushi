@@ -240,7 +240,7 @@ function renderTop(){
  if(B.m){$('mhp').style.width=Math.max(0,B.m.hp/B.m.max*100)+'%';$('mhpt').textContent=fmt(Math.max(0,B.m.hp))+' / '+fmt(B.m.max)}
  $('timer').style.display=B.rep?'block':'none';if(B.rep)$('timeri').style.width=Math.max(0,(BOSS_TIME-B.rep.t)/BOSS_TIME*100)+'%';
  const nw=G.inv.filter(i=>i.nw).length,nb=$('newb');nb.style.display=nw?'inline':'none';nb.textContent=nw;
- {const P=V.pass,qb=$('qb');const q=(P&&(P.lv>P.f.length||(P.prem&&P.lv>P.p.length)))||(V.ach||[]).some(x=>x.done>x.got);if(qb)qb.style.display=q?'inline':'none'}
+ {const qb=$('qb'),d=subDots();if(qb)qb.style.display=d.quest||d.ach?'inline':'none';document.querySelectorAll('#subtabs button[data-s]').forEach(b=>b.classList.toggle('sdot',!!d[b.dataset.s]))} // 09.11 (Влад): «!» на Завданнях — і крапка на тій підвкладці, де є що забрати
  {const hc=$('hsCur');if(hc&&document.body.classList.contains('hs-open'))hc.innerHTML=`<span>💰 ${fmt(gold)}</span><span>🔥 ${fmt(G.souls||0)} · ⚱️ ${fmt(G.ash||0)}</span>`} // баланс у шторці «Герой»: верхня панель під нею не видна (04.11)
  if(tab==='train')renderTrainBtns();
 }
@@ -1363,13 +1363,14 @@ function heroSheet(open){
   sh.classList.remove('open');document.body.classList.remove('hs-open');
  }
 }
+function subDots(){const P=V&&V.pass;return{quest:!!(P&&(P.lv>P.f.length||(P.prem&&P.lv>P.p.length))),ach:!!((V&&V.ach)||[]).some(x=>x.done>x.got)}}
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
  const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['shop','sub_shop'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:tab;e.style.display='flex';
- e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}">${T(l)}</button>`).join('');
+ const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}</button>`).join('');
  e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});

@@ -301,3 +301,5 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 
 /* 09.11: дії в Сумці — компактна сітка 2 колонки (кнопка автопродажу була на всю ширину) */
 .bagact{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 8px}.bagact .btn{padding:7px 8px;font-size:13px;line-height:1.2;white-space:normal;min-height:0}.bagact .btn.wide{grid-column:1/-1}.bagact .btn.on{border-color:var(--gold);color:var(--gold)}
+/* 09.11: крапка на підвкладці, де є нагорода (Пропуск / Досягнення) */
+#subtabs button.sdot{position:relative}#subtabs button.sdot::after{content:'';position:absolute;top:4px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)}
