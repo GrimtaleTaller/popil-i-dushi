@@ -516,7 +516,7 @@ function renderForge(){
  if(!aSlot||!mOf(aSlot).length)aSlot=SLOTS.find(s=>mOf(s).length)||aSlot||'weapon';
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aEx=aIt?astExtra(aIt):{gold:0,shards:0},eqA=G.eq[aSlot];
  // 08.11 (варіант Ж): 2 прадавні з сумки в жертву (найслабші, спершу без зірок і перекидань, без каменів) + 📜 Сувій
- const aNeed=A.sac||2,aScr=G.scroll||0,aSac=G.inv.filter(i=>i.r===5&&(!aIt||i.id!==aIt.id)&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b)).slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
+ const aNeed=A.sac||2,aScr=G.scroll||0,aSac=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b)).slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
  const aEs=A.ess||0,aOk=aIt&&aScr>=1&&(G.ess||0)>=aEs&&aSac.length>=aNeed&&G.souls>=aSo&&G.gold>=aEx.gold&&G.shards>=aEx.shards;
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
