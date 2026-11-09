@@ -566,7 +566,7 @@ function swampCard(){
  const FL=S.floors||[];if(!FL.length)return'';
  if(!FL.some(x=>x.f===swF))swF=FL[0].f;
  const c=FL.find(x=>x.f===swF),rw=c.rw,e=c.est,ec=e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e',my=V.hero.power,ok=my>=c.need,isNew=c.f>S.f;
- const can=!busy&&(S.left>0||(G.ash||0)>=S.pay);
+ const pay=c.pay??S.pay,can=!busy&&(S.left>0||(G.ash||0)>=pay);
  return `<div class="dcard swc">${head}<div class="info">
   <div class="nm">${T('sw_name')} <span class="sub">· ${T('sw_floor',{n:c.f})}${isNew?' · '+T('sw_new'):''}</span></div>
   <div class="sub">${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100)})}</div>
@@ -574,7 +574,7 @@ function swampCard(){
   <div class="rw">🪙${fmt(rw.gold)} · ${chestIc(rw.chestG)}×${rw.chests} · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls} · 💠${Math.round(rw.gemChance*100)}% · ${c.sc===false?'':`<span style="color:${RAR[6].c}">📜${Math.round(rw.scroll*100)}%</span>`}${isNew&&rw.ashFirst?` · ⚱️+${rw.ashFirst}`:''}</div>${c.sc===false?`<div class="sub">${T('sw_sc_low')}</div>`:''}
   <div class="sub need ${ok?'ok':'bad'}">💪 ${T('need_power',{n:fmt(c.need),m:fmt(my)})}${ok?' ✓':' · '+T('need_short',{n:fmt(c.need-my)})}</div>
   <div class="sub">${T('dng_res')} <span class="est" style="color:${ec}">${T(e?'res_win':'res_lose')}</span> · ${T('sw_left',{n:S.left,m:S.free})}</div>
-  <button class="btn pri" id="swGo" data-f="${c.f}" data-e="${e}" ${can?'':'disabled'}>${S.left>0?T('enter_free'):T('enter',{p:fmt(S.pay)})}</button>
+  <button class="btn pri" id="swGo" data-f="${c.f}" data-e="${e}" ${can?'':'disabled'}>${S.left>0?T('enter_free'):T('enter',{p:fmt(pay)})}</button>
   ${S.wins?`<div class="sub">${T('sw_stats',{w:S.wins,r:S.runs,s:S.sc})}</div>`:''}
  </div></div>`;
 }
@@ -608,8 +608,8 @@ function renderDng(){
  const loseAsk=(b,go)=>b.dataset.e==='0'?modal(`<div class="big">💪</div><p>${T('lose_warn')}</p>`,T('lose_go'),go):go(); // 09.11: Сили менше за поріг — попередити
  $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>loseAsk(b,()=>act('dungeon',{t:+b.dataset.dng,d:+b.dataset.d},r=>dngPlay(r.out))));
  $('p-dng').querySelectorAll('[data-swf]').forEach(b=>b.onclick=()=>{swF=+b.dataset.swf;renderDng()});
- if($('swGo'))$('swGo').onclick=()=>{const S=V.swamp,go=()=>act('swamp',{f:+$('swGo').dataset.f},r=>{r.out.sw=1;if(r.out.win)swF=0;dngPlay(r.out)});
-  if($('swGo').dataset.e==='0')modal(`<div class="big">💪</div><p>${T('lose_warn')}</p>`,T('lose_go'),go);else if(!S.left&&S.pay>=100)modal(`<div class="big">⚱️</div><p>${T('sw_pay_ask',{p:fmt(S.pay)})}</p>`,T('enter',{p:fmt(S.pay)}),go,null,'swpay');else go()}; // 09.11: результат відомий наперед — попередити про поразку
+ if($('swGo'))$('swGo').onclick=()=>{const S=V.swamp,f0=+$('swGo').dataset.f,pay=((S.floors||[]).find(x=>x.f===f0)||{}).pay??S.pay,go=()=>act('swamp',{f:+$('swGo').dataset.f},r=>{r.out.sw=1;if(r.out.win)swF=0;dngPlay(r.out)});
+  if($('swGo').dataset.e==='0')modal(`<div class="big">💪</div><p>${T('lose_warn')}</p>`,T('lose_go'),go);else if(!S.left&&pay>=100)modal(`<div class="big">⚱️</div><p>${T('sw_pay_ask',{p:fmt(pay)})}</p>`,T('enter',{p:fmt(pay)}),go,null,'swpay');else go()}; // 09.11: результат відомий наперед — попередити про поразку
  $('p-dng').querySelectorAll('[data-dngn]').forEach(b=>b.onclick=()=>loseAsk(b,()=>act('dungeon',{t:+b.dataset.dngn,d:+b.dataset.d,n:10},r=>dngBatch(r.out))));
  $('p-dng').querySelectorAll('[data-dt]').forEach(b=>b.onclick=()=>{const t=+b.dataset.dt,k=+b.dataset.dd,x=(V.dng.tiers[t-1].diffs||[])[k-1];
   if(!x||!x.open){toast(T('diff_lock',{n:T('diff_'+(k-1))}));return}dngD[t]=k;renderDng()});
