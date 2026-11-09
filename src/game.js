@@ -61,7 +61,7 @@ const UPG=[
  {k:'crit',n:'Холодний розрахунок',ic:'🎯',d:'+0,5% шанс криту (макс. 25%)',val:l=>0.5*Math.min(l,50),cost:l=>40*Math.pow(1.22,l),max:50}
 ];
 const WAVES=10,BOSS_TIME=30,INV_MAX=40;
-const mobHp=s=>s<=50?25*Math.pow(1.25,s-1):25*Math.pow(1.25,49)*Math.pow(1.18,s-50),mobAtk=s=>4*Math.pow(1.22,s-1),mobGold=s=>4*Math.pow(1.17,s-1),mobXp=s=>V&&V.xp?V.xp.mob:6*Math.pow(1.07,s-1);
+const mobHp=s=>27.5*(s<=50?Math.pow(1.25,s-1):Math.pow(1.25,49)*Math.pow(1.18,Math.min(s,80)-50)*Math.pow(1.22,Math.max(0,s-80))),mobAtk=s=>4.4*Math.pow(1.22,s-1),mobGold=s=>4*Math.pow(1.17,s-1),mobXp=s=>V&&V.xp?V.xp.mob:6*Math.pow(1.07,s-1);
 const xpNeed=l=>V&&V.xp?V.xp.need:Math.floor(3000*Math.pow(1.12,l-1)); // точні значення дає сервер
 function region(s){const i=Math.floor((s-1)/10);return{r:REGIONS[i%REGIONS.length],tier:Math.floor(i/REGIONS.length)}}
 const itemName=it=>SLOT[it.slot].names[Math.min(it.nm,SLOT[it.slot].names.length-1)];
