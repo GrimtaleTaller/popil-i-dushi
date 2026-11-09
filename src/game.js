@@ -662,7 +662,7 @@ const LOGT={
  daily:a=>T('log_daily',{n:a[0]}),
  reward:a=>T('log_reward',{a:fmt(a[0])}),relic:a=>T('relic_done',{n:a[0],a:a[1]}),refine:a=>T('log_ref',{s:SLOT[a[0]]?SLOT[a[0]].n:a[0],n:a[2],k:a[3]}),
  star:a=>'★ '+(SLOT[a[0]]?SLOT[a[0]].n:a[0])+' → '+'★'.repeat(a[2]||0),
- pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
+ pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
  pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
@@ -693,6 +693,7 @@ const petIc=(sp,big,l)=>PETIC[sp]?`<img class="pet-ic${big?' big':''}" src="${pe
 // ★1 сіра · ★2 зелена · ★3 синя · ★4 фіолетова · ★5 золота з м'яким сяйвом; колір — CSS-змінна --pf у класі .s1…s5
 const petFrame=(sp,l,s,big)=>{s=Math.max(1,Math.min(5,s||1));return `<span class="pfB s${s}${big?' big':''}"><span class="pfB-in"><img src="${petImg(sp,l)}" alt=""></span><i class="o1"></i><i class="o2"></i><i class="o3"></i><i class="o4"></i><span class="pfst">${'★'.repeat(s)}</span></span>`};
 const petEvoN=l=>l>=20?2:l>=10?1:0,stars=(s,m=5)=>'<span class="stars">'+'★'.repeat(s)+'<i>'+'★'.repeat(m-s)+'</i></span>';
+const dur=ms=>{const m=Math.round(ms/60000);return m%60?hms(ms):T('t_hh',{h:m/60})}; // тривалість без «0 хв»
 const hms=ms=>{const m=Math.ceil(ms/60000),h=Math.floor(m/60);return h?T('t_hm',{h,m:m%60}):T('t_m',{m})};
 function petFighter(){const e=$('petf');if(!e)return;const P=G&&G.pet;if(P&&P.act){const p=P.list[P.act];e.innerHTML=`<img src="${petImg(P.act,p.l)}" alt="">`;e.className='petf evo'+petEvoN(p.l);e.style.display=''}else e.style.display='none'}
 function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn:0},D=V.pet||{},I=D.info||{},C=D.cfg||{},now=Date.now();
@@ -716,8 +717,9 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
   h+=`</div>`}
  // інкубатор
  h+=`<div class="card"><h4>🥚 ${T('pet_inc')}</h4>`;
- if(P.inc){const left=Math.max(0,P.inc.at-now);h+=`<div class="petinc">${eggIc(P.inc.e)}<div><b>${T(P.inc.e==='r'?'egg_r':'egg_c')}</b><div class="sub">${left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed" ${G.ash>=I.speed?'':'disabled'}>⚡ ⚱️${I.speed}</button>`:`<button class="btn pri" id="pClaim">${T('pet_claim')}</button>`}</div>`}
- h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&!P.inc?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||144e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||432e5)/36e5)})}</p></div>`;
+ if(P.inc){const left=Math.max(0,P.inc.at-now);h+=`<div class="petinc">${eggIc(P.inc.e)}<div><b>${T(P.inc.e==='r'?'egg_r':'egg_c')}</b><div class="sub">${left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed" ${G.ash>=I.speed?'':'disabled'}>⚡ ⚱️${I.speed}</button>`:`<button class="btn pri" id="pClaim">${T('pet_claim')}</button>`}</div>`;
+  const E=V.tasks&&V.tasks.egg;if(E&&left>=E.cut&&V.tasks.block){const wt=Math.max(0,(E.next||0)-now),can=E.n<E.max&&!wt;h+=`<div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('pet_ad_hint',{t:dur(E.cut),n:E.n,x:E.max})}${wt&&E.n<E.max?' '+T('pet_ad_wait',{t:hms(wt)}):''}</span><button class="btn" id="pAd" ${can?'':'disabled'}>${'📺 −'+dur(E.cut)}</button></div>`}}
+ h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&!P.inc?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||216e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||576e5)/36e5)})}</p></div>`;
  // колекція
  h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc pfc ${P.act===sp?'act':''}" data-pset="${sp}">${P.act===sp?`<em class="pact">${T('pet_active')}</em>`:''}${petFrame(sp,p.l,p.s,0)}<b>${T('pet_'+sp)}</b><small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
  if(!a&&!P.inc&&!(P.eggs.c||P.eggs.r))h=`<div class="card"><h4>🐾 ${T('sub_pet')}</h4><p class="hint">${T('pet_intro')}</p></div>`+h;
@@ -728,7 +730,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if($('pFeed'))$('pFeed').onclick=()=>fdAsk(1);if($('pFeedM'))$('pFeedM').onclick=()=>fdAsk(30);
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
   modal(`<div class="big">${petFrame(P.act,(P.list[P.act]||{}).l,(P.list[P.act]||{}).s,1)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
- if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));
+ if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));if($('pAd'))$('pAd').onclick=()=>act('adIntent',{k:'egg'},()=>{adEggAt=Date.now();watchAd()});
  if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},r=>{const o=r.out;modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')});
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
  if($('pgCat'))$('pgCat').onclick=()=>{pgCat=!pgCat;$('pgCat').classList.toggle('on',pgCat)};
@@ -1220,9 +1222,12 @@ function renderQuest(){
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
 let adCtl=null,adLoading=false;
-function adsgram(cb){if(window.Adsgram)return cb();if(adLoading)return;adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;cb()};sc.onerror=()=>{adLoading=false;toast(T('ad_err'))};document.head.appendChild(sc)}
+function adsgram(cb){if(window.Adsgram)return cb();if(adLoading)return adEggDrop();adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;cb()};sc.onerror=()=>{adLoading=false;adEggDrop();toast(T('ad_err'))};document.head.appendChild(sc)}
+let adEggAt=0;const adEggOn=()=>Date.now()-adEggAt<170e3;
+// реклама на яйці (09.11): сервер віддає перегляд тому, на що поставлено намір; якщо реклама не показалась — намір скидаємо
+const adEggDrop=()=>{if(adEggOn()){adEggAt=0;api('adIntent',{k:''}).catch(()=>{})}};
 function watchAd(){const K=V.tasks;if(!K||!K.block)return toast(T('ad_soon'));
- adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){toast(T('ad_wait'));setTimeout(()=>sync(),3000);setTimeout(()=>sync(),9000)}}).catch(()=>toast(T('ad_none')))}catch(e){toast(T('ad_err'))}})}
+ adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){adEggAt=0;toast(T('ad_wait'));setTimeout(()=>sync(),3000);setTimeout(()=>sync(),9000)}else adEggDrop()}).catch(()=>{adEggDrop();toast(T('ad_none'))})}catch(e){adEggDrop();toast(T('ad_err'))}})}
 const SUB_N={news:'@GRIMTALENEWS',chat:'@GRIMTALECHAT',pay:'@GRIMTALEPAYOUTS'};
 function tgOpen(u){const w=window.Telegram&&Telegram.WebApp;if(/^https:\/\/t\.me\//.test(u)&&w&&w.openTelegramLink)w.openTelegramLink(u);else if(w&&w.openLink)w.openLink(u);else window.open(u,'_blank')}
 function renderTasks(){
@@ -1235,7 +1240,7 @@ function renderTasks(){
  h+=K.subs.map(x=>`<div class="card"${x.ok?' style="opacity:.6"':''}><div class="row" style="align-items:center;gap:8px"><div style="flex:1;min-width:0"><h4 style="margin:0">${x.ok?'✅':'📢'} ${T('sub_one',{c:SUB_N[x.k]||x.chat})}</h4><span class="hint" style="margin:0">${T('tk_rw')}: ⚱️${K.subAsh}</span></div>${x.ok?'':`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div></div>`).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
  if(K.ptn.length){h+=`<div class="card"><h4>🤝 ${T('ptn_t')}</h4>`+K.ptn.map(p=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0">${p.ok?'✅':'🎯'} ${esc(p.t[LANG]||p.t.en||p.id)} <span class="hint">· ${chestIc(1)}×${p.ch}${p.key?' +🗝️×'+p.key:''}</span></span>${p.ok?'':`<button class="btn" style="flex:0 0 auto" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`}</div>`).join('')+`</div>`}
  el.innerHTML=h;
- $('tkAd').onclick=watchAd;$('qShare').onclick=shareStory;
+ $('tkAd').onclick=()=>{adEggDrop();watchAd()};$('qShare').onclick=shareStory;
  if($('qBioCopy')){$('qBioCopy').onclick=()=>copyText(bioLink());$('qBioChk').onclick=()=>act('bio',{},r=>{toast('🔗 +⚱️'+r.out.ash);haptic('medium')})}
  el.querySelectorAll('[data-sgo]').forEach(b=>b.onclick=()=>tgOpen('https://t.me/'+b.dataset.sgo.replace('@','')));
  el.querySelectorAll('[data-sck]').forEach(b=>b.onclick=()=>act('subCheck',{k:b.dataset.sck},r=>{toast('📢 +⚱️'+r.out.ash);haptic('medium')}));
