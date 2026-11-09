@@ -553,7 +553,7 @@ function feedHi(l,want){const M=(G.mats||[]).slice(),hi={};let sh=G.shards,done=
   sh-=c.sh;l++;done++;if(c.cat)break}
  return Object.keys(hi).map(i=>[+i,hi[i]])}
 function matAsk(m,n,go){const hi=matUse(m,n).filter(x=>x[0]>m);if(!hi.length)return go(false);modal(`<div class="big">⛏️</div><p>${T('mat_hi_ask',{m:MATN[m],u:hi.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})}</p>`,T('mat_hi_ok'),()=>go(true),null,'matask')} // go(true) — гравець погодився на вищі матеріали
-const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');return d.toDateString()===n.toDateString()?p(d.getHours())+':'+p(d.getMinutes()):p(d.getDate())+'.'+p(d.getMonth()+1)};
+const logTime=a=>{const d=new Date(a),n=new Date(),p=x=>String(x).padStart(2,'0');const hm=p(d.getHours())+':'+p(d.getMinutes());return d.toDateString()===n.toDateString()?hm:p(d.getDate())+'.'+p(d.getMonth()+1)+' '+hm}; // 09.11: журнал клану за 24 год — вчорашнім записам теж потрібен час
 // ---------- Болото відьми (09.11): поверхи, хвилі монстрів підряд і Відьма Мара; Сувій вічності — лише з Відьми ----------
 const SWM=[['sw_m1','sw_mire'],['sw_m2','sw_mavka'],['sw_m3','sw_toad'],['sw_m4','sw_scare'],['sw_m5','sw_wisp'],['sw_m6','sw_cat']],SWB=['sw_boss','sw_witch'];
 let swF=0; // вибраний поверх (0 — найвищий доступний)
