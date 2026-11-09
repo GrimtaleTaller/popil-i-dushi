@@ -568,7 +568,7 @@ function swampCard(){
  return `<div class="dcard swc">${head}<div class="info">
   <div class="nm">${T('sw_name')} <span class="sub">· ${T('sw_floor',{n:c.f})}${isNew?' · '+T('sw_new'):''}</span></div>
   <div class="sub">${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100)})}</div>
-  <div class="chips diffs">${FL.slice().reverse().map(x=>`<button data-swf="${x.f}" class="${x.f===c.f?'act':''}">${x.f>S.f?'🆕 ':''}${x.f}${x.sc?' 📜':''}</button>`).join('')}</div>
+  <div class="chips diffs">${FL.slice().sort((a,b)=>a.f-b.f).map(x=>`<button data-swf="${x.f}" class="${x.f===c.f?'act':''}">${x.f>S.f?'🆕 ':''}${x.f}${x.sc?' 📜':''}</button>`).join('')}</div>
   <div class="rw">🪙${fmt(rw.gold)} · ${chestIc(rw.chestG)}×${rw.chests} · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls} · 💠${Math.round(rw.gemChance*100)}% · ${c.sc===false?'':`<span style="color:${RAR[6].c}">📜${Math.round(rw.scroll*100)}%</span>`}${isNew&&rw.ashFirst?` · ⚱️+${rw.ashFirst}`:''}</div>${c.sc===false?`<div class="sub">${T('sw_sc_low')}</div>`:''}
   <div class="sub need ${ok?'ok':'bad'}">💪 ${T('need_power',{n:fmt(c.need),m:fmt(my)})}${ok?' ✓':' · '+T('need_short',{n:fmt(c.need-my)})}</div>
   <div class="sub">${T('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span> · ${T('sw_left',{n:S.left,m:S.free})}</div>
@@ -1245,7 +1245,7 @@ function renderQuest(){
  const dr=rwTxt(P.dqR);
  const BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
  h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_in_tasks')}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
- h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`<p class="hint">${P.wb?'✅ ':''}${T('wq_all')}</p></div>`; // 08.11: усі завдання тижня → Сувій вічності
+ h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`</div>`; // 09.11: тижневий Сувій прибрано (лише з Відьми в Болоті) → Сувій вічності
  h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#</b><span>${T('pass_free')}</span><span>👑 ${T('pass_paid')}</span></div>`;
  for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i);
   h+=`<div class="${ok?'on':''}"><b>${i}</b><span>${f?'✓ ':''}${rwTxt(P.free[i-1])}</span><span class="${P.prem?'':'lock'}">${p?'✓ ':P.prem?'':'🔒 '}${rwTxt(P.paid[i-1])}</span></div>`}
