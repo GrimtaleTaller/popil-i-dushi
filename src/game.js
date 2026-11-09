@@ -8,7 +8,8 @@ const Q=new URLSearchParams(location.search);
 const DEV=Q.get('dev')?{key:Q.get('dev'),user:{id:Number(Q.get('uid')||1),first_name:'Tester'}}:null;
 const tg=()=>window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 
-function fmt(n){n=Math.floor(n);if(n<1000)return String(n);const u=['','K','M','B','T','Qa','Qi','Sx'];let i=0,x=n;while(x>=999.5&&i<u.length-1){x/=1000;i++}return(x<10?x.toFixed(2):x<100?x.toFixed(1):x.toFixed(0))+u[i]}
+function fmt(n){n=Math.floor(n);if(n<1000)return String(n);const u=['','K','M','B','T','Qa','Qi','Sx'];let i=0,x=n;while(x>=1000&&i<u.length-1){x/=1000;i++}const d=x<10?2:x<100?1:0,f=10**d;return(Math.floor(x*f+1e-9)/f).toFixed(d)+u[i]} // 09.11: відкидаємо, а не округлюємо — 2208 Попелу показувало «2.21K», і Влад вносив 2210 → «не вистачає»
+const fmtX=n=>Math.floor(n||0).toLocaleString('uk-UA'); // точне число (поля вводу)
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 // ---------- мова ----------
@@ -971,7 +972,7 @@ function renderClan(){
  S.main+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
   <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div>
   <h4 style="margin-top:12px">⚱️ ${T('clan_ash')}: <span style="color:var(--gold)">${fmt(C.clan.ash||0)}</span></h4>
-  <div class="row" style="align-items:center"><input id="cAsh" class="inp" type="number" min="1" inputmode="numeric" placeholder="⚱️ ${fmt(G.ash||0)}"><button class="btn" id="cAshAll">${T('give_all')}</button><button class="btn pri" id="cAshGo">${T('give')}</button></div>
+  <div class="row" style="align-items:center"><input id="cAsh" class="inp" type="number" min="1" inputmode="numeric" placeholder="⚱️ ${fmtX(G.ash)}"><button class="btn" id="cAshAll">${T('give_all')}</button><button class="btn pri" id="cAshGo">${T('give')}</button></div>
   <h4 style="margin-top:12px">📦 ${T('clan_res')}</h4><div class="mats">${[0,1,2,3].map(i=>`<div><b>⛏️ ${MATN[i]}</b><span>${fmt((C.clan.res||{m:[]}).m[i]||0)}</span></div>`).join('')}<div><b>🔩</b><span>${fmt((C.clan.res||{}).sh||0)}</span></div></div>
   <div class="chips" style="margin-top:8px">${['m0','m1','m2','m3','sh'].map(k=>`<button data-rk="${k}" class="${resK===k?'act':''}">${k==='sh'?'🔩 '+fmt(G.shards||0):'⛏️'+MATN[+k[1]]+' '+fmt((G.mats||[])[+k[1]]||0)}</button>`).join('')}</div>
   <div class="row" style="align-items:center"><input id="cRes" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cResAll">${T('give_all')}</button><button class="btn pri" id="cResGo">${T('give')}</button></div></div>`;
@@ -1024,7 +1025,7 @@ function renderClan(){
  if($('cResAll'))$('cResAll').onclick=()=>{$('cRes').value=haveRes(resK)};
  if($('cResGo'))$('cResGo').onclick=()=>{const n=Math.floor(+$('cRes').value||0);if(n<1)return;if(n>haveRes(resK)){toast(ERR.no_mats);return}clanAct('clanGiveRes',{k:resK,n},()=>toast(T('res_given')))};
  if($('cAshAll'))$('cAshAll').onclick=()=>{$('cAsh').value=Math.floor(G.ash||0)};
- if($('cAshGo'))$('cAshGo').onclick=()=>{const a=Math.floor(+$('cAsh').value||0);if(a<1)return;if(a>(G.ash||0)){toast(ERR.no_ash);return}clanAct('clanGiveAsh',{amt:a})};
+ if($('cAshGo'))$('cAshGo').onclick=()=>{const a=Math.floor(+$('cAsh').value||0);if(a<1)return;if(a>(G.ash||0)){toast(ERR.no_ash+': ⚱️'+fmtX(G.ash));return}clanAct('clanGiveAsh',{amt:a})};
  if($('cGiveGo'))$('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
  el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>clanAct('clanCraft',{t:craftT,n:+b.dataset.cn}));
