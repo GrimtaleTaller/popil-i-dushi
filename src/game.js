@@ -1313,6 +1313,7 @@ function renderColl(){
 }
 let wbData=null,wbBusy=false;
 function renderWb(){
+ if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return} // 09.11 (Влад): світового боса прибрано з гри
  const W=V.wb,el=$('p-wboss');
  if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('wb_unlock',{n:W?W.stage:15})}</div>`;return}
  if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out}).catch(e=>toast(errT(e))).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
@@ -1367,7 +1368,7 @@ function subDots(){const P=V&&V.pass;return{quest:!!(P&&(P.lv>P.f.length||(P.pre
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],['wboss','sub_wb'],['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['shop','sub_shop'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['shop','sub_shop'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}</button>`).join('');
