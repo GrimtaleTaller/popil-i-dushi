@@ -571,8 +571,8 @@ function swampCard(){
   <div class="chips diffs">${FL.slice().sort((a,b)=>a.f-b.f).map(x=>`<button data-swf="${x.f}" class="${x.f===c.f?'act':''}">${x.f>S.f?'🆕 ':''}${x.f}${x.sc?' 📜':''}</button>`).join('')}</div>
   <div class="rw">🪙${fmt(rw.gold)} · ${chestIc(rw.chestG)}×${rw.chests} · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls} · 💠${Math.round(rw.gemChance*100)}% · ${c.sc===false?'':`<span style="color:${RAR[6].c}">📜${Math.round(rw.scroll*100)}%</span>`}${isNew&&rw.ashFirst?` · ⚱️+${rw.ashFirst}`:''}</div>${c.sc===false?`<div class="sub">${T('sw_sc_low')}</div>`:''}
   <div class="sub need ${ok?'ok':'bad'}">💪 ${T('need_power',{n:fmt(c.need),m:fmt(my)})}${ok?' ✓':' · '+T('need_short',{n:fmt(c.need-my)})}</div>
-  <div class="sub">${T('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span> · ${T('sw_left',{n:S.left,m:S.free})}</div>
-  <button class="btn pri" id="swGo" data-f="${c.f}" ${can?'':'disabled'}>${S.left>0?T('enter_free'):T('enter',{p:fmt(S.pay)})}</button>
+  <div class="sub">${T('dng_res')} <span class="est" style="color:${ec}">${T(e?'res_win':'res_lose')}</span> · ${T('sw_left',{n:S.left,m:S.free})}</div>
+  <button class="btn pri" id="swGo" data-f="${c.f}" data-e="${e}" ${can?'':'disabled'}>${S.left>0?T('enter_free'):T('enter',{p:fmt(S.pay)})}</button>
   ${S.wins?`<div class="sub">${T('sw_stats',{w:S.wins,r:S.runs,s:S.sc})}</div>`:''}
  </div></div>`;
 }
@@ -599,15 +599,16 @@ function renderDng(){
    <div class="rw">${chestIc(rw.chestG)}×${rw.chests} (${tr('lvl',{n:G.lvl+'–'+(G.lvl+3)})}) · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls}${rw.catChance?' · 💎'+Math.round(rw.catChance*100)+'%':''}${rw.essChance?' · ✦'+Math.round(rw.essChance*100)+'%':''}</div>
    ${cd.need?(()=>{const my=V.hero.power,ok=my>=cd.need;return `<div class="sub need ${ok?'ok':'bad'}">💪 ${tr('need_power',{n:fmt(cd.need),m:fmt(my)})}${ok?' ✓':' · '+tr('need_short',{n:fmt(cd.need-my)})}</div>`})():''}
    ${T.open&&DF.length>1?`<div class="chips diffs">${DF.map(x=>`<button data-dt="${T.t}" data-dd="${x.d}" class="${x.d===cd.d?'act':''} ${x.open?'':'lockd'}">${x.open?'':'🔒'}${tr('diff_'+x.d)}</button>`).join('')}</div>`:''}
-   ${T.open?`<div class="sub">${tr('dng_chance')} <span class="est" style="color:${ec}">~${e}%</span></div>
-   <button class="btn pri" data-dng="${T.t}" data-d="${cd.d}" ${busy||(!left&&!T.keys&&(G.ash||0)<T.pay)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.pay)})}</button>${(left+T.keys)>1?`<button class="btn" data-dngn="${T.t}" data-d="${cd.d}" ${busy?'disabled':''}>⚡ ${tr('batch',{n:Math.min(10,left+T.keys)})}</button>`:''}`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
+   ${T.open?`<div class="sub">${tr('dng_res')} <span class="est" style="color:${ec}">${tr(e?'res_win':'res_lose')}</span></div>
+   <button class="btn pri" data-dng="${T.t}" data-d="${cd.d}" data-e="${e}" ${busy||(!left&&!T.keys&&(G.ash||0)<T.pay)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.pay)})}</button>${(left+T.keys)>1?`<button class="btn" data-dngn="${T.t}" data-d="${cd.d}" data-e="${e}" ${busy?'disabled':''}>⚡ ${tr('batch',{n:Math.min(10,left+T.keys)})}</button>`:''}`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
   </div></div>`}
  $('p-dng').innerHTML=h;
- $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dng,d:+b.dataset.d},r=>dngPlay(r.out)));
+ const loseAsk=(b,go)=>b.dataset.e==='0'?modal(`<div class="big">💪</div><p>${T('lose_warn')}</p>`,T('lose_go'),go):go(); // 09.11: Сили менше за поріг — попередити
+ $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>loseAsk(b,()=>act('dungeon',{t:+b.dataset.dng,d:+b.dataset.d},r=>dngPlay(r.out))));
  $('p-dng').querySelectorAll('[data-swf]').forEach(b=>b.onclick=()=>{swF=+b.dataset.swf;renderDng()});
  if($('swGo'))$('swGo').onclick=()=>{const S=V.swamp,go=()=>act('swamp',{f:+$('swGo').dataset.f},r=>{r.out.sw=1;if(r.out.win)swF=0;dngPlay(r.out)});
-  if(!S.left&&S.pay>=100)modal(`<div class="big">⚱️</div><p>${T('sw_pay_ask',{p:fmt(S.pay)})}</p>`,T('enter',{p:fmt(S.pay)}),go,null,'swpay');else go()};
- $('p-dng').querySelectorAll('[data-dngn]').forEach(b=>b.onclick=()=>act('dungeon',{t:+b.dataset.dngn,d:+b.dataset.d,n:10},r=>dngBatch(r.out)));
+  if($('swGo').dataset.e==='0')modal(`<div class="big">💪</div><p>${T('lose_warn')}</p>`,T('lose_go'),go);else if(!S.left&&S.pay>=100)modal(`<div class="big">⚱️</div><p>${T('sw_pay_ask',{p:fmt(S.pay)})}</p>`,T('enter',{p:fmt(S.pay)}),go,null,'swpay');else go()}; // 09.11: результат відомий наперед — попередити про поразку
+ $('p-dng').querySelectorAll('[data-dngn]').forEach(b=>b.onclick=()=>loseAsk(b,()=>act('dungeon',{t:+b.dataset.dngn,d:+b.dataset.d,n:10},r=>dngBatch(r.out))));
  $('p-dng').querySelectorAll('[data-dt]').forEach(b=>b.onclick=()=>{const t=+b.dataset.dt,k=+b.dataset.dd,x=(V.dng.tiers[t-1].diffs||[])[k-1];
   if(!x||!x.open){toast(T('diff_lock',{n:T('diff_'+(k-1))}));return}dngD[t]=k;renderDng()});
 }
