@@ -562,14 +562,14 @@ let swF=0; // вибраний поверх (0 — найвищий доступ
 function swampCard(){
  const S=V.swamp;if(!S)return'';
  const head=`<div class="th" style="background-image:url(${IMG('sw_bg')})"><b>🧙</b></div>`;
- if(!S.open)return `<div class="dcard lock swc">${head}<div class="info"><div class="nm">${T('sw_name')}</div><div class="sub">${T('sw_lock',{n:S.lvl})}</div><div class="sub">${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100)})}</div></div></div>`;
+ if(!S.open)return `<div class="dcard lock swc">${head}<div class="info"><div class="nm">${T('sw_name')}</div><div class="sub">${T('sw_lock',{n:S.lvl})}</div><div class="sub">${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100),m:Math.round((S.scMax||S.scroll)*100)})}</div></div></div>`;
  const FL=S.floors||[];if(!FL.length)return'';
  if(!FL.some(x=>x.f===swF))swF=FL[0].f;
  const c=FL.find(x=>x.f===swF),rw=c.rw,e=c.est,ec=e>=80?'#56c271':e>=40?'#f2c14e':'#e0484e',my=V.hero.power,ok=my>=c.need,isNew=c.f>S.f;
  const pay=c.pay??S.pay,can=!busy&&(S.left>0||(G.ash||0)>=pay);
  return `<div class="dcard swc">${head}<div class="info">
   <div class="nm">${T('sw_name')} <span class="sub">· ${T('sw_floor',{n:c.f})}${isNew?' · '+T('sw_new'):''}</span></div>
-  <div class="sub">${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100)})}</div>
+  <div class="sub">${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100),m:Math.round((S.scMax||S.scroll)*100)})}</div>
   <div class="chips diffs">${FL.slice().sort((a,b)=>a.f-b.f).map(x=>`<button data-swf="${x.f}" class="${x.f===c.f?'act':''}">${x.f>S.f?'🆕 ':''}${x.f}${x.sc?' 📜':''}</button>`).join('')}</div>
   <div class="rw">🪙${fmt(rw.gold)} · ${chestIc(rw.chestG)}×${rw.chests} · ⛏️${MATN[rw.mat]}×${rw.matN} · 🔥${rw.souls} · 💠${Math.round(rw.gemChance*100)}% · ${c.sc===false?'':`<span style="color:${RAR[6].c}">📜${Math.round(rw.scroll*100)}%</span>`}${isNew&&rw.ashFirst?` · ⚱️+${rw.ashFirst}`:''}</div>${c.sc===false?`<div class="sub">${T('sw_sc_low')}</div>`:''}
   <div class="sub need ${ok?'ok':'bad'}">💪 ${T('need_power',{n:fmt(c.need),m:fmt(my)})}${ok?' ✓':' · '+T('need_short',{n:fmt(c.need-my)})}</div>
