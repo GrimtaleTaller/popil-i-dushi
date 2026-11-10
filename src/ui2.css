@@ -224,10 +224,14 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .lnchlock .lnchprep{font:700 17px/1.25 Georgia,'Times New Roman',serif;color:#f8d27d;text-shadow:0 0 8px #e8a33d77,0 2px 3px #000}
 .lnchlock .lnchprep::after{content:'';display:inline-block;width:1.2em;text-align:left;animation:lnchdots 1.5s steps(4) infinite}
 @keyframes lnchdots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
-.lnchlock .lnchbar{height:12px;max-width:300px;margin:10px auto;border:2px solid #96692d;border-radius:10px;background:#1a100a;overflow:hidden}
-.lnchlock .lnchbar i{display:block;height:100%;width:40%;border-radius:8px;background:linear-gradient(90deg,#50cd5f,#b6e07a,#fab14a);box-shadow:0 0 10px #b4ff9a;animation:lnchload 2.4s ease-in-out infinite}
-@keyframes lnchload{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
-@media (prefers-reduced-motion:reduce){.lnchlock .lnchbar i{animation:none;width:100%}}
+.lnchlock{pointer-events:auto;user-select:none;-webkit-user-select:none}.lnchlock *{pointer-events:none}
+.lnchlock .lnchbar{position:relative;height:16px;max-width:300px;margin:10px auto;border:2px solid #96692d;border-radius:10px;background:#1a100a;overflow:hidden}
+.lnchlock .lnchbar i{display:block;height:100%;width:0;border-radius:8px;background:linear-gradient(90deg,#50cd5f,#b6e07a,#fab14a);box-shadow:0 0 10px #b4ff9a;transition:width 1s linear;position:relative;overflow:hidden}
+.lnchlock .lnchbar i::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,#ffffff55,transparent);transform:translateX(-100%);animation:lnchshine 2.2s ease-in-out infinite}
+@keyframes lnchshine{to{transform:translateX(100%)}}
+.lnchlock .lnchbar b{position:absolute;inset:0;font:700 11px/16px system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px #000}
+.lnchlock .lnchat{color:#dcebc8;font-size:14px;font-weight:600;margin-top:4px!important;text-shadow:0 1px 3px #000}
+@media (prefers-reduced-motion:reduce){.lnchlock .lnchbar i::after{animation:none}}
 .lnchlock #lnchLT{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;text-shadow:0 0 8px #e8a33d88,0 2px 3px #000}
 .lnchlock .hint{color:#d9b77a;max-width:320px;margin:8px auto 12px!important;font-size:13px;text-shadow:0 1px 2px #000}
 
