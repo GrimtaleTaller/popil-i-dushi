@@ -1026,7 +1026,8 @@ function renderClan(){
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ct,q=el.querySelector(`[data-ktq="${t}"]`),n=Math.floor(+(q&&q.value)||1);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanTake',{t,n})});
  const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{if(!$('kgP').value){toast(T('key_pick_err'));return}const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
  el.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.cta,all:1}));
- el.querySelectorAll('[data-pj]').forEach(b=>b.onclick=()=>clanAct('clanProj',{s:clanData.proj.done,cost:clanData.proj.cost},()=>{toast(T('pj_done'));haptic('medium')}));
+ el.querySelectorAll('[data-pj]').forEach(b=>b.onclick=()=>{const P=clanData.proj,go=()=>clanAct('clanProj',{s:P.done,cost:P.cost},()=>{toast(T('pj_done'));haptic('medium')}).then(r=>{if(!r){clanData=null;dirty.clan=1}}); // 10.11: підтвердження; після помилки — свіжі дані клану
+  modal(`<div class="big">🎯</div><p>${T('pj_ask',{p:fmt(P.cost),n:P.done+1})}</p>`,T('pj_pay'),go)});
  el.querySelectorAll('[data-bk]').forEach(b=>b.onclick=()=>clanAct('clanBuild',{k:b.dataset.bk},()=>{toast(T('bld_done'));haptic('medium')}));
  el.querySelectorAll('[data-ay]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.ay,ok:true}));
  el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.an,ok:false}));
