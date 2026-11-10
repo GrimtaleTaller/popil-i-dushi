@@ -437,10 +437,11 @@ const gmLack=x=>x.k==='gem'?T('gem_lack',{n:x.v}):x.k==='mat'?gmMat(x.m)+' −'+
 // множина «1 злиття / 2 злиття / 5 злиттів»: форми через | у перекладі
 const plT=(k,n)=>{const f=T(k).split('|');let i;if(LANG==='en')i=n===1?0:2;else{const m=n%10,h=n%100;i=m===1&&h!==11?0:m>=2&&m<=4&&(h<12||h>14)?1:2}return(f[i]||f[f.length-1]).replace('{n}',fmt(n))};
 const gmSpend=A=>[...A.mats.map((v,i)=>v?`⛏️${MATN[i]}×${fmt(v)}`:'').filter(Boolean),A.sh?'🔩'+fmt(A.sh):''].filter(Boolean).join(' · ');
-function gemMergeCard(){const M=gmCfg(),A=M.all,Mt=G.mats||[],mx=gemCfg().max;
+const gmAllPlan=()=>{const M=gmCfg(),A=M.all,H=M.allHi;return H&&A&&H.n>A.n?{A:H,hi:true}:{A,hi:false}}; // 10.11 (Влад): якщо свого матеріалу бракує — «Злити все» бере й вищі, з попередженням
+function gemMergeCard(){const M=gmCfg(),{A,hi:gHi}=gmAllPlan(),Mt=G.mats||[],mx=gemCfg().max;
  let h=`<div class="card"><h4>◆ ${T('gem_title')}</h4><p class="hint">${T('gem_merge_hint',{n:M.need})}</p>
  <div class="gmres"><span class="sub">${T('gem_have')}</span>${MATN.map((x,i)=>`<span>⛏️${x} <b>${fmt(Mt[i]||0)}</b></span>`).join('')}<span>🔩 <b>${fmt(G.shards||0)}</b></span></div>`;
- if(A)h+=`<button class="btn pri big gmall" id="gmAll" ${A.n?'':'disabled'}>⬆ ${T('gem_all')}${A.n?' · '+plT('gem_all_n',A.n):''}</button>${A.n?`<div class="gmspend">${T('gem_spend')}: ${gmSpend(A)}</div>`:''}`;
+ if(A)h+=`<button class="btn pri big gmall" id="gmAll" ${A.n?'':'disabled'}>⬆ ${T('gem_all')}${A.n?' · '+plT('gem_all_n',A.n):''}</button>${A.n?`<div class="gmspend">${T('gem_spend')}: ${gmSpend(A)}${gHi?' · ⚠️ '+T('gem_all_hi_s'):''}</div>`:''}`;
  h+=`<div class="gmA"><div class="gmA-h"><span></span>${GEMS.map(t=>`<b style="color:${GEMC[t]}">${T('gem_'+t)}<small>${T('gem_st_'+t)}</small></b>`).join('')}</div>`;
  for(let l=1;l<=mx;l++){const c=l<mx?M.cost[l-1]:null;
   h+=`<div class="gmA-r"><span class="gmA-l"><b>${ROM[l-1]}</b>${c?`<small>→${ROM[l]}</small><small class="pr">${gmPrice(c)}</small>`:`<small>${T('gem_max')}</small>`}</span>`+
@@ -464,8 +465,8 @@ function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.i
 function bindGem(){const P=$('p-forge');
  // злиття в клітинці — усі доступні; якщо бракує матеріалу свого рівня й підуть вищі — спершу питаємо (matAsk, як у тренуванні)
  P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{const k=b.dataset.gm,c=gmCfg().cost[+k[1]-1];const x=+b.dataset.x||1;matAsk(c.mat,x*c.matN,hi=>act('gemMerge',{k,n:x,hi},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}))});
- if($('gmAll'))$('gmAll').onclick=()=>{const A=gmCfg().all;if(!A||!A.n)return;
-  modal(`<div class="big">◆</div><h3>${T('gem_all')}</h3><p>${T('gem_all_q',{n:plT('gem_all_n',A.n)})}</p><p class="gmspend">${T('gem_spend')}: ${gmSpend(A)}</p>`,T('gem_all_ok'),()=>act('gemMergeAll',{},r=>{toast(T('gem_all_done',{n:plT('gem_all_n',r.out.n)}));haptic('light')}),null,'gemmall')};
+ if($('gmAll'))$('gmAll').onclick=()=>{const {A,hi}=gmAllPlan();if(!A||!A.n)return;
+  modal(`<div class="big">◆</div><h3>${T('gem_all')}</h3><p>${T(hi?'gem_all_qh':'gem_all_q',{n:plT('gem_all_n',A.n)})}</p><p class="gmspend">${T('gem_spend')}: ${gmSpend(A)}</p>`,T('gem_all_ok'),()=>act('gemMergeAll',{hi},r=>{toast(T('gem_all_done',{n:plT('gem_all_n',r.out.n)}));haptic('light')}),null,'gemmall')};
  P.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>gemPick(+b.dataset.gi));
  if($('gOutAll'))$('gOutAll').onclick=()=>{const d=$('gOutAll').dataset,c=+d.c,ok=(G.ash||0)>=c;
   modal(`<div class="big">◆</div><h3>${T('gem_out_all',{n:d.n})}</h3><p>${T('gem_out_all_q',{i:d.i,c:fmt(c)})}</p><p class="hint">${T('gem_have_ash',{a:fmt(G.ash||0)})}</p>`,ok?T('gem_out_btn',{c:fmt(c)}):null,()=>{if(ok)act('gemRemoveAll',{},r=>{haptic('light');toast(T('gem_out_all_ok',{n:r.out.n,c:fmt(r.out.cost)}))})},null,'gemall')};
