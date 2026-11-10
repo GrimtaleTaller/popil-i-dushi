@@ -840,6 +840,9 @@ async function tcWallet(){const ui=await loadTC();if(ui.account&&ui.account.addr
   const off2=ui.onModalStateChange?ui.onModalStateChange(st=>{if(st&&st.status==='closed')setTimeout(()=>fin(ui.account?ui.account.address:null),300)}):()=>{}})} // закрив вікно без підключення — не чекаємо (критик 08.11)
 function shopReload(){shopData=null;dirty.shop=1;flush()}
 function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
+// 12.11 (Влад): підкатегорії магазину — Вигідне / VIP / Зручність / Покупки; новий товар без категорії — у «Зручність»
+let ssub='deal';
+const SHOP_CAT={starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
 function renderShop(){
  const el=$('p-shop');if(!el)return;
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
@@ -848,9 +851,13 @@ function renderShop(){
  let h=`<div class="card"><h4>🛒 ${T('shop_t')}</h4><p class="hint">${T('shop_hint')}</p><div class="resg"><div><span>💰 ${T('shop_pool')}</span><b>$${S.pool.toFixed(2)}</b></div>${vipActive()?`<div><span>👑 VIP</span><b>${dt(G.vip)}</b></div>`:''}</div>
   ${soon?`<p class="hint" style="color:var(--gold)">${T('shop_soon_t')}</p>`:''}
   ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
- for(const it of S.items){
-  const done=it.left===0,desc=T(SHOP_DESC[it.k]||'');
-  h+=`<div class="card shopc"><h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4><p class="hint">${desc}</p>
+ const vips=S.items.filter(x=>VIP_D[x.k]),pd=x=>x.stars/VIP_D[x.k],best=vips.length?vips.reduce((a,b)=>pd(b)<pd(a)?b:a):null,base=vips.find(x=>x.k==='vip1');
+ const list=ssub==='deal'?[...S.items.filter(x=>x.k==='starter'&&x.left!==0),...(best?[best]:[])]:ssub==='mine'?[]:S.items.filter(x=>(SHOP_CAT[x.k]||'conv')===ssub);
+ if(ssub!=='deal')h=''; // шапка з пулом — лише на «Вигідне»
+ if(ssub==='deal')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_deal_h')}</p>`;
+ for(const it of list){
+  const done=it.left===0,desc=T(SHOP_DESC[it.k]||''),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
+  h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${save}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4><p class="hint">${desc}</p>${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
    ${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
    ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
@@ -858,11 +865,12 @@ function renderShop(){
     <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 ${it.usd.toFixed(2)} USDT</button></div>
     <button class="btn shoth" data-other="${it.k}"${soon?' disabled':''}>${T('shop_other_link')} ›</button>`}</div>`;
  }
- h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
+ if(ssub==='deal')h+=`<button class="btn shmore" id="shAll">${T('ssub_more')} ›</button>`;
+ if(ssub==='mine')h+=`<div class="card"><h4>💳 ${T('shop_pay_t')}</h4><p class="hint">${T('shop_pay_hint')}</p>
   ${w?`<div class="row" style="align-items:center"><span class="hint" style="flex:2;margin:0">${T('shop_wallet',{a:shortAddr(w.address)})}</span><button class="btn" id="shOff">${T('shop_wallet_off')}</button></div>`:''}
   <p class="hint">💵 ${T('usdt_hint')}</p>
   <p class="hint">${T('shop_support')}</p></div>`;
- if(S.ops&&S.ops.length)h+=opsHtml(S.ops); // «Мої операції» — у самому низу магазину (прохання Влада)
+ if(ssub==='mine')h+=(S.ops&&S.ops.length)?opsHtml(S.ops):`<div class="empty">${T('ssub_mine_empty')}</div>`; // «Мої операції» — у самому низу магазину (прохання Влада)
  el.innerHTML=h;
  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const k=b.dataset.buy,m=b.dataset.m;
   // USDT у мережі TON: перед першою оплатою пояснюємо, що потрібно трохи GRAM на комісію і звідки списуються гроші (08.11, Влад: «А»)
@@ -871,6 +879,7 @@ function renderShop(){
   else shopBuy(k,m)});
  el.querySelectorAll('[data-other]').forEach(b=>b.onclick=e=>{e.preventDefault();if(!soon)shopOther(b.dataset.other)});
  if($('shOff'))$('shOff').onclick=()=>tcUI&&tcUI.disconnect();
+ if($('shAll'))$('shAll').onclick=()=>{ssub='vip';dirty.shop=1;flush();renderSub()};
  if($('shRn'))$('shRn').onclick=renameAsk;
  el.querySelectorAll('[data-reop]').forEach(b=>b.onclick=()=>{const o=S.ops.find(x=>x.id===+b.dataset.reop);if(o&&o.address)netInvoice({id:o.id,net:o.net,address:o.address,amount:o.amount,coin:o.coin,usd:o.usd,until:o.until})});
  // поки є неоплачені/непідтверджені операції — оновлюємо список кожні 20 с (сервер сам перевіряє мережу)
@@ -1390,11 +1399,11 @@ function subDots(){const P=V&&V.pass;return{quest:!!(P&&(P.lv>P.f.length||(P.pre
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='shop'?[['deal','ssub_deal'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
- const cur=g==='forge'?fsub:g==='clan'?csub:tab;e.style.display='flex';
+ const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}</button>`).join('');
- e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
+ e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
 $('lvl').onclick=$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click(); // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)

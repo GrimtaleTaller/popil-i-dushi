@@ -330,3 +330,11 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .tabs button.tshop span{font-size:11px;color:#f3c56b}
 .tabs button.tshop.act span{color:#ffd98a;text-shadow:0 0 10px #f3c56b88}
 .tabs button.tshop.act i{box-shadow:0 0 20px #f3c56bcc,0 2px 0 #00000080}
+
+/* 12.11: підкатегорії магазину */
+.card.shopc{position:relative}
+.card.shbest{border-color:#f3c56b88;box-shadow:0 0 16px #f3c56b33}
+.shtag{position:absolute;top:-9px;right:12px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800;color:#2a1a05;background:linear-gradient(180deg,#ffe08a,#d9a033)}
+.shtag.shnew{background:linear-gradient(180deg,#9fe0a0,#4c9a4f);color:#0b1f0c}
+.shpd{color:#f3c56b!important;margin-top:-4px}
+.btn.shmore{width:100%;margin:2px 0 10px}
