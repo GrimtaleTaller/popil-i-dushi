@@ -233,6 +233,9 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .lnchlock .lnchrun{position:absolute;left:0;right:0;bottom:0;padding:7px 0 calc(7px + env(safe-area-inset-bottom));background:#0d0906;border-top:1px solid #6b4a1f;overflow:hidden;white-space:nowrap;z-index:2}
 .lnchlock .lnchrun span{display:inline-block;padding-left:100%;animation:lnchrun 26s linear infinite;color:#f1c66b;font-size:14px;font-weight:600;text-shadow:0 1px 2px #000}
 @keyframes lnchrun{to{transform:translateX(-100%)}}
+.lnchlock .lnchrun,.lnchlock .lnchrun *{pointer-events:auto}
+.lnchlock .lnchrun:active span{animation-play-state:paused}
+.lnchlock .lnchlink{color:#8fd8ff;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:6px 2px}
 @media (prefers-reduced-motion:reduce){.lnchlock .lnchrun span{animation-duration:60s}}
 .lnchlock .lnchat{color:#dcebc8;font-size:14px;font-weight:600;margin-top:4px!important;text-shadow:0 1px 3px #000}
 @media (prefers-reduced-motion:reduce){.lnchlock .lnchbar i::after{animation:none}}
