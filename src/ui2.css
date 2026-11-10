@@ -323,3 +323,10 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .bagact{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 8px}.bagact .btn{padding:7px 8px;font-size:13px;line-height:1.2;white-space:normal;min-height:0}.bagact .btn.wide{grid-column:1/-1}.bagact .btn.on{border-color:var(--gold);color:var(--gold)}
 /* 09.11: крапка на підвкладці, де є нагорода (Пропуск / Досягнення) */
 #subtabs button.sdot{position:relative}#subtabs button.sdot::after{content:'';position:absolute;top:4px;right:2px;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)}
+
+/* 10.11 (Влад, Штаб #4): магазин — виділена кругла вкладка в центрі нижньої панелі */
+.tabs button.tshop{flex:1.25;position:relative;margin-top:-14px;padding-top:0;border:none;background:none;color:#f3c56b}
+.tabs button.tshop i{display:block;width:44px;height:44px;margin:0 auto 1px;border-radius:50%;font-style:normal;font-size:22px;line-height:44px;background:radial-gradient(circle at 35% 30%,#ffe7a3,#d59a2c 60%,#8a5a12);box-shadow:0 0 14px #f3c56b88,0 2px 0 #00000080;border:2px solid #120f14}
+.tabs button.tshop span{font-size:11px;color:#f3c56b}
+.tabs button.tshop.act span{color:#ffd98a;text-shadow:0 0 10px #f3c56b88}
+.tabs button.tshop.act i{box-shadow:0 0 20px #f3c56bcc,0 2px 0 #00000080}
