@@ -2,7 +2,7 @@
 'use strict';
 // ---------- налаштування ----------
 const API='https://fatpfzstkjtfcunlwnvx.supabase.co/functions/v1/game';
-const SYNC_MS=10000;
+const SYNC_MS=30000; // 10.11 (Влад, ліміти Supabase «А»): синхронізація раз на 30 с (було 10), бій і нагороди між синхронізаціями клієнт показує сам (pend)
 const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
 const DEV=Q.get('dev')?{key:Q.get('dev'),user:{id:Number(Q.get('uid')||1),first_name:'Tester'}}:null;
@@ -1239,7 +1239,7 @@ function boot(msg,retry){
  if(retry)$('bootR').onclick=start;
 }
 let syncing=false;
-async function sync(){if(syncing||busy||B.rep||!G)return;syncing=true;try{const r=await api('sync');afterSync(r)}catch(e){if(e.message==='auth')boot(ERR.auth)}finally{syncing=false}}
+let lastSync=0;async function sync(){if(syncing||busy||B.rep||!G)return;if(document.hidden&&Date.now()-lastSync<80000)return;/* згорнута гра — раз на 80 с: менше трафіку, але в межах «онлайн» сервера (ONLINE_WINDOW 90 с), фарм у фоні не сповільнюється */lastSync=Date.now();syncing=true;try{const r=await api('sync');afterSync(r)}catch(e){if(e.message==='auth')boot(ERR.auth)}finally{syncing=false}}
 async function start(){
  applyLang();
  const w=tg();
