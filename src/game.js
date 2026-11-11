@@ -2,7 +2,8 @@
 'use strict';
 // ---------- налаштування ----------
 const API='https://fatpfzstkjtfcunlwnvx.supabase.co/functions/v1/game';
-const SYNC_MS=30000; // 10.11 (Влад, ліміти Supabase «А»): синхронізація раз на 30 с (було 10), бій і нагороди між синхронізаціями клієнт показує сам (pend)
+var lastSync=0,VC=null,VH=null; // остання синхронізація; повний view і хеші його частин (дельта, 11.11)
+const SYNC_MS=30000; // крок перевірки; сама синхронізація — раз на 60 с відкрита / 80+ с згорнута, і не раніше ніж через 55 с після будь-якого запиту (11.11, Влад, ліміти Supabase «А»; 10.11 було 30 с). Бій і нагороди між синхронізаціями клієнт показує сам (pend)
 const $=id=>document.getElementById(id);
 const Q=new URLSearchParams(location.search);
 const DEV=Q.get('dev')?{key:Q.get('dev'),user:{id:Number(Q.get('uid')||1),first_name:'Tester'}}:null;
@@ -76,13 +77,19 @@ let busy=false;
 // ---------- мережа ----------
 async function api(action,args){
  const body={action,args:args||{}};const headers={'content-type':'application/json'};
+ lastSync=Date.now();const base=VC;if(base&&VH)body.vh=VH; // дельта екрана (11.11): сервер не надсилає частини, які вже є
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}
  const j=await r.json().catch(()=>({ok:false,err:'bad'}));
  if(!j.ok){if(j.err==='prelaunch'&&j.launch)lnchLock(j.launch);throw new Error(j.err||'err')}
+ if(j.view){if(j.vd){if(!base){VC=null;VH=null;throw new Error('net')}j.view=vmerge(base,j.view,j.vh)}VC=j.view;VH=j.vh||null}
  apply(j.view);
  return j;
 }
+// збирає повний view: частини з відповіді + незмінені з попереднього (за списком хешів vh — ключі, яких немає в vh, зникли)
+function vmerge(base,part,vh){const v={},s={},ps=part.s||{};
+ for(const k in vh){if(k.startsWith('s.')){const sk=k.slice(2);s[sk]=sk in ps?ps[sk]:base.s?.[sk]}else if(k!=='s')v[k]=k in part?part[k]:base[k]}
+ v.s=s;return v}
 // плашка відліку до старту (картка 6, 08.11): час старту й «зараз» — із сервера, годинник телефона не впливає
 let lnchAt=0,lnchOff=0,lnchIv=0;
 function lnchTick(){const el=$('lnch');if(!el)return;const left=lnchAt-(Date.now()+lnchOff);
@@ -1239,7 +1246,7 @@ function boot(msg,retry){
  if(retry)$('bootR').onclick=start;
 }
 let syncing=false;
-let lastSync=0;async function sync(){if(syncing||busy||B.rep||!G)return;if(document.hidden&&Date.now()-lastSync<80000)return;/* згорнута гра — раз на 80 с: менше трафіку, але в межах «онлайн» сервера (ONLINE_WINDOW 90 с), фарм у фоні не сповільнюється */lastSync=Date.now();syncing=true;try{const r=await api('sync');afterSync(r)}catch(e){if(e.message==='auth')boot(ERR.auth)}finally{syncing=false}}
+async function sync(){if(syncing||busy||B.rep||!G)return;if(Date.now()-lastSync<(document.hidden?80000:55000))return;/* згорнута гра — раз на 80 с: менше трафіку, але в межах «онлайн» сервера (ONLINE_WINDOW 90 с), фарм у фоні не сповільнюється */lastSync=Date.now();syncing=true;try{const r=await api('sync');afterSync(r)}catch(e){if(e.message==='auth')boot(ERR.auth)}finally{syncing=false}}
 async function start(){
  applyLang();
  const w=tg();
