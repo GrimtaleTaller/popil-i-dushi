@@ -204,7 +204,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={tasks:1,quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,shop:1,clan:1,market:1};
+const dirty={wd:1,tasks:1,quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,shop:1,clan:1,market:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?(?:span|i|b|small)(?:\s+(?:class|style)="[^"<>]*")*\s*>)/g,'&lt;'); /* 07.11 (критик): лише class/style, без onclick тощо */ /* 05.11: значок каменя має <i> (рівень) — раніше він показувався як текст */e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -729,12 +729,44 @@ const LOGT={
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):`<div class="empty">${T('log_empty')}</div>`)+'</div>'}
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({tasks:renderTasks,quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,shop:renderShop,clan:renderClan,market:renderMarket})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({tasks:renderTasks,quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,wd:renderWd,shop:renderShop,clan:renderClan,market:renderMarket})[tab]()}}
 
 // ---------- профіль ----------
 let profData=null,profBusy=false,adminData=null;
 const dt=s=>{if(!s)return '—';const d=new Date(s);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()};
 function copyText(t){try{navigator.clipboard.writeText(t);toast(T('copied'))}catch(e){toast(t)}}
+// ---------- вивід коштів (Влад 12.11) ----------
+// баланс $ наповнюватиметься з пулу (схема Г), поки 0; заявку виплачує адмін вручну з Tonkeeper
+let wdData=null,wdBusy=false,wdAdm=null,wdCur='gram',wdAt=0;
+const wdLoad=()=>{if(wdBusy)return;wdBusy=true;api('wdInfo').then(r=>{wdData=r.out;wdAt=Date.now()}).catch(e=>toast(errT(e))).finally(()=>{wdBusy=false;dirty.wd=1})};
+const WD_ST={new:'⏳',paid:'✅',rejected:'❌'};
+function renderWd(){const el=$('p-wd');
+ if(wdData&&Date.now()-wdAt>6e4)wdLoad(); // свіжі статуси заявок раз на хвилину (поки показуємо старі)
+ if(!wdData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;wdLoad();return}
+ const D=wdData,A=D.acc,mn=D.min[wdCur],left=Math.max(0,Math.round((D.cap-D.used)*100)/100);
+ const why=!A.ok?T('wd_need'):!D.wallet?T('wd_need_wallet'):D.pending?T('wd_pending_t'):D.bal<=0?T('wd_empty'):D.bal<mn?T('wd_low',{m:mn}):left<mn?T('wd_cap_t'):'';
+ let h=`<div class="card"><h4>💸 ${T('wd_bal')}</h4><div class="wdbal">$${D.bal.toFixed(2)}</div><p class="hint" style="margin:4px 0 0">${T('wd_bal_hint')}</p></div>`;
+ h+=`<div class="card"><h4>🔓 ${T('wd_acc')}</h4><p style="margin:4px 0">${A.lvl>=A.needLvl?'✅':'⏳'} ${T('wd_acc_lvl',{n:Math.min(A.lvl,A.needLvl),m:A.needLvl})}</p><p style="margin:4px 0">${A.days>=A.needDays?'✅':'⏳'} ${T('wd_acc_days',{n:Math.min(A.days,A.needDays),m:A.needDays})}</p></div>`;
+ h+=`<div class="card"><h4>👛 ${T('wd_wallet')}</h4>${D.wallet?`<p class="wdaddr">${esc(D.wallet)}</p>`:''}<p class="hint" style="margin:0 0 6px">${T('wd_wallet_hint')}</p><div class="row" style="gap:8px;align-items:center"><input id="wdAddr" class="inp" placeholder="UQ… / EQ…" autocomplete="off" spellcheck="false"><button class="btn" id="wdAddrGo" ${A.ok?'':'disabled'}>${D.wallet?T('wd_change'):T('wd_save')}</button></div>${A.ok?'':`<p class="hint" style="margin:6px 0 0">${T('wd_wallet_acc')}</p>`}</div>`;
+ h+=`<div class="card"><h4>📤 ${T('wd_out')}</h4><div class="chips">${['gram','usdt'].map(c=>`<button data-wdc="${c}" class="${wdCur===c?'act':''}">${c==='gram'?'GRAM':'USDT'} (TON) · ${T('wd_from',{m:D.min[c]})}</button>`).join('')}</div><p class="hint" style="margin:6px 0">${T('wd_lim',{l:left.toFixed(2),c:D.cap})}</p><div class="row" style="gap:8px;align-items:center"><input id="wdUsd" class="inp" type="number" min="${mn}" step="0.01" inputmode="decimal" placeholder="$ ${mn}+"><button class="btn pri" id="wdGo" ${why?'disabled':''}>${T('wd_go')}</button></div>${why?`<p class="hint" style="margin:6px 0 0">${why}</p>`:''}<p class="hint" style="margin:6px 0 0">${T('wd_note')}</p></div>`;
+ if(D.list.length)h+=`<div class="card"><h4>🧾 ${T('wd_hist')}</h4>`+D.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${WD_ST[x.status]||''} $${Number(x.usd).toFixed(2)} · ${String(x.cur).toUpperCase()}</span><span class="hint" style="margin:0">${dt(x.created_at)} · ${T('wd_st_'+x.status)}</span></div>`).join('')+`</div>`;
+ if(V.isAdmin){h+=`<div class="card"><h4>🛠 ${T('wd_adm')}</h4><button class="btn" id="wdAdmLoad">🔄 ${T('wd_adm_load')}</button>`;
+  if(wdAdm)h+=wdAdm.list.length?wdAdm.list.map(x=>`<div class="wdadm"><b>#${x.id}</b> ${WD_ST[x.status]||''} $${Number(x.usd).toFixed(2)} ${String(x.cur).toUpperCase()}${x.first?' · ⚠️ '+T('wd_first'):''}<br><span class="hint" style="margin:0">${esc(x.name)} · id ${x.player_id} · ${dt(x.created_at)}</span><br><span class="wdaddr" data-wdcp="${esc(x.addr)}">${esc(x.addr)} 📋</span>${x.status==='new'?`<div class="row" style="gap:6px;margin-top:6px;align-items:center"><input class="inp" data-wdtx="${x.id}" placeholder="tx (${T('wd_opt')})"><button class="btn pri" data-wdok="${x.id}">✅</button><button class="btn" data-wdno="${x.id}">❌</button></div>`:x.tx?`<br><span class="hint" style="margin:0">tx ${esc(x.tx)}</span>`:''}</div>`).join(''):`<p class="hint">${T('wd_adm_none')}</p>`;
+  h+=`</div>`}
+ const keep={};el.querySelectorAll('input').forEach(i=>{const k=i.id||'tx'+i.dataset.wdtx;if(i.value)keep[k]=i.value}); // синхронізація перемальовує вкладку — не губимо введене
+ el.innerHTML=h;
+ el.querySelectorAll('input').forEach(i=>{const k=i.id||'tx'+i.dataset.wdtx;if(keep[k])i.value=keep[k]});
+ el.querySelectorAll('[data-wdc]').forEach(b=>b.onclick=()=>{wdCur=b.dataset.wdc;dirty.wd=1;flush()});
+ $('wdAddrGo').onclick=()=>{const a=$('wdAddr').value.trim();if(!a){toast(T('wd_addr_empty'));return}
+  modal(`<div class="big">👛</div><p class="wdaddr">${esc(a)}</p><p>${T('wd_bind_q')}</p>`,T('wd_save'),()=>api('wdWallet',{addr:a}).then(()=>{toast(T('wd_saved'));$('wdAddr').value='';wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e))),null,'wdbind')};
+ $('wdGo').onclick=()=>{const u=Math.floor((+$('wdUsd').value||0)*100+1e-6)/100;if(u<mn){toast(T('wd_low',{m:mn}));return}if(u>D.bal){toast(ERR.wd_funds||T('wd_low',{m:mn}));return}
+  modal(`<div class="big">💸</div><p>${T('wd_q',{u:u.toFixed(2),c:wdCur.toUpperCase()})}</p><p class="wdaddr">${esc(D.wallet)}</p>`,T('wd_go'),()=>api('wdReq',{cur:wdCur,usd:u}).then(()=>{toast(T('wd_sent'));wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e))),null,'wdq')};
+ if($('wdAdmLoad'))$('wdAdmLoad').onclick=()=>api('wdAdmin').then(r=>{wdAdm=r.out;dirty.wd=1;flush()}).catch(e=>toast(errT(e)));
+ el.querySelectorAll('[data-wdcp]').forEach(b=>b.onclick=()=>copyText(b.dataset.wdcp));
+ const mark=(id,st)=>{const t=el.querySelector(`[data-wdtx="${id}"]`);api('wdMark',{id,st,tx:t?t.value.trim():''}).then(()=>{toast('#'+id+' '+T('wd_st_'+st));return api('wdAdmin')}).then(r=>{wdAdm=r.out;dirty.wd=1;flush()}).catch(e=>toast(errT(e)))};
+ el.querySelectorAll('[data-wdok]').forEach(b=>b.onclick=()=>modal(`<p>${T('wd_paid_q',{id:b.dataset.wdok})}</p>`,'✅',()=>mark(+b.dataset.wdok,'paid'),null,'wdpaid'+b.dataset.wdok));
+ el.querySelectorAll('[data-wdno]').forEach(b=>b.onclick=()=>modal(`<p>${T('wd_rej_q',{id:b.dataset.wdno})}</p>`,'❌',()=>mark(+b.dataset.wdno,'rejected'),null,'wdrej'+b.dataset.wdno));
+}
 // ---------- пітомці ----------
 const PETIC={wolf:'🐺',golem:'🗿',raven:'🐦‍⬛',owl:'🦉',ghost:'👻',phoenix:'🐦‍🔥'},PETS_ORD=['wolf','golem','raven','owl','ghost','phoenix'];
 const SVG_SADDLE='<svg class="svi" viewBox="0 0 32 32"><path d="M4 13.5c3.5-4.5 8-6 12-6s8.5 1.5 12 6c-1.4 2.2-3.6 3-6 3.4-.4 3-2.6 5.6-6 5.6s-5.6-2.6-6-5.6c-2.4-.4-4.6-1.2-6-3.4z" fill="#8a5a33" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.3 13.4c3.2-3.7 7-4.9 10.7-4.9v12.8c-2.8 0-4.5-2.3-4.8-5-2.6-.3-4.6-1-5.9-2.9z" fill="#b07a45"/><path d="M10 16.9c1.8.5 4 .7 6 .7s4.2-.2 6-.7" fill="none" stroke="#2b2f36" stroke-width="1.1" opacity=".55" stroke-dasharray="1.6 1.3"/><path d="M11 21.5v4.5M21 21.5v4.5" stroke="#6b4a2a" stroke-width="1.6"/><path d="M8.5 25.5h5v3.5h-5zM18.5 25.5h5v3.5h-5z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.2" stroke-linejoin="round"/><circle cx="16" cy="11" r="1.6" fill="#b98a3e" stroke="#2b2f36" stroke-width="1"/></svg>',SVG_PARM='<svg class="svi" viewBox="0 0 32 32"><path d="M3 9.5 9 6h14l6 3.5-1.5 9.5c-3.3 1-7 1.5-11.5 1.5S7.8 20 4.5 19z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M9.3 6.8H16v12.9c-4.2 0-7.6-.5-10.7-1.4L4 10z" fill="#c9d0d8"/><path d="M16 6v14.5M4.2 13.5c3.7 1 7.6 1.5 11.8 1.5s8.1-.5 11.8-1.5" fill="none" stroke="#2b2f36" stroke-width="1.2" opacity=".55"/><path d="M6 20.5l-1 6h4.5l1-5.3M26 20.5l1 6h-4.5l-1-5.3" fill="#8a5a33" stroke="#2b2f36" stroke-width="1.2" stroke-linejoin="round"/><g fill="#b98a3e" stroke="#2b2f36" stroke-width=".8"><circle cx="9" cy="10" r="1.1"/><circle cx="23" cy="10" r="1.1"/><circle cx="12" cy="17" r="1.1"/><circle cx="20" cy="17" r="1.1"/></g></svg>',SVG_PHELM='<svg class="svi" viewBox="0 0 32 32"><path d="M5 4l5 6M27 4l-5 6" stroke="#2b2f36" stroke-width="3.6" stroke-linecap="round"/><path d="M5 4l5 6M27 4l-5 6" stroke="#c9d0d8" stroke-width="1.6" stroke-linecap="round"/><path d="M16 7c-6 0-9.5 4-9.5 9 0 3 1.2 5.5 3.5 7.5L16 29l6-5.5c2.3-2 3.5-4.5 3.5-7.5 0-5-3.5-9-9.5-9z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 7.7c-5.3 0-8.7 3.6-8.7 8.3 0 2.8 1.1 5 3.2 6.9L16 28z" fill="#c9d0d8"/><path d="M10 15.5h4.3v2.4H10zM17.7 15.5H22v2.4h-4.3z" fill="#16181d"/><path d="M16 8v20" stroke="#2b2f36" stroke-width="1.1" opacity=".5"/><path d="M13 22.5h6" stroke="#2b2f36" stroke-width="1.2" opacity=".6"/></svg>';
@@ -1173,7 +1205,7 @@ const tutHas=k=>tutLocal.has(k)||((G&&G.tut)||[]).includes(k);
 const tutOff=()=>tutHas('off');
 function tutMark(k){if(tutHas(k))return;tutLocal.add(k);api('tut',{k}).catch(()=>{})}
 const TUT_INTRO=[['ti_1','#arena'],['ti_2','#bossBtn'],['ti_4','.cur'],['ti_5','.tabs']];
-const TUT_PANES=['bag','market','train','pet','res','gem','ench','myth','ast','dng','arena','top','clan','prof'];
+const TUT_PANES=['bag','market','train','pet','res','gem','ench','myth','ast','dng','arena','top','clan','prof','wd'];
 const tabBtn=t=>'.tabs button[data-t="'+t+'"]';
 // вказівники: умова, куди показати, після якого пояснення розділу крок уже не потрібен; all — і для старих гравців (нові функції)
 const TUT_GOALS=[
@@ -1392,12 +1424,12 @@ function wbResult(o){
 const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'tasks'};
 // 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Пітомець, Тренування, Журнал, Профіль — у вікні героя на весь екран
 // 10.11 (Влад, Штаб #4): магазин — окрема виділена вкладка в центрі нижньої панелі (була підвкладка вікна Героя)
-const groupOf=t=>['bag','market','pet','train','log','prof'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
+const groupOf=t=>['bag','market','pet','train','log','prof','wd'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 // «Герой» (Спорядження / Пітомець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
 // Підвкладки й панелі героя переносяться в шторку й повертаються назад при закритті. Закрити: ✕, тап по затемненню, свайп униз по шапці.
-let prevTab='hero';const HERO_PANES=['bag','market','pet','train','log','prof'];
+let prevTab='hero';const HERO_PANES=['bag','market','pet','train','log','prof','wd'];
 function heroSheet(open){
  let sh=$('hsheet');
  if(!sh){sh=document.createElement('div');sh.id='hsheet';sh.innerHTML=`<div class="hs-bg"></div><div class="hs-box"><div class="hs-head"><div class="hs-t"><b id="hsTitle"></b><span id="hsSub"></span></div><div class="hs-cur" id="hsCur"></div><button class="mx" id="hsX">✕</button></div><div class="hs-body" id="hsBody"></div></div>`;document.body.appendChild(sh);
@@ -1421,7 +1453,7 @@ function subDots(){const P=V&&V.pass;return{quest:!!(P&&(P.lv>P.f.length||(P.pre
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof']]:g==='shop'?[['deal','ssub_deal'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof'],['wd','sub_wd']]:g==='shop'?[['deal','ssub_deal'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}</button>`).join('');
