@@ -254,7 +254,7 @@ function renderTop(){
  if(B.m){$('mhp').style.width=Math.max(0,B.m.hp/B.m.max*100)+'%';$('mhpt').textContent=fmt(Math.max(0,B.m.hp))+' / '+fmt(B.m.max)}
  $('timer').style.display=B.rep?'block':'none';if(B.rep)$('timeri').style.width=Math.max(0,(BOSS_TIME-B.rep.t)/BOSS_TIME*100)+'%';
  const nw=G.inv.filter(i=>i.nw).length,nb=$('newb');nb.style.display=nw?'inline':'none';nb.textContent=nw;
- {const qb=$('qb'),d=subDots();if(qb)qb.style.display=d.quest||d.ach?'inline':'none';document.querySelectorAll('#subtabs button[data-s]').forEach(b=>b.classList.toggle('sdot',!!d[b.dataset.s]))} // 09.11 (Влад): «!» на Завданнях — і крапка на тій підвкладці, де є що забрати
+ {const qb=$('qb'),d=subDots();if(qb)qb.style.display=d.quest||d.ach||d.tasks?'inline':'none';document.querySelectorAll('#subtabs button[data-s]').forEach(b=>b.classList.toggle('sdot',!!d[b.dataset.s]))} // 09.11 (Влад): «!» на Завданнях — і крапка на тій підвкладці, де є що забрати
  {const hc=$('hsCur');if(hc&&document.body.classList.contains('hs-open'))hc.innerHTML=`<span>💰 ${fmt(gold)}</span><span>🔥 ${fmt(G.souls||0)} · ⚱️ ${fmt(G.ash||0)}</span>`} // баланс у шторці «Герой»: верхня панель під нею не видна (04.11)
  if(tab==='train')renderTrainBtns();
 }
@@ -715,7 +715,7 @@ const LOGT={
  daily:a=>T('log_daily',{n:a[0]}),
  reward:a=>T('log_reward',{a:fmt(a[0])}),relic:a=>T('relic_done',{n:a[0],a:a[1]}),refine:a=>T('log_ref',{s:SLOT[a[0]]?SLOT[a[0]].n:a[0],n:a[2],k:a[3]}),
  star:a=>'★ '+(SLOT[a[0]]?SLOT[a[0]].n:a[0])+' → '+'★'.repeat(a[2]||0),
- pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adTask:a=>T('log_ad_task',{a:a[0],g:fmt(a[1]||0)}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
+ pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adTask:a=>T('log_ad_task',{a:a[0],g:fmt(a[1]||0)}),card:a=>T('log_card',{t:[a[0]?'⚱️'+a[0]:'',a[1]?(a[1]==='r'?T('card_egg_r'):T('card_egg_c')):''].filter(Boolean).join(', ')}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
  pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
@@ -859,7 +859,7 @@ function renderProfile(){
 }
 // ---------- магазин (08.11, варіант А): Stars і крипто в мережі TON ----------
 let shopData=null,shopBusy=false,tcUI=null,tcLoading=null,shopPoll=0;
-const SHOP_DESC={vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
+const SHOP_DESC={ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function loadTC(){ // TON Connect вантажимо лише тоді, коли гравець обирає оплату криптою
@@ -871,11 +871,18 @@ async function tcWallet(){const ui=await loadTC();if(ui.account&&ui.account.addr
  await ui.openModal();return await new Promise(res=>{let done=false;const fin=a=>{if(done)return;done=true;off1();off2();res(a)};
   const off1=ui.onStatusChange(w=>fin(w&&w.account?w.account.address:null));
   const off2=ui.onModalStateChange?ui.onModalStateChange(st=>{if(st&&st.status==='closed')setTimeout(()=>fin(ui.account?ui.account.address:null),300)}):()=>{}})} // закрив вікно без підключення — не чекаємо (критик 08.11)
+// 12.11 (Влад): карти на 30 днів — «Дар Хранителя» (60 ⚱️ щодня, 30 разів) і «Клятва Мисливця» (×1,5 досвіду, +25% золота, 5 яєць); забрати — тут і в «Завданнях»
+function cardLine(k){const C=V&&V.cards;if(!C||(k!=='ash30'&&k!=='hunt30'))return '';const now=Date.now(),c=k==='ash30'?C.a:C.h;if(!(c.end>now)&&!(k==='hunt30'&&c.eggs>0)||(k==='ash30'&&!(c.n>0)))return '';
+ const days=k==='ash30'?(c.n||0):Math.max(0,Math.ceil((c.end-now)/864e5)),st=k==='ash30'?(c.ready?'':`✅ ${T('card_got')}`):(c.ready?'':c.eggs>0?`🥚 ${T('card_egg_next',{d:Math.max(1,Math.ceil((c.next-now)/864e5)),n:c.eggs})}`:'');
+ return `<div class="cardst">${c.end>now?`<span>⏳ ${T('card_left',{n:days})}</span>`:''}${st?`<span class="hint" style="margin:0">${st}</span>`:''}${c.ready?`<button class="btn pri" data-cardc="1">${T('card_claim')}</button>`:''}</div>`}
+function cardsBox(){const C=V&&V.cards;if(!C)return '';const now=Date.now();if(!(C.a.end>now&&C.a.n>0)&&!(C.h.end>now)&&!(C.h.eggs>0))return '';
+ return `<div class="card"><h4>🎴 ${T('card_mine')}</h4>${C.a.end>now&&C.a.n>0?`<p style="margin:4px 0"><b>${T('shop_i_ash30')}</b></p>${cardLine('ash30')}`:''}${C.h.end>now||C.h.eggs>0?`<p style="margin:8px 0 4px"><b>${T('shop_i_hunt30')}</b>${C.h.end>now?` · ×${C.h.xp} ${T('card_xp')}, +${Math.round((C.h.gold-1)*100)}% ${T('card_gold')}`:''}</p>${cardLine('hunt30')}`:''}</div>`}
+function cardClaim(){act('cardClaim',{},r=>{const o=r.out;toast('🎴 '+[o.ash?'+⚱️'+o.ash:'',o.egg?(o.egg==='r'?T('card_egg_r'):T('card_egg_c')):''].filter(Boolean).join(' · '));haptic('medium');dirty.tasks=1;dirty.shop=1})}
 function shopReload(){shopData=null;dirty.shop=1;flush()}
 function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
 // 12.11 (Влад): підкатегорії магазину — Вигідне / VIP / Зручність / Покупки; новий товар без категорії — у «Зручність»
 let ssub='deal';
-const SHOP_CAT={starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
+const SHOP_CAT={ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
 function renderShop(){
  const el=$('p-shop');if(!el)return;
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
@@ -891,7 +898,7 @@ function renderShop(){
  for(const it of list){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||''),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
   h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${save}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4><p class="hint">${desc}</p>${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
-   ${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
+   ${cardLine(it.k)}${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
    ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
     ${it.gram?`<button class="btn" data-buy="${it.k}" data-m="gram"${soon?' disabled':''}>💎 ${it.gram} GRAM</button>`:''}
@@ -905,6 +912,7 @@ function renderShop(){
   <p class="hint">${T('shop_support')}</p></div>`;
  if(ssub==='mine')h+=(S.ops&&S.ops.length)?opsHtml(S.ops):`<div class="empty">${T('ssub_mine_empty')}</div>`; // «Мої операції» — у самому низу магазину (прохання Влада)
  el.innerHTML=h;
+ el.querySelectorAll('[data-cardc]').forEach(b=>b.onclick=cardClaim);
  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const k=b.dataset.buy,m=b.dataset.m;
   // USDT у мережі TON: перед першою оплатою пояснюємо, що потрібно трохи GRAM на комісію і звідки списуються гроші (08.11, Влад: «А»)
   let seen=false;try{seen=localStorage.getItem('gtUsdtHint')==='1'}catch(e){}
@@ -1354,14 +1362,14 @@ function renderTasks(){
  const K=V.tasks;if(!$('tkList'))$('p-tasks').innerHTML=`<div id="tkList"></div><div class="card" id="adTaskCard" hidden><h4>🎯 <span id="adtT"></span></h4><p class="hint" id="adtH" style="margin:0 0 6px"></p><div id="adTaskBox"></div><p class="hint" id="adtNone" style="margin:4px 0 0" hidden></p><p class="hint" id="adtD" style="margin:4px 0 0"></p></div>`;
  const el=$('tkList');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
  const A=K.ads,keyTxt=A.tier?'🗝️'+T('tier',{n:A.tier}):chestIc(2);
- let h=`<p class="hint">${T('tk_hint')}</p>`;
+ let h=`<p class="hint">${T('tk_hint')}</p>`+cardsBox();
  h+=`<div class="card"><h4>📺 ${T('ad_t')}</h4><p class="hint" style="margin:0 0 6px">${T('ad_hint',{c:chestIc(1)+'×'+A.ch,n:A.keyEvery,k:keyTxt})}</p><div class="bar"><i style="width:${A.n/A.max*100}%;background:#f2c14e"></i></div><div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('ad_cnt',{n:A.n,m:A.max})}</span><button class="btn pri" id="tkAd" ${A.n<A.max?'':'disabled'}>▶️ ${T('ad_btn')}</button></div></div>`;
  const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?'✅ '+T('share_again'):T('share_btn')}</button></div>`;
  const BI=V.bio||{};h+=`<div class="card"><h4>🔗 ${T('q_bio')} · ⚱️${BI.ash||10}</h4>`+(BI.taken?`<p class="hint">✅ ${T('tk_done_today')}</p>`:`<p class="hint" style="margin:0 0 6px">${T('bio_hint',{l:bioLink()})}</p><div class="row" style="gap:8px"><button class="btn" id="qBioCopy">📋 ${T('bio_copy')}</button><button class="btn pri" id="qBioChk">🔗 ${T('bio_check')}</button></div>`)+`</div>`;
  h+=K.subs.map(x=>`<div class="card"${x.ok?' style="opacity:.6"':''}><div class="row" style="align-items:center;gap:8px"><div style="flex:1;min-width:0"><h4 style="margin:0">${x.ok?'✅':'📢'} ${T('sub_one',{c:SUB_N[x.k]||x.chat})}</h4><span class="hint" style="margin:0">${T('tk_rw')}: ⚱️${K.subAsh}</span></div>${x.ok?'':`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div></div>`).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
  if(K.ptn.length){h+=`<div class="card"><h4>🤝 ${T('ptn_t')}</h4>`+K.ptn.map(p=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0">${p.ok?'✅':'🎯'} ${esc(p.t[LANG]||p.t.en||p.id)} <span class="hint">· ${chestIc(1)}×${p.ch}${p.key?' +🗝️×'+p.key:''}</span></span>${p.ok?'':`<button class="btn" style="flex:0 0 auto" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`}</div>`).join('')+`</div>`}
  el.innerHTML=h;
- mountAdTask(K);
+ mountAdTask(K);el.querySelectorAll('[data-cardc]').forEach(b=>b.onclick=cardClaim);
  $('tkAd').onclick=()=>{adEggDrop();watchAd()};$('qShare').onclick=shareStory;
  if($('qBioCopy')){$('qBioCopy').onclick=()=>copyText(bioLink());$('qBioChk').onclick=()=>act('bio',{},r=>{toast('🔗 +⚱️'+r.out.ash);haptic('medium')})}
  el.querySelectorAll('[data-sgo]').forEach(b=>b.onclick=()=>tgOpen('https://t.me/'+b.dataset.sgo.replace('@','')));
@@ -1450,7 +1458,7 @@ function heroSheet(open){
   sh.classList.remove('open');document.body.classList.remove('hs-open');
  }
 }
-function subDots(){const P=V&&V.pass;return{quest:!!(P&&(P.lv>P.f.length||(P.prem&&P.lv>P.p.length))),ach:!!((V&&V.ach)||[]).some(x=>x.done>x.got)}}
+function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready||C.h.ready)),quest:!!(P&&(P.lv>P.f.length||(P.prem&&P.lv>P.p.length))),ach:!!((V&&V.ach)||[]).some(x=>x.done>x.got)}}
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
