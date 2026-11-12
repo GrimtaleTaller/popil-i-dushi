@@ -1308,8 +1308,7 @@ function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
  if(adTaskGone&&Date.now()-adTaskGone<adTaskWait)return;
  if(Date.now()-adTaskTry<15e3)return;adTaskTry=Date.now();
  const gone=(w,e)=>{adTaskGone=Date.now();adTaskWait=w;if(e)e.remove();if(!e||adTaskEl===e)adTaskEl=null;const n=$('adtNone');if(n)n.hidden=false};
- adsgram(()=>{if(adTaskEl)return;const e=document.createElement('adsgram-task');e.className='adtask';e.setAttribute('data-block-id',String(K.tblock));if(V.isAdmin){e.setAttribute('data-debug','true');e.setAttribute('data-debug-console','false')} // 12.11: тестове завдання лише адмінам (Влад)
-  
+ adsgram(()=>{if(adTaskEl)return;const e=document.createElement('adsgram-task');e.className='adtask';e.setAttribute('data-block-id',String(K.tblock));
   e.innerHTML=`<span slot="reward" class="adt-rw">⚱️${K.task.ash} · 💰${fmt(K.task.gold)}</span><button slot="button" class="btn pri adt-b">${T('adt_go')}</button><button slot="claim" class="btn pri adt-b">${T('adt_claim')}</button><span slot="done" class="adt-ok">✅ ${T('adt_got')}</span>`;
   e.addEventListener('reward',()=>{toast(T('adt_ok',{a:K.task.ash,g:fmt(K.task.gold)}));haptic('medium');setTimeout(()=>{lastSync=0;sync()},3000);setTimeout(()=>{lastSync=0;sync()},9000)});
   e.addEventListener('onBannerNotFound',()=>gone(15e4,e));['onError','onTooLongSession'].forEach(n=>e.addEventListener(n,()=>gone(6e5,e)));
