@@ -715,7 +715,7 @@ const LOGT={
  daily:a=>T('log_daily',{n:a[0]}),
  reward:a=>T('log_reward',{a:fmt(a[0])}),relic:a=>T('relic_done',{n:a[0],a:a[1]}),refine:a=>T('log_ref',{s:SLOT[a[0]]?SLOT[a[0]].n:a[0],n:a[2],k:a[3]}),
  star:a=>'★ '+(SLOT[a[0]]?SLOT[a[0]].n:a[0])+' → '+'★'.repeat(a[2]||0),
- pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adTask:a=>T('log_ad_task',{a:a[0],g:fmt(a[1]||0)}),card:a=>T('log_card',{t:[a[0]?'⚱️'+a[0]:'',a[1]?(a[1]==='r'?T('card_egg_r'):T('card_egg_c')):''].filter(Boolean).join(', ')}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
+ pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adTask:a=>T('log_ad_task',{a:a[0],g:fmt(a[1]||0)}),adTaskDup:()=>T('adt_dup'),card:a=>T('log_card',{t:[a[0]?'⚱️'+a[0]:'',a[1]?(a[1]==='r'?T('card_egg_r'):T('card_egg_c')):''].filter(Boolean).join(', ')}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
  pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
@@ -1337,7 +1337,12 @@ let adEggAt=0;const adEggOn=()=>Date.now()-adEggAt<170e3;
 const adEggDrop=()=>{if(adEggOn()){adEggAt=0;api('adIntent',{k:''}).catch(()=>{})}};
 // 12.11 (Влад): рекламні завдання AdsGram (блок Task) — один елемент на весь сеанс, між перемальовуваннями лише переноситься в картку;
 // нагорода — з Reward URL (&t=task) на сервері, тут лише тост і синхронізація; немає завдань — картку ховаємо на 10 хв
-let adTaskEl=null,adTaskGone=0,adTaskWait=0,adTaskTry=0;
+let adTaskEl=null,adTaskGone=0,adTaskWait=0,adTaskTry=0,adtC='';
+// 13.11 (відео Влада): AdsGram може показати те саме завдання вдруге — сервер не знає, яке саме, тож беремо campaignId
+// з відповіді api.adsgram.ai (fetch не змінюємо, лише читаємо копію) і повідомляємо серверу (adTaskSeen); повтор кампанії — без нагороди
+(function(){if(window.__adtWrap||!window.fetch)return;window.__adtWrap=1;const of=window.fetch.bind(window);
+ const find=o=>{if(!o||typeof o!=='object')return '';for(const k in o){const v=o[k];if((k==='campaignId'||k==='campaign_id')&&(typeof v==='number'||typeof v==='string')&&String(v))return String(v);if(v&&typeof v==='object'){const r=find(v);if(r)return r}}return ''};
+ window.fetch=function(u,...a){const p=of(u,...a);try{const url=String(u&&u.url||u);if(/^https:\/\/api\.adsgram\.ai\//.test(url))p.then(r=>r.clone().json()).then(j=>{const c=find(j);if(c)adtC=c}).catch(()=>{})}catch(e){}return p}})();
 // картка #adTaskCard стоїть поза списком, який перемальовується: від'єднаний <adsgram-task> скидає стан («Забрати» губиться), тому елемент ніколи не переносимо
 function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
  if(!(K.tblock&&K.task)){c.hidden=true;return}
@@ -1350,7 +1355,7 @@ function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
  const gone=(w,e)=>{adTaskGone=Date.now();adTaskWait=w;if(e)e.remove();if(!e||adTaskEl===e)adTaskEl=null;const n=$('adtNone');if(n)n.hidden=false};
  adsgram(()=>{if(adTaskEl)return;const e=document.createElement('adsgram-task');e.className='adtask';e.setAttribute('data-block-id',String(K.tblock));
   e.innerHTML=`<span slot="reward" class="adt-rw">⚱️${K.task.ash} · 💰${fmt(K.task.gold)}</span><button slot="button" class="btn pri adt-b">${T('adt_go')}</button><button slot="claim" class="btn pri adt-b">${T('adt_claim')}</button><span slot="done" class="adt-ok">✅ ${T('adt_got')}</span>`;
-  e.addEventListener('reward',()=>{toast(T('adt_ok',{a:K.task.ash,g:fmt(K.task.gold)}));haptic('medium');setTimeout(()=>{lastSync=0;sync()},3000);setTimeout(()=>{lastSync=0;sync()},9000)});
+  e.addEventListener('reward',()=>{const c=adtC;act('adTaskSeen',{c},r=>{const o=r.out||{};if(o.dup||o.known)toast(T('adt_dup'));else{toast(T('adt_ok',{a:K.task.ash,g:fmt(K.task.gold)}));haptic('medium')}setTimeout(()=>{lastSync=0;sync()},3000);setTimeout(()=>{lastSync=0;sync()},9000)})});
   e.addEventListener('onBannerNotFound',()=>gone(15e4,e));['onError','onTooLongSession'].forEach(n=>e.addEventListener(n,()=>gone(6e5,e)));
   adTaskEl=e;adTaskGone=0;$('adTaskBox').appendChild(e);const n=$('adtNone');if(n)n.hidden=true;
   setTimeout(()=>{const m=$('adtNone');if(m&&adTaskEl===e&&e.getBoundingClientRect().height<20&&!$('adTaskCard').hidden&&$('adTaskCard').offsetParent)m.hidden=false},8000)},true,()=>gone(6e5,null))}
