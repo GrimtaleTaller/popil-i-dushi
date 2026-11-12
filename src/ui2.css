@@ -338,3 +338,7 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .shtag.shnew{background:linear-gradient(180deg,#9fe0a0,#4c9a4f);color:#0b1f0c}
 .shpd{color:#f3c56b!important;margin-top:-4px}
 .btn.shmore{width:100%;margin:2px 0 10px}
+
+/* 12.11: очки для рівня пропуску */
+.ptrack b{display:flex;flex-direction:column;align-items:center;line-height:1.05}
+.ptrack b .ptp{font-size:9px;font-weight:600;color:#c9a35a;opacity:.85}

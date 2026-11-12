@@ -438,23 +438,23 @@ function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{i
 let mSlot=null,mN=3,fsub='res',gemSel=null,aSlot=null,aSel=null;
 // ── Камені: злиття (картка 2, макет A «компактна таблиця», 08.11) ──
 // Правило й ціни — із сервера (V.gem.merge): need однакових каменів рівня l → 1 рівня l+1 (до V);
-// ціна — матеріал рівня каменів «або вищий» (як у тренуванні й кормі пітомця) × matN і уламки sh. all — розрахунок «злити все» від сервера.
+// ціна — матеріал рівня каменів (лише свій, з 12.11) × matN, уламки sh і золото gold. all — розрахунок «злити все» від сервера.
 const gmCfg=()=>gemCfg().merge||{need:3,cost:[1,2,3,4].map(()=>({mat:0,matN:0,sh:0})),all:null}; // старий сервер: 3 → 1 безкоштовно
-const matsFrom=m=>(G.mats||[]).slice(m).reduce((a,b)=>a+(b||0),0);
+const matsFrom=m=>(G.mats||[])[m]||0; // 12.11: лише свій рівень
 function gmInfo(k){const M=gmCfg(),l=+k[1],n=(G.gems||{})[k]||0;if(l>=gemCfg().max)return{n,max:1,x:0,lack:[]};
- const c=M.cost[l-1],hm=matsFrom(c.mat),sh=G.shards||0,x=Math.min(Math.floor(n/M.need),c.matN?Math.floor(hm/c.matN):1e9,c.sh?Math.floor(sh/c.sh):1e9),lack=[];
- if(n<M.need)lack.push({k:'gem',v:M.need-n});if(hm<c.matN)lack.push({k:'mat',v:c.matN-hm,m:c.mat});if(sh<c.sh)lack.push({k:'sh',v:c.sh-sh});
+ const c=M.cost[l-1],hm=matsFrom(c.mat),sh=G.shards||0,x=Math.min(Math.floor(n/M.need),c.matN?Math.floor(hm/c.matN):1e9,c.sh?Math.floor(sh/c.sh):1e9,c.gold?Math.floor((G.gold||0)/c.gold):1e9),lack=[];
+ if(n<M.need)lack.push({k:'gem',v:M.need-n});if(hm<c.matN)lack.push({k:'mat',v:c.matN-hm,m:c.mat});if(sh<c.sh)lack.push({k:'sh',v:c.sh-sh});if(c.gold&&(G.gold||0)<c.gold)lack.push({k:'g',v:Math.ceil(c.gold-(G.gold||0))});
  return{n,c,x,lack}}
-const gmMat=m=>'⛏️'+MATN[m]+(m<3?'+':'');
-const gmPrice=c=>c.matN||c.sh?`${gmMat(c.mat)}×${fmt(c.matN)}<br>🔩${fmt(c.sh)}`:'';
-const gmLack=x=>x.k==='gem'?T('gem_lack',{n:x.v}):x.k==='mat'?gmMat(x.m)+' −'+fmt(x.v):'🔩 −'+fmt(x.v);
+const gmMat=m=>'⛏️'+MATN[m]; // 12.11: лише свій рівень
+const gmPrice=c=>c.matN||c.sh?`${gmMat(c.mat)}×${fmt(c.matN)}<br>🔩${fmt(c.sh)}${c.gold?'<br>💰'+fmt(c.gold):''}`:'';
+const gmLack=x=>x.k==='gem'?T('gem_lack',{n:x.v}):x.k==='mat'?gmMat(x.m)+' −'+fmt(x.v):x.k==='g'?'💰 −'+fmt(x.v):'🔩 −'+fmt(x.v);
 // множина «1 злиття / 2 злиття / 5 злиттів»: форми через | у перекладі
 const plT=(k,n)=>{const f=T(k).split('|');let i;if(LANG==='en')i=n===1?0:2;else{const m=n%10,h=n%100;i=m===1&&h!==11?0:m>=2&&m<=4&&(h<12||h>14)?1:2}return(f[i]||f[f.length-1]).replace('{n}',fmt(n))};
-const gmSpend=A=>[...A.mats.map((v,i)=>v?`⛏️${MATN[i]}×${fmt(v)}`:'').filter(Boolean),A.sh?'🔩'+fmt(A.sh):''].filter(Boolean).join(' · ');
-const gmAllPlan=()=>{const M=gmCfg(),A=M.all,H=M.allHi;return H&&A&&H.n>A.n?{A:H,hi:true}:{A,hi:false}}; // 10.11 (Влад): якщо свого матеріалу бракує — «Злити все» бере й вищі, з попередженням
+const gmSpend=A=>[...A.mats.map((v,i)=>v?`⛏️${MATN[i]}×${fmt(v)}`:'').filter(Boolean),A.sh?'🔩'+fmt(A.sh):'',A.gold?'💰'+fmt(A.gold):''].filter(Boolean).join(' · ');
+const gmAllPlan=()=>{const M=gmCfg(),A=M.all,H=M.allHi;return H&&A&&H.n>A.n?{A:H,hi:true}:{A,hi:false}}; // 10.11: allHi — legacy; з 12.11 сервер не шле allHi, вищі матеріали не підходять
 function gemMergeCard(){const M=gmCfg(),{A,hi:gHi}=gmAllPlan(),Mt=G.mats||[],mx=gemCfg().max;
  let h=`<div class="card"><h4>◆ ${T('gem_title')}</h4><p class="hint">${T('gem_merge_hint',{n:M.need})}</p>
- <div class="gmres"><span class="sub">${T('gem_have')}</span>${MATN.map((x,i)=>`<span>⛏️${x} <b>${fmt(Mt[i]||0)}</b></span>`).join('')}<span>🔩 <b>${fmt(G.shards||0)}</b></span></div>`;
+ <div class="gmres"><span class="sub">${T('gem_have')}</span>${MATN.map((x,i)=>`<span>⛏️${x} <b>${fmt(Mt[i]||0)}</b></span>`).join('')}<span>🔩 <b>${fmt(G.shards||0)}</b></span><span>💰 <b>${fmt(G.gold||0)}</b></span></div>`;
  if(A)h+=`<button class="btn pri big gmall" id="gmAll" ${A.n?'':'disabled'}>⬆ ${T('gem_all')}${A.n?' · '+plT('gem_all_n',A.n):''}</button>${A.n?`<div class="gmspend">${T('gem_spend')}: ${gmSpend(A)}${gHi?' · ⚠️ '+T('gem_all_hi_s'):''}</div>`:''}`;
  h+=`<div class="gmA"><div class="gmA-h"><span></span>${GEMS.map(t=>`<b style="color:${GEMC[t]}">${T('gem_'+t)}<small>${T('gem_st_'+t)}</small></b>`).join('')}</div>`;
  for(let l=1;l<=mx;l++){const c=l<mx?M.cost[l-1]:null;
@@ -478,9 +478,10 @@ function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.i
  modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),null,()=>{},()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),'gempick')} // 05.11: замість «Скасувати» внизу довгого списку — ✕ і тап поза вікном
 function bindGem(){const P=$('p-forge');
  // злиття в клітинці — усі доступні; якщо бракує матеріалу свого рівня й підуть вищі — спершу питаємо (matAsk, як у тренуванні)
- P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{const k=b.dataset.gm,c=gmCfg().cost[+k[1]-1];const x=+b.dataset.x||1;matAsk(c.mat,x*c.matN,hi=>act('gemMerge',{k,n:x,hi},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')}))});
+ P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{const k=b.dataset.gm,c=gmCfg().cost[+k[1]-1];const x=+b.dataset.x||1;const go=()=>act('gemMerge',{k,n:x,max:c.gold||0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')});
+  if(c.gold&&c.gold*x>=(G.gold||0)*0.05){const ms=[0,0,0,0];ms[c.mat]=c.matN*x;modal(`<div class="big">◆</div><p>${T('gem_x_q',{n:x,g:gemName(k[0]+(+k[1]+1))})}</p><p class="gmspend">${T('gem_spend')}: ${gmSpend({mats:ms,sh:c.sh*x,gold:c.gold*x})}</p>`,T('gem_all_ok'),go,null,'gemx')}else go()});
  if($('gmAll'))$('gmAll').onclick=()=>{const {A,hi}=gmAllPlan();if(!A||!A.n)return;
-  modal(`<div class="big">◆</div><h3>${T('gem_all')}</h3><p>${T(hi?'gem_all_qh':'gem_all_q',{n:plT('gem_all_n',A.n)})}</p><p class="gmspend">${T('gem_spend')}: ${gmSpend(A)}</p>`,T('gem_all_ok'),()=>act('gemMergeAll',{hi},r=>{toast(T('gem_all_done',{n:plT('gem_all_n',r.out.n)}));haptic('light')}),null,'gemmall')};
+  modal(`<div class="big">◆</div><h3>${T('gem_all')}</h3><p>${T(hi?'gem_all_qh':'gem_all_q',{n:plT('gem_all_n',A.n)})}</p><p class="gmspend">${T('gem_spend')}: ${gmSpend(A)}</p>`,T('gem_all_ok'),()=>act('gemMergeAll',{hi,max:A.gold||0},r=>{toast(T('gem_all_done',{n:plT('gem_all_n',r.out.n)}));haptic('light')}),null,'gemmall')};
  P.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>gemPick(+b.dataset.gi));
  if($('gOutAll'))$('gOutAll').onclick=()=>{const d=$('gOutAll').dataset,c=+d.c,ok=(G.ash||0)>=c;
   modal(`<div class="big">◆</div><h3>${T('gem_out_all',{n:d.n})}</h3><p>${T('gem_out_all_q',{i:d.i,c:fmt(c)})}</p><p class="hint">${T('gem_have_ash',{a:fmt(G.ash||0)})}</p>`,ok?T('gem_out_btn',{c:fmt(c)}):null,()=>{if(ok)act('gemRemoveAll',{},r=>{haptic('light');toast(T('gem_out_all_ok',{n:r.out.n,c:fmt(r.out.cost)}))})},null,'gemall')};
@@ -560,13 +561,13 @@ function renderForge(){
 }
 const DNG=[{n:'Нора щурів',bg:'dbg1',reg:1},{n:'Вовче лігво',bg:'dbg2',reg:1},{n:'Склеп короля',bg:'dbg3',reg:2},{n:'Болотне капище',bg:'dbg4',reg:3},{n:'Вогняна кузня',bg:'dbg5',reg:4},{n:'Крижана печера',bg:'dbg6',reg:5},{n:'Затонулий храм',bg:'dbg7',reg:6},{n:'Зала дзеркал',bg:'dbg8',reg:7},{n:'Серце безодні',bg:'dbg9',reg:8},{n:'Трон попелу',bg:'dbg10',reg:8}]; // власні фони підземель (31.10)
 const MATN=['I','II','III','IV'];
-// матеріали «тир або вищі»: сервер бере спершу найнижчий доступний (takeMats); показуємо, що саме піде (08.11, Влад)
-function matUse(m,n){const M=G.mats||[],u=[];for(let i=m;i<4&&n>0;i++){const k=Math.min(n,M[i]||0);if(k){u.push([i,k]);n-=k}}return u}
-function matTxt(m,n){const u=matUse(m,n),hi=u.some(x=>x[0]>m),have=u.reduce((a,x)=>a+x[1],0);return '⛏️'+MATN[m]+(m<3?'+':'')+'×'+fmt(n)+(have<n?` <span class="mhi">(${T('mat_lack',{n:fmt(n-have)})})</span>`:hi?` <span class="mhi">(${T('mat_use')}: ${u.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})</span>`:'')}
+// матеріали — лише свого тиру (12.11, Влад); hi-гілки нижче — legacy, тепер не спрацьовують
+function matUse(m,n){const M=G.mats||[],u=[];for(let i=m;i<=m&&n>0;i++){ /* 12.11 (Влад): лише свій рівень, вищі не підставляються */const k=Math.min(n,M[i]||0);if(k){u.push([i,k]);n-=k}}return u}
+function matTxt(m,n){const u=matUse(m,n),hi=u.some(x=>x[0]>m),have=u.reduce((a,x)=>a+x[1],0);return '⛏️'+MATN[m]+'×'+fmt(n)+(have<n?` <span class="mhi">(${T('mat_lack',{n:fmt(n-have)})})</span>`:hi?` <span class="mhi">(${T('mat_use')}: ${u.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})</span>`:'')}
 // годування «до максимуму»: повторюємо цикл сервера (actPetFeed), щоб спитати про всі вищі матеріали, які піде (критик 08.11)
 function feedHi(l,want){const M=(G.mats||[]).slice(),hi={};let sh=G.shards,done=0;
  while(done<want&&l<30){const c={mat:Math.min(2,Math.floor(l/10)),matN:5+l,sh:15*l,cat:(l===10||l===20)?1:0};if(c.cat&&done)break;
-  if(M.slice(c.mat).reduce((a,b)=>a+(b||0),0)<c.matN||sh<c.sh)break;let n=c.matN;for(let i=c.mat;i<4&&n>0;i++){const k=Math.min(n,M[i]||0);M[i]-=k;n-=k;if(k&&i>c.mat)hi[i]=(hi[i]||0)+k}
+  if((M[c.mat]||0)<c.matN||sh<c.sh)break;let n=c.matN;for(let i=c.mat;i<=c.mat&&n>0;i++){const k=Math.min(n,M[i]||0);M[i]-=k;n-=k;if(k&&i>c.mat)hi[i]=(hi[i]||0)+k}
   sh-=c.sh;l++;done++;if(c.cat)break}
  return Object.keys(hi).map(i=>[+i,hi[i]])}
 function matAsk(m,n,go){const hi=matUse(m,n).filter(x=>x[0]>m);if(!hi.length)return go(false);modal(`<div class="big">⛏️</div><p>${T('mat_hi_ask',{m:MATN[m],u:hi.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})}</p>`,T('mat_hi_ok'),()=>go(true),null,'matask')} // go(true) — гравець погодився на вищі матеріали
@@ -686,7 +687,7 @@ function dngResult(o){
  haptic(o.full?'heavy':'medium');
 }
 function gateTxt(c){return '🔩'+fmt(c.shards)+(c.mat>=0?' · '+matTxt(c.mat,c.matN):'')+(c.cat?' · 💎'+c.cat:'')}
-function gateOk(c){return G.shards>=c.shards&&(c.mat<0||(G.mats||[]).slice(c.mat).reduce((a,b)=>a+(b||0),0)>=c.matN)&&G.cat>=c.cat} // сервер бере «тир або вищі» (takeMats)
+function gateOk(c){return G.shards>=c.shards&&(c.mat<0||((G.mats||[])[c.mat]||0)>=c.matN)&&G.cat>=c.cat} // лише свій тир (takeMats, 12.11)
 function renderTrain(){
  const TG=(V.train&&V.train.gate)||{};
  let h='';for(const u of UPG){const l=G.up[u.k],mx=u.max&&l>=u.max,gc=TG[u.k];
@@ -752,7 +753,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  let h='';const a=P.act&&P.list[P.act];
  if(a){const sp=P.act,b=(D.defs||{})[sp]||{},bv=(I.bonus||{})[sp]||0,nx=I.next,f=petEvoN(a.l);
   h+=`<div class="card petcard"><div class="petmain">${petFrame(sp,a.l,a.s,1)}<div><h4>${T('pet_'+sp)} · ${T('pet_form',{f:ROM[f]})}</h4><div>${stars(a.s)} · ${T('lvl',{n:a.l})}/${C.maxLvl||30}</div><div class="up">${T('petb_'+b.b,{v:bv})}</div><div class="sub">${a.s<5?T('pet_dups',{d:a.d,n:C.dupStar||2}):T('pet_maxstar')}</div></div></div>`;
-  if(nx){const ok=(G.mats||[]).slice(nx.mat).reduce((x,y)=>x+(y||0),0)>=nx.matN&&G.shards>=nx.shards&&G.cat>=nx.cat;
+  if(nx){const ok=((G.mats||[])[nx.mat]||0)>=nx.matN&&G.shards>=nx.shards&&G.cat>=nx.cat;
    h+=`<p class="hint">${nx.cat?T('pet_evo_hint',{f:ROM[f+1]}):T('pet_feed_hint')}</p><div class="st">${T('pet_cost')}: ${matTxt(nx.mat,nx.matN)} · 🔩${fmt(nx.shards)}${nx.cat?' · 💎1':''}</div><div class="row"><button class="btn pri" id="pFeed" data-m="${nx.mat}" data-n="${nx.matN}" ${ok?'':'disabled'}>${nx.cat?T('pet_evo_btn'):T('pet_feed')}</button>${nx.cat?'':`<button class="btn" id="pFeedM" ${ok?'':'disabled'}>${T('pet_feed_max')}</button>`}</div>`}
   else h+=`<p class="hint">${T('max_reached')}</p>`;
   h+=`<div class="petfind"><span>🎒 ${T('pet_finds',{n:P.fn||0,m:C.findMax||3})}${(P.fn||0)<(C.findMax||3)&&I.findIn?' · '+T('pet_next',{t:hms(I.findIn)}):''}</span><button class="btn pri" id="pFind" ${P.fn?'':'disabled'}>${T('take')}</button></div></div>`;
@@ -761,7 +762,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
   if(ab)h+=`<div class="card"><h4>✨ ${T('pg_ab_t')}: ${T('ab_'+ab.k)}</h4><p>${T('abd_'+ab.k,{v:ab.v,w:2*ab.v})}</p></div>`;
   h+=`<div class="card"><h4>${T('pg_t')}</h4><p class="hint">${T('pg_hint')}</p><div class="slots">`+PGSLOTS.map(s=>{const it=PE[s];return `<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):PGIC[s]}</div><div class="sn">${T('pslot_'+s)}</div>`+(it?`<div class="it" style="color:${RAR[it.r].c}">${RAR[it.r].n}</div><div class="sn">${T('lvl',{n:it.il})}${it.il>a.l?' ⚠️':''}</div><div class="sn">${pgSt(it)}</div><button class="btn" data-pgoff="${s}" style="margin-top:6px">${T('pg_take_off')}</button>`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}).join('')+`</div>`;
   if(sum.ab||sum.atk||sum.hp||sum.crit||sum.gold||sum.xp)h+=`<div class="st" style="margin-top:8px">${T('pg_sum')}: ${pgSt({st:sum})}</div>`;
-  if(cost){const ok=(G.mats||[]).slice(cost.mat).reduce((x,y)=>x+(y||0),0)>=cost.matN&&G.shards>=cost.shards;
+  if(cost){const ok=((G.mats||[])[cost.mat]||0)>=cost.matN&&G.shards>=cost.shards;
    h+=`<h4 style="margin-top:12px">${T('pg_craft_t')}</h4><p class="hint">${T('pg_craft_hint',{l:a.l})}</p><div class="st">${T('pet_cost')}: ${matTxt(cost.mat,cost.matN)} · 🔩${fmt(cost.shards)}</div><div class="row">`+PGSLOTS.map(s=>`<button class="btn pri" data-pgc="${s}" data-m="${cost.mat}" data-n="${cost.matN}" ${ok?'':'disabled'}>${PGIC[s]} ${T('pslot_'+s)}</button>`).join('')+`<button class="btn ${pgCat?'on':''}" id="pgCat" ${G.cat>0?'':'disabled'}>${T('pg_cat')} ${G.cat||0}</button></div>`}
   h+=`<h4 style="margin-top:12px">${T('pg_bag')} ${PI.length}/${GI.invMax||30}</h4>`;
   if(GI.best||GI.junk)h+=`<div class="row" style="margin-top:0;margin-bottom:8px">${GI.best?`<button class="btn pri" id="pgBest">${T('pg_best',{n:GI.best})}</button>`:''}${GI.junk?`<button class="btn" id="pgJunk">${T('pg_junk',{n:GI.junk})}</button>`:''}</div>`; // 05.11
@@ -1280,9 +1281,9 @@ function renderQuest(){
  const BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
  h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_in_tasks')}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
  h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`</div>`; // 09.11: тижневий Сувій прибрано (лише з Відьми в Болоті) → Сувій вічності
- h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#</b><span>${T('pass_free')}</span><span>👑 ${T('pass_paid')}</span></div>`;
+ h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#<small class="ptp">${T('pass_ptsh')}</small></b><span>${T('pass_free')}</span><span>👑 ${T('pass_paid')}</span></div>`;
  for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i);
-  h+=`<div class="${ok?'on':''}"><b>${i}</b><span>${f?'✓ ':''}${rwTxt(P.free[i-1])}</span><span class="${P.prem?'':'lock'}">${p?'✓ ':P.prem?'':'🔒 '}${rwTxt(P.paid[i-1])}</span></div>`}
+  h+=`<div class="${ok?'on':''}"><b>${i}<small class="ptp">${i*P.per}</small></b><span>${f?'✓ ':''}${rwTxt(P.free[i-1])}</span><span class="${P.prem?'':'lock'}">${p?'✓ ':P.prem?'':'🔒 '}${rwTxt(P.paid[i-1])}</span></div>`}
  h+=`</div><p class="hint">${P.prem?T('pass_prem_on'):T('pass_prem_soon')}</p></div>`;
  h+=`<p class="hint">${T('pass_hint')}</p>`;
  el.innerHTML=h;
