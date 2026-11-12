@@ -715,7 +715,7 @@ const LOGT={
  daily:a=>T('log_daily',{n:a[0]}),
  reward:a=>T('log_reward',{a:fmt(a[0])}),relic:a=>T('relic_done',{n:a[0],a:a[1]}),refine:a=>T('log_ref',{s:SLOT[a[0]]?SLOT[a[0]].n:a[0],n:a[2],k:a[3]}),
  star:a=>'★ '+(SLOT[a[0]]?SLOT[a[0]].n:a[0])+' → '+'★'.repeat(a[2]||0),
- pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
+ pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adTask:a=>T('log_ad_task',{a:a[0],g:fmt(a[1]||0)}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
  pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
@@ -1290,17 +1290,36 @@ function renderQuest(){
  $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
-let adCtl=null,adLoading=false;
-function adsgram(cb){if(window.Adsgram)return cb();if(adLoading)return adEggDrop();adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;cb()};sc.onerror=()=>{adLoading=false;adEggDrop();toast(T('ad_err'))};document.head.appendChild(sc)}
+let adCtl=null,adLoading=false,adQ=[];
+function adsgram(cb,quiet,fail){if(window.Adsgram)return cb();if(adLoading&&!quiet&&adQ.some(x=>!x.quiet))return;adQ.push({cb,quiet,fail});if(adLoading)return;adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;const q=adQ;adQ=[];q.forEach(x=>x.cb())};sc.onerror=()=>{adLoading=false;sc.remove();const q=adQ;adQ=[];q.forEach(x=>{if(x.fail)x.fail();if(!x.quiet){adEggDrop();toast(T('ad_err'))}})};document.head.appendChild(sc)} // 12.11: черга колбеків (відео й рекламні завдання), quiet — без тосту
 let adEggAt=0;const adEggOn=()=>Date.now()-adEggAt<170e3;
 // реклама на яйці (09.11): сервер віддає перегляд тому, на що поставлено намір; якщо реклама не показалась — намір скидаємо
 const adEggDrop=()=>{if(adEggOn()){adEggAt=0;api('adIntent',{k:''}).catch(()=>{})}};
+// 12.11 (Влад): рекламні завдання AdsGram (блок Task) — один елемент на весь сеанс, між перемальовуваннями лише переноситься в картку;
+// нагорода — з Reward URL (&t=task) на сервері, тут лише тост і синхронізація; немає завдань — картку ховаємо на 10 хв
+let adTaskEl=null,adTaskGone=0,adTaskWait=0,adTaskTry=0;
+// картка #adTaskCard стоїть поза списком, який перемальовується: від'єднаний <adsgram-task> скидає стан («Забрати» губиться), тому елемент ніколи не переносимо
+function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
+ if(!(K.tblock&&K.task)){c.hidden=true;return}
+ c.hidden=false;$('adtT').textContent=T('adt_t');$('adtH').textContent=T('adt_hint',{a:K.task.ash,g:fmt(K.task.gold)});
+ $('adtD').textContent=K.task.done?T('adt_done',{n:K.task.done}):'';$('adtNone').textContent=T('adt_none');
+ if(adTaskEl){if(!c.contains(adTaskEl))$('adTaskBox').appendChild(adTaskEl);$('adtNone').hidden=true;return}
+ $('adtNone').hidden=!adTaskGone; // картку не ховаємо (Влад 12.11): немає нових завдань — пишемо про це, виконані лишаються в лічильнику
+ if(adTaskGone&&Date.now()-adTaskGone<adTaskWait)return;
+ if(Date.now()-adTaskTry<15e3)return;adTaskTry=Date.now();
+ const gone=(w,e)=>{adTaskGone=Date.now();adTaskWait=w;if(e)e.remove();if(!e||adTaskEl===e)adTaskEl=null;const n=$('adtNone');if(n)n.hidden=false};
+ adsgram(()=>{if(adTaskEl)return;const e=document.createElement('adsgram-task');e.className='adtask';e.setAttribute('data-block-id',String(K.tblock));
+  e.innerHTML=`<span slot="reward" class="adt-rw">⚱️${K.task.ash} · 💰${fmt(K.task.gold)}</span><button slot="button" class="btn pri adt-b">${T('adt_go')}</button><button slot="claim" class="btn pri adt-b">${T('adt_claim')}</button><span slot="done" class="adt-ok">✅</span>`;
+  e.addEventListener('reward',()=>{toast(T('adt_ok',{a:K.task.ash,g:fmt(K.task.gold)}));haptic('medium');setTimeout(()=>{lastSync=0;sync()},3000);setTimeout(()=>{lastSync=0;sync()},9000)});
+  e.addEventListener('onBannerNotFound',()=>gone(15e4,e));['onError','onTooLongSession'].forEach(n=>e.addEventListener(n,()=>gone(6e5,e)));
+  adTaskEl=e;adTaskGone=0;$('adTaskBox').appendChild(e);const n=$('adtNone');if(n)n.hidden=true},true,()=>gone(6e5,null))}
 function watchAd(){const K=V.tasks;if(!K||!K.block)return toast(T('ad_soon'));
  adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){adEggAt=0;toast(T('ad_wait'));setTimeout(()=>sync(),3000);setTimeout(()=>sync(),9000)}else adEggDrop()}).catch(()=>{adEggDrop();toast(T('ad_none'))})}catch(e){adEggDrop();toast(T('ad_err'))}})}
 const SUB_N={news:'@GRIMTALENEWS',chat:'@GRIMTALECHAT',pay:'@GRIMTALEPAYOUTS'};
 function tgOpen(u){const w=window.Telegram&&Telegram.WebApp;if(/^https:\/\/t\.me\//.test(u)&&w&&w.openTelegramLink)w.openTelegramLink(u);else if(w&&w.openLink)w.openLink(u);else window.open(u,'_blank')}
 function renderTasks(){
- const K=V.tasks,el=$('p-tasks');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
+ const K=V.tasks;if(!$('tkList'))$('p-tasks').innerHTML=`<div id="tkList"></div><div class="card" id="adTaskCard" hidden><h4>🎯 <span id="adtT"></span></h4><p class="hint" id="adtH" style="margin:0 0 6px"></p><div id="adTaskBox"></div><p class="hint" id="adtNone" style="margin:4px 0 0" hidden></p><p class="hint" id="adtD" style="margin:4px 0 0"></p></div>`;
+ const el=$('tkList');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
  const A=K.ads,keyTxt=A.tier?'🗝️'+T('tier',{n:A.tier}):chestIc(2);
  let h=`<p class="hint">${T('tk_hint')}</p>`;
  h+=`<div class="card"><h4>📺 ${T('ad_t')}</h4><p class="hint" style="margin:0 0 6px">${T('ad_hint',{c:chestIc(1)+'×'+A.ch,n:A.keyEvery,k:keyTxt})}</p><div class="bar"><i style="width:${A.n/A.max*100}%;background:#f2c14e"></i></div><div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('ad_cnt',{n:A.n,m:A.max})}</span><button class="btn pri" id="tkAd" ${A.n<A.max?'':'disabled'}>▶️ ${T('ad_btn')}</button></div></div>`;
@@ -1309,6 +1328,7 @@ function renderTasks(){
  h+=K.subs.map(x=>`<div class="card"${x.ok?' style="opacity:.6"':''}><div class="row" style="align-items:center;gap:8px"><div style="flex:1;min-width:0"><h4 style="margin:0">${x.ok?'✅':'📢'} ${T('sub_one',{c:SUB_N[x.k]||x.chat})}</h4><span class="hint" style="margin:0">${T('tk_rw')}: ⚱️${K.subAsh}</span></div>${x.ok?'':`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div></div>`).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
  if(K.ptn.length){h+=`<div class="card"><h4>🤝 ${T('ptn_t')}</h4>`+K.ptn.map(p=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0">${p.ok?'✅':'🎯'} ${esc(p.t[LANG]||p.t.en||p.id)} <span class="hint">· ${chestIc(1)}×${p.ch}${p.key?' +🗝️×'+p.key:''}</span></span>${p.ok?'':`<button class="btn" style="flex:0 0 auto" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`}</div>`).join('')+`</div>`}
  el.innerHTML=h;
+ mountAdTask(K);
  $('tkAd').onclick=()=>{adEggDrop();watchAd()};$('qShare').onclick=shareStory;
  if($('qBioCopy')){$('qBioCopy').onclick=()=>copyText(bioLink());$('qBioChk').onclick=()=>act('bio',{},r=>{toast('🔗 +⚱️'+r.out.ash);haptic('medium')})}
  el.querySelectorAll('[data-sgo]').forEach(b=>b.onclick=()=>tgOpen('https://t.me/'+b.dataset.sgo.replace('@','')));

@@ -342,3 +342,9 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 /* 12.11: очки для рівня пропуску */
 .ptrack b{display:flex;flex-direction:column;align-items:center;line-height:1.05}
 .ptrack b .ptp{font-size:9px;font-weight:600;color:#c9a35a;opacity:.85}
+
+/* 12.11 рекламні завдання AdsGram */
+.adtask{display:block;--adsgram-task-font-size:14px;--adsgram-task-icon-size:40px;--adsgram-task-icon-title-gap:10px;--adsgram-task-icon-border-radius:10px;--adsgram-task-button-width:96px}
+.adtask .adt-rw{font-size:12px;color:#f2c14e;font-weight:700}
+.adtask .adt-b{padding:6px 10px;font-size:13px;width:100%}
+.adtask .adt-ok{font-size:18px}
