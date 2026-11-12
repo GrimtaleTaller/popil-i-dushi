@@ -305,7 +305,7 @@ function renderHero(){
  $('p-hero').innerHTML=h;$('hStats').ontoggle=e=>{statsOpen=e.target.open}; /* характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями */$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best')));
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
  $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
- $('p-hero').querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{lastSub.bag=b.dataset.hq;document.querySelector(tabBtn('bag')).click()});
+ $('p-hero').querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{const k=b.dataset.hq,keep=lastSub.bag;lastSub.bag=k;document.querySelector(tabBtn('bag')).click();if(k==='pet'||k==='train')lastSub.bag=keep});
 }
 // Вдосконалення речі (04.11): +1 рівень предмета за золото й уламки, до (найвищий етап − 15)
 const refK=r=>((V.refine&&V.refine.m)||[0,0,0,1,2,5,15])[r]||1; // множник ціни за рідкістю (04.11: вічна в 7,5 раза дорожча за легендарку)
@@ -1210,14 +1210,14 @@ const tabBtn=t=>'.tabs button[data-t="'+t+'"]';
 // вказівники: умова, куди показати, після якого пояснення розділу крок уже не потрібен; all — і для старих гравців (нові функції)
 const TUT_GOALS=[
  {k:'bag',tab:'bag',p:'bag',c:()=>G.inv.length>0},
- {k:'train',tab:'bag',p:'train',c:()=>G.maxStage>=2&&G.gold>=150},
+ {k:'train',tab:'hero',q:1,p:'train',c:()=>G.maxStage>=2&&G.gold>=150},
  {k:'forge',tab:'forge',p:'res',c:()=>G.maxStage>=4},
  {k:'dng',tab:'dng',p:'dng',c:()=>V.dng&&G.maxStage>=V.dng.unlockStage},
  {k:'arena',tab:'arena',p:'arena',c:()=>V.arena&&G.maxStage>=V.arena.stage},
  {k:'clan',tab:'clan',p:'clan',c:()=>G.maxStage>=(V.clanStage||5)},
- {k:'pet',tab:'bag',p:'pet',all:1,c:()=>{const P=G.pet;return !!P&&(P.eggs.c+P.eggs.r>0||!!P.inc||Object.keys(P.list).length>0)}},
+ {k:'pet',tab:'hero',q:1,p:'pet',all:1,c:()=>{const P=G.pet;return !!P&&(P.eggs.c+P.eggs.r>0||!!P.inc||Object.keys(P.list).length>0)}},
  {k:'gem',tab:'forge',p:'gem',all:1,c:()=>Object.values(G.gems||{}).some(n=>n>0)},
- {k:'pgear',tab:'bag',p:'pet',all:1,np:1,c:()=>{const P=G.pet;return !!P&&!!P.act&&!P.craft}},
+ {k:'pgear',tab:'hero',q:1,p:'pet',all:1,np:1,c:()=>{const P=G.pet;return !!P&&!!P.act&&!P.craft}},
 ];
 function tutEl(){let e=$('tut');if(!e){e=document.createElement('div');e.id='tut';e.innerHTML='<div class="tring" id="tring"></div><div class="tbub" id="tbub"></div>';document.body.appendChild(e)}return e}
 function tutHide(){tutCur=null;const e=$('tut');if(e)e.className=''}
@@ -1265,7 +1265,7 @@ function tutCheck(){
   if((old&&!g.all)||tutHas('tg_'+g.k)||(tutHas('p_'+g.p)&&!g.np))continue;
   let ok=false;try{ok=g.c()}catch(e){}
   if(!ok)continue;
-  const inG=groupOf(tab)===g.tab,sel=inG?`#subtabs button[data-s="${g.p}"]`:tabBtn(g.tab);
+  const inG=groupOf(tab)===g.tab,sel=inG?(g.q?`#p-hero [data-hq="${g.p}"]`:`#subtabs button[data-s="${g.p}"]`):tabBtn(g.tab);
   tutShow({txt:'tg_'+g.k,sel,skip:!old,still:()=>(groupOf(tab)===g.tab)===inG&&curPane()!==g.p&&!tipPending(),ok:()=>tutMark('tg_'+g.k)});return;
  }
 }
@@ -1424,6 +1424,7 @@ function wbResult(o){
 const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'tasks'};
 // 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Пітомець, Тренування, Журнал, Профіль — у вікні героя на весь екран
 // 10.11 (Влад, Штаб #4): магазин — окрема виділена вкладка в центрі нижньої панелі (була підвкладка вікна Героя)
+// 13.11 (Влад): у вікні Сумки без Пітомця й Тренування (вони є кнопками на головному екрані), Журнал — у самому кінці, щоб легше знайти «💸 Вивід»
 const groupOf=t=>['bag','market','pet','train','log','prof','wd'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
@@ -1453,7 +1454,7 @@ function subDots(){const P=V&&V.pass;return{quest:!!(P&&(P.lv>P.f.length||(P.pre
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['pet','sub_pet'],['train','sub_train'],['log','sub_log'],['prof','sub_prof'],['wd','sub_wd']]:g==='shop'?[['deal','ssub_deal'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}</button>`).join('');
