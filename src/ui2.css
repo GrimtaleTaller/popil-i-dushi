@@ -359,3 +359,5 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .cardst .btn{padding:6px 14px}
 /* 13.11: пакети Попелу — сума з бонусом */
 .shash{margin:6px 0 2px;font-size:16px}.shash s{color:var(--mute,#8a8a8a);font-size:13px;margin-right:4px}.shash b{color:var(--gold,#e8b14a)}.shash em{font-style:normal;font-size:12px;font-weight:800;margin-left:6px;color:#7fd67f}
+/* 13.11: Конюшня — перемикач «з 💎» видно, коли увімкнено */
+.btn.pgcat.on{border-color:var(--gold,#e8b14a);color:#fff;background:#3a2a12;box-shadow:0 0 0 1px var(--gold,#e8b14a) inset}

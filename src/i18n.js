@@ -264,3 +264,7 @@ Object.assign(window.I18N.ru.t,{shop_i_ash100:'⚱️ 100 Пепла',shop_i_ash
 Object.assign(window.I18N.uk.t,{adt_hint2:'Виконай завдання від рекламодавця — 💰{g} за кожне, а за перші {n} на день ще ⚱️{a}. Сьогодні з Попелом лишилось: {l}. Кожне завдання можна виконати лише раз.',adt_ok_g:'🎯 Завдання виконано: +💰{g} (зарахується за кілька секунд)'});
 Object.assign(window.I18N.en.t,{adt_hint2:'Complete a task from an advertiser — 💰{g} for each, plus ⚱️{a} for the first {n} a day. Ash rewards left today: {l}. Every task can be done only once.',adt_ok_g:'🎯 Task done: +💰{g} (credited in a few seconds)'});
 Object.assign(window.I18N.ru.t,{adt_hint2:'Выполни задание от рекламодателя — 💰{g} за каждое, а за первые {n} в день ещё ⚱️{a}. Сегодня с Пеплом осталось: {l}. Каждое задание можно выполнить только раз.',adt_ok_g:'🎯 Задание выполнено: +💰{g} (зачислится через несколько секунд)'});
+// 13.11: Конюшня — підказка, коли кування із Самоцвітом увімкнено
+Object.assign(window.I18N.uk.t,{pg_cat_on:'Кування із Самоцвітом: −1 💎, вищий шанс епічної й легендарної речі.'});
+Object.assign(window.I18N.en.t,{pg_cat_on:'Forging with a Gem: −1 💎, higher chance of epic and legendary.'});
+Object.assign(window.I18N.ru.t,{pg_cat_on:'Ковка с Самоцветом: −1 💎, выше шанс эпической и легендарной вещи.'});
