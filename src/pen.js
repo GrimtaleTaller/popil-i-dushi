@@ -73,9 +73,9 @@ function banner(name,tier=0,w=120){
  <path d="${sh}" fill="none" stroke="${T.m}" stroke-width="${tier>=2?3.2:2.4}"/>
  ${sm?'':`<path d="${sh}" fill="none" stroke="${T.m2}" stroke-width="1" stroke-dasharray="3 3" transform="translate(60 88) scale(.9) translate(-60 -88)" opacity=".9"/>`}
  <rect x="2" y="7" width="116" height="7" rx="3.5" fill="url(#${u}p)"/>${fin}
- <circle cx="60" cy="72" r="31" fill="url(#${u}m)" stroke="${T.m}" stroke-width="2.6"/>
+ <circle cx="60" cy="72" r="${sm?38:31}" fill="url(#${u}m)" stroke="${T.m}" stroke-width="${sm?4:2.6}"/>
  <circle cx="60" cy="72" r="27" fill="none" stroke="${T.m2}" stroke-width="1"/>
- <g transform="translate(39 51) scale(.42)">${symbol(g.sym,L,A)}</g>
+ <g transform="${sm?'translate(31 43) scale(.58)':'translate(39 51) scale(.42)'}">${symbol(g.sym,L,A)}</g>
  ${stars}${tass}</g></svg>`;
 }
 const CACHE=new Map();
