@@ -134,7 +134,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;heroPen();lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;heroPen();wdChip(v.usd);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -263,6 +263,9 @@ function setK(it){if(it.r==null)return 1;const cur=setPowWith(null,-1);return(1+
 function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore(it,1)-itemScore({slot:it.slot,st:{},il:it.il,gm:[]},1)}
 // 13.11 (Влад): вимпел клану біля ніку (src/pen.js малює з назви; p = [назва клану, ступінь рамки])
 function penI(p,w=24){return p&&p[0]&&window.penSvg?`<span class="pen">${window.penSvg(p[0],p[1],w)}</span>`:''}
+// 13.11 (Влад «А»): зелена плашка балансу виводу в шапці — видно на всіх екранах; тап → Герой → 💸 Вивід
+var wdUsd=null;function wdChip(u){if(u!=null)wdUsd=Number(u)||0;const c=$('wdChip');if(!c||wdUsd==null)return;c.hidden=false;const t='$'+wdUsd.toFixed(2);if($('wdChipV').textContent!==t)$('wdChipV').textContent=t;
+ if(!c.onclick)c.onclick=()=>{haptic('light');lastSub.hero='wd';const b=document.querySelector('.tabs button[data-t="hero"]');if(b)b.click()}}
 var heroPenK='';function heroPen(){const hn=document.querySelector('.f.hero .fname');if(!hn)return;const k=JSON.stringify(V&&V.pen||null)+T('hero_name');if(k===heroPenK)return;heroPenK=k;hn.innerHTML=penI(V&&V.pen,22)+esc(T('hero_name'))}
 function renderTop(){
  {const hs=$('hsSub');if(hs&&G&&document.body.classList.contains('hs-open'))hs.textContent=T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)})} // 13.11 (Влад): рівень і Сила в шапці «Герой» оновлюються разом із верхньою панеллю
@@ -786,7 +789,7 @@ function copyText(t){try{navigator.clipboard.writeText(t);toast(T('copied'))}cat
 // ---------- вивід коштів (Влад 12.11) ----------
 // баланс $ наповнюватиметься з пулу (схема Г), поки 0; заявку виплачує адмін вручну з Tonkeeper
 let wdData=null,wdBusy=false,wdAdm=null,wdCur='gram',wdAt=0;
-const wdLoad=()=>{if(wdBusy)return;wdBusy=true;api('wdInfo').then(r=>{wdData=r.out;wdAt=Date.now()}).catch(e=>toast(errT(e))).finally(()=>{wdBusy=false;dirty.wd=1})};
+const wdLoad=()=>{if(wdBusy)return;wdBusy=true;api('wdInfo').then(r=>{wdData=r.out;wdAt=Date.now();wdChip(r.out&&r.out.bal)}).catch(e=>toast(errT(e))).finally(()=>{wdBusy=false;dirty.wd=1})};
 const WD_ST={new:'⏳',paid:'✅',rejected:'❌'};
 function renderWd(){const el=$('p-wd');
  if(wdData)live('wd',()=>api('wdInfo').then(r=>r.out),o=>{if(same(o,wdData))return false;wdData=o;wdAt=Date.now();return true}); // свіжі статуси заявок раз на хвилину (поки показуємо старі)

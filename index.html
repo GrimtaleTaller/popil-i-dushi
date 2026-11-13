@@ -92,6 +92,8 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
 .lunge-r{transform:translateX(30px) rotate(4deg)!important}
 .lunge-l{transform:translateX(-30px) rotate(-4deg)!important}
 .pen{display:inline-block;vertical-align:middle;line-height:0;margin:-9px 6px -7px 0;flex:none}.pen svg{display:inline-block}.ic .pen{margin:0}
+.top .xpw{min-width:0}.top .xpl{gap:6px}.top .xpl span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.top .xpl #pw{flex:none}.top .xpl #xpt{opacity:.8}
+.wdchip{display:flex;align-items:center;gap:3px;flex:none;background:linear-gradient(180deg,#24461b,#183212);color:#9fe07a;border:1.5px solid #56c271;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 0 8px #56c27144;cursor:pointer}.wdchip b{color:#c8f7a8;font-weight:800}.wdchip:active{transform:scale(.96)}
 .fname{font-size:12px;color:#ddd;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hpb{height:7px;background:#0009;border-radius:5px;overflow:hidden;margin-top:4px;border:1px solid #fff1}
 .hpb>i{display:block;height:100%;background:linear-gradient(90deg,#b8323a,#e45a4f);transition:width .12s}
@@ -488,6 +490,7 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
     <div class="xpl"><span id="pw">Сила 0</span><span id="xpt">0/0</span></div>
     <div class="bar"><i id="xpb" style="background:linear-gradient(90deg,#7b4fd0,#b07cf0)"></i></div>
   </div>
+  <button class="wdchip" id="wdChip" type="button" hidden>💸 <b id="wdChipV">$0</b></button>
   <div class="cur"><div class="gold">💰 <span id="gold">0</span></div><div class="souls">🔥 <span id="souls">0</span> <span class="ashv">⚱️ <span id="ashv">0</span></span></div></div>
 </div>
 
@@ -551,6 +554,6 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
 <script src="src/i18n.js?v=108"></script>
 <script src="src/gear.js?v=5"></script>
 <script src="src/pen.js?v=2"></script>
-<script src="src/game.js?v=155"></script>
+<script src="src/game.js?v=156"></script>
 </body>
 </html>
