@@ -134,7 +134,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;heroPen();wdChip(v.usd);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;heroPen();wdChip(v.usd);giftShow(v.gmsg);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -266,6 +266,10 @@ function penI(p,w=24){return p&&p[0]&&window.penSvg?`<span class="pen">${window.
 // 13.11 (Влад «А»): зелена плашка балансу виводу в шапці — видно на всіх екранах; тап → Герой → 💸 Вивід
 var wdUsd=null;function wdChip(u){if(u!=null)wdUsd=Number(u)||0;const c=$('wdChip');if(!c||wdUsd==null)return;c.hidden=false;const t='$'+wdUsd.toFixed(2);if($('wdChipV').textContent!==t)$('wdChipV').textContent=t;
  if(!c.onclick)c.onclick=()=>{haptic('light');lastSub.hero='wd';const b=document.querySelector('.tabs button[data-t="hero"]');if(b)b.click()}}
+// 13.11 (Влад): подарунок з привітанням від адміна — вікно на головному екрані, Попіл зараховується лише після «Забрати» (giftClaim)
+var giftBusy=0;function giftShow(L){if(!L||!L.length)return;for(const g of L){if(queue.some(q=>q.tag==='gift'+g.id))continue;
+ modal(`<div class="gift"><div class="gift-ic">🎁</div><h3>${T('gift_t')}</h3><div class="gift-tx">${esc(g.t).replace(/\n/g,'<br>')}</div>${g.ash?`<div class="gift-rw">⚱️ <b>${String(g.ash)}</b></div>`:''}<button class="btn pri" id="giftGo${g.id}">${g.ash?T('gift_claim_a',{a:String(g.ash)}):T('gift_claim')}</button></div>`,null,null,()=>{const b=$('giftGo'+g.id);if(b)b.onclick=()=>{if(giftBusy)return;giftBusy=1;b.disabled=true;
+  act('giftClaim',{id:g.id},r=>{haptic('heavy');if(r.out&&r.out.ash)toast(T('gift_got',{a:String(r.out.ash)}))}).then(()=>{giftBusy=0;if(queue[0]&&queue[0].tag==='gift'+g.id){queue.shift();showModal()}})}},'gift'+g.id)}} // невдача (мережа) — вікно закривається, подарунок прийде знову з наступним sync
 var heroPenK='';function heroPen(){const hn=document.querySelector('.f.hero .fname');if(!hn)return;const k=JSON.stringify(V&&V.pen||null)+T('hero_name');if(k===heroPenK)return;heroPenK=k;hn.innerHTML=penI(V&&V.pen,22)+esc(T('hero_name'))}
 function renderTop(){
  {const hs=$('hsSub');if(hs&&G&&document.body.classList.contains('hs-open'))hs.textContent=T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)})} // 13.11 (Влад): рівень і Сила в шапці «Герой» оновлюються разом із верхньою панеллю
