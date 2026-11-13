@@ -391,3 +391,6 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .gmm-r .gem.gimg{width:24px;height:24px}.gmmi{font-size:17px;text-align:center}
 .gmm-left{text-align:center;font-size:12.5px;color:var(--mut);margin:8px 0}
 #gmmGo{width:100%;font-size:16px;padding:12px 10px;margin-top:2px}#gmmGo:disabled{opacity:.6;background:#3a2f35;color:#c9b9b0}
+/* 13.11: «Мої реферали» */
+.reflv{gap:6px;margin:6px 0 0}.reflv .btn{flex:1;padding:6px 4px;font-size:12.5px}.reflv .btn.on{color:#fff}
+.reflist>div{align-items:center}.reflist span{display:flex;flex-direction:column;min-width:0}.reflist span small{color:var(--mut);font-weight:500;font-size:11px;line-height:1.3;white-space:normal}

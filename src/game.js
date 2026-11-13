@@ -791,6 +791,19 @@ function copyText(t){try{navigator.clipboard.writeText(t);toast(T('copied'))}cat
 let wdData=null,wdBusy=false,wdAdm=null,wdCur='gram',wdAt=0;
 const wdLoad=()=>{if(wdBusy)return;wdBusy=true;api('wdInfo').then(r=>{wdData=r.out;wdAt=Date.now();wdChip(r.out&&r.out.bal)}).catch(e=>toast(errT(e))).finally(()=>{wdBusy=false;dirty.wd=1})};
 const WD_ST={new:'⏳',paid:'✅',rejected:'❌'};
+// 13.11 (Влад «А»): «Мої реферали» — рівні 1·2·3, рівень і етап, прихід, останній вхід, скільки $ отримано з кожного; у Профілі й у Виводі
+let refData=null,refAt=0,refBusy=false,refLv=0,refAll=false;
+function refsCard(pane){
+ if(!refData||Date.now()-refAt>6e4){if(!refBusy){refBusy=true;api('refList').then(r=>{refData=r.out;refAt=Date.now()}).catch(()=>{refAt=Date.now()}).finally(()=>{refBusy=false;dirty[pane]=1;flush()})}
+  if(!refData)return `<div class="card"><h4>👥 ${T('myrefs')}</h4><div class="empty">${T('loading')}</div></div>`}
+ const D=refData,L=D.lv[refLv]||[],now=Date.now(),day=864e5,shown=refAll?L:L.slice(0,30);
+ const seen=x=>{if(!x.seen)return '';const d=Math.floor((now-Date.parse(x.seen))/day);return d<1?`🟢 ${T('ref_seen_now')}`:d<2?T('ref_seen_1'):T('ref_seen_d',{n:d})};
+ return `<div class="card"><h4>👥 ${T('myrefs')}</h4>${D.usd>0?`<p style="margin:4px 0"><b>💵 ${T('ref_got',{n:D.usd.toFixed(2)})}</b></p>`:''}
+  <div class="row reflv">${[0,1,2].map(k=>`<button class="btn ${k===refLv?'on pri':''}" data-reflv="${k}">${T('ref_tab',{n:k+1})} · ${D.n[k]}</button>`).join('')}</div>
+  <p class="hint" style="margin:4px 0 6px">${T('ref_lv_h'+(refLv+1),{p:D.pct[refLv]})}</p>
+  ${L.length?'<div class="rank reflist">'+shown.map(x=>`<div><b>👤</b><span>${esc(x.name)}<small>${T('lvl',{n:x.lvl})} · ${T('stage',{n:x.stage})} · ${T('ref_join',{d:dt(x.joined)})}${seen(x)?' · '+seen(x):''}</small></span><i style="color:${x.usd>0?'var(--green,#7fd67f)':'var(--mut)'};font-weight:700">${x.usd>0?'+$'+x.usd.toFixed(2):'—'}</i></div>`).join('')+'</div>'+(L.length>shown.length?`<button class="btn" data-refall="1" style="margin-top:6px;width:100%">${T('ref_all',{n:L.length})}</button>`:''):`<p class="hint">${refLv?T('ref_none_lv'):T('no_refs')}</p>`}</div>`}
+function refsBind(root,pane){root.querySelectorAll('[data-reflv]').forEach(b=>b.onclick=()=>{refLv=+b.dataset.reflv;refAll=false;dirty[pane]=1;flush()});
+ root.querySelectorAll('[data-refall]').forEach(b=>b.onclick=()=>{refAll=true;dirty[pane]=1;flush()})}
 function renderWd(){const el=$('p-wd');
  if(wdData)live('wd',()=>api('wdInfo').then(r=>r.out),o=>{if(same(o,wdData))return false;wdData=o;wdAt=Date.now();return true}); // свіжі статуси заявок раз на хвилину (поки показуємо старі)
  if(!wdData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;wdLoad();return}
@@ -800,13 +813,13 @@ function renderWd(){const el=$('p-wd');
  h+=`<div class="card"><h4>🔓 ${T('wd_acc')}</h4><p style="margin:4px 0">${A.lvl>=A.needLvl?'✅':'⏳'} ${T('wd_acc_lvl',{n:Math.min(A.lvl,A.needLvl),m:A.needLvl})}</p><p style="margin:4px 0">${A.days>=A.needDays?'✅':'⏳'} ${T('wd_acc_days',{n:Math.min(A.days,A.needDays),m:A.needDays})}</p></div>`;
  h+=`<div class="card"><h4>👛 ${T('wd_wallet')}</h4>${D.wallet?`<p class="wdaddr">${esc(D.wallet)}</p>`:''}<p class="hint" style="margin:0 0 6px">${T('wd_wallet_hint')}</p><div class="row" style="gap:8px;align-items:center"><input id="wdAddr" class="inp" placeholder="UQ… / EQ…" autocomplete="off" spellcheck="false"><button class="btn" id="wdAddrGo" ${A.ok?'':'disabled'}>${D.wallet?T('wd_change'):T('wd_save')}</button></div>${A.ok?'':`<p class="hint" style="margin:6px 0 0">${T('wd_wallet_acc')}</p>`}</div>`;
  h+=`<div class="card"><h4>📤 ${T('wd_out')}</h4><div class="chips">${['gram','usdt'].map(c=>`<button data-wdc="${c}" class="${wdCur===c?'act':''}">${c==='gram'?'GRAM':'USDT'} (TON) · ${T('wd_from',{m:D.min[c]})}</button>`).join('')}</div><p class="hint" style="margin:6px 0">${T('wd_lim',{l:left.toFixed(2),c:D.cap})}</p><div class="row" style="gap:8px;align-items:center"><input id="wdUsd" class="inp" type="number" min="${mn}" step="0.01" inputmode="decimal" placeholder="$ ${mn}+"><button class="btn pri" id="wdGo" ${why?'disabled':''}>${T('wd_go')}</button></div>${why?`<p class="hint" style="margin:6px 0 0">${why}</p>`:''}<p class="hint" style="margin:6px 0 0">${T('wd_note')}</p></div>`;
- const R=D.ref||{sum:0,list:[]};h+=`<div class="card"><h4>👥 ${T('wd_ref')}</h4><p style="margin:4px 0"><b>${T('wd_ref_sum',{n:R.sum.toFixed(2)})}</b></p><p class="hint" style="margin:0 0 6px">${T('wd_ref_hint')}</p>`+(R.list.length?R.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${x.usd<0?'↩️ −':'💵 +'}$${Math.abs(x.usd).toFixed(2)} · ${T('wd_ref_lv',{n:x.lv})}</span><span class="hint" style="margin:0">${dt(x.at)}</span></div>`).join(''):`<p class="hint" style="margin:0">${T('wd_ref_none')}</p>`)+`</div>`; // 13.11 (Влад): нарахування з покупок рефералів
+ const R=D.ref||{sum:0,list:[]};h+=`<div class="card"><h4>👥 ${T('wd_ref')}</h4><p style="margin:4px 0"><b>${T('wd_ref_sum',{n:R.sum.toFixed(2)})}</b></p><p class="hint" style="margin:0 0 6px">${T('wd_ref_hint')}</p>`+(R.list.length?R.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${x.usd<0?'↩️ −':'💵 +'}$${Math.abs(x.usd).toFixed(2)} · ${T('wd_ref_lv',{n:x.lv})}</span><span class="hint" style="margin:0">${dt(x.at)}</span></div>`).join(''):`<p class="hint" style="margin:0">${T('wd_ref_none')}</p>`)+`</div>`+refsCard('wd'); // 13.11 (Влад): нарахування з покупок рефералів
  if(D.list.length)h+=`<div class="card"><h4>🧾 ${T('wd_hist')}</h4>`+D.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${WD_ST[x.status]||''} $${Number(x.usd).toFixed(2)} · ${String(x.cur).toUpperCase()}</span><span class="hint" style="margin:0">${dt(x.created_at)} · ${T('wd_st_'+x.status)}</span></div>`).join('')+`</div>`;
  if(V.isAdmin){h+=`<div class="card"><h4>🛠 ${T('wd_adm')}</h4><button class="btn" id="wdAdmLoad">🔄 ${T('wd_adm_load')}</button>`;
   if(wdAdm)h+=wdAdm.list.length?wdAdm.list.map(x=>`<div class="wdadm"><b>#${x.id}</b> ${WD_ST[x.status]||''} $${Number(x.usd).toFixed(2)} ${String(x.cur).toUpperCase()}${x.first?' · ⚠️ '+T('wd_first'):''}<br><span class="hint" style="margin:0">${esc(x.name)} · id ${x.player_id} · ${dt(x.created_at)}</span><br><span class="wdaddr" data-wdcp="${esc(x.addr)}">${esc(x.addr)} 📋</span>${x.status==='new'?`<div class="row" style="gap:6px;margin-top:6px;align-items:center"><input class="inp" data-wdtx="${x.id}" placeholder="tx (${T('wd_opt')})"><button class="btn pri" data-wdok="${x.id}">✅</button><button class="btn" data-wdno="${x.id}">❌</button></div>`:x.tx?`<br><span class="hint" style="margin:0">tx ${esc(x.tx)}</span>`:''}</div>`).join(''):`<p class="hint">${T('wd_adm_none')}</p>`;
   h+=`</div>`}
  const keep={};el.querySelectorAll('input').forEach(i=>{const k=i.id||'tx'+i.dataset.wdtx;if(i.value)keep[k]=i.value}); // синхронізація перемальовує вкладку — не губимо введене
- el.innerHTML=h;
+ el.innerHTML=h;refsBind(el,'wd');
  el.querySelectorAll('input').forEach(i=>{const k=i.id||'tx'+i.dataset.wdtx;if(keep[k])i.value=keep[k]});
  el.querySelectorAll('[data-wdc]').forEach(b=>b.onclick=()=>{wdCur=b.dataset.wdc;dirty.wd=1;flush()});
  $('wdAddrGo').onclick=()=>{const a=$('wdAddr').value.trim();if(!a){toast(T('wd_addr_empty'));return}
@@ -892,7 +905,7 @@ function renderProfile(){
  h+=`<div class="card"><h4>👥 ${T('refs')}</h4><p class="hint">${T('refs_hint',{a:R.pct[0],b:R.pct[1],c:R.pct[2]})}</p>
   <div class="arenah"><div><b>${R.n1}</b><span>${T('ref_lvl',{n:1})} · ${R.pct[0]}%</span></div><div><b>${R.n2}</b><span>${T('ref_lvl',{n:2})} · ${R.pct[1]}%</span></div><div><b>${R.n3}</b><span>${T('ref_lvl',{n:3})} · ${R.pct[2]}%</span></div></div>
   ${P.refUsd>0?`<p class="hint">💵 ${T('ref_usd',{n:P.refUsd.toFixed(2)})}</p>`:''}<div class="reflink">${esc(link)}</div><div class="row"><button class="btn pri" id="pInv">${T('invite')}</button><button class="btn" id="pCopy">📋 ${T('copy')}</button></div>
-  ${R.list.length?'<div class="rank" style="margin-top:8px">'+R.list.map(x=>`<div><b>👤</b><span>${esc(x.name)}</span><i style="color:var(--mut);font-weight:600">${T('lvl',{n:x.lvl})} · ${T('stage',{n:x.stage})}</i></div>`).join('')+'</div>':`<p class="hint">${T('no_refs')}</p>`}</div>`;
+  </div>`+refsCard('prof');
  h+=`<div class="card"><h4>📈 ${T('stats')}</h4><div class="resg">
   <div><span>${T('max_stage')}</span><b>${G.maxStage}</b></div><div><span>${T('kills')}</span><b>${fmt(G.tot.kills)}</b></div>
   <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
@@ -901,7 +914,7 @@ function renderProfile(){
  h+=`<div class="card"><h4>📢 ${T('comm')}</h4><div class="row" style="margin:0"><button class="btn" id="pCh">📣 ${T('lnch_ch')}</button><button class="btn" id="pChat">💬 ${T('chat_pl')}</button></div><button class="btn" id="pBot" style="margin-top:8px;width:100%">🤖 ${T('chat_bot')}</button></div>`;
  h+=`<div class="card"><h4>🔔 ${T('ntf')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${T('ntf_hint')}</span><button class="btn" id="pNtf">${G.ntf===0?T('ntf_off'):T('ntf_on')}</button></div></div>`;
  h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button><button class="btn" id="pTut">${T('tut_restart')}</button></div>`;
- el.innerHTML=h;
+ el.innerHTML=h;refsBind(el,'prof');
  $('pTut').onclick=tutRestart;
  $('pCh').onclick=openCh;$('pChat').onclick=openChat;$('pBot').onclick=()=>{const w=tg();if(V&&V.pm===0&&w&&typeof w.requestWriteAccess==='function'){try{w.requestWriteAccess(ok=>{if(ok)api('botHello').catch(()=>{});openBot()});return}catch(e){}}openBot()};
  $('pNtf').onclick=()=>act('notify',{on:G.ntf===0},()=>{dirty.prof=1});
