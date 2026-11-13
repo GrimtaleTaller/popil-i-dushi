@@ -1396,7 +1396,7 @@ let adTaskEl=null,adTaskGone=0,adTaskWait=0,adTaskTry=0,adtC='';
 // картка #adTaskCard стоїть поза списком, який перемальовується: від'єднаний <adsgram-task> скидає стан («Забрати» губиться), тому елемент ніколи не переносимо
 function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
  if(!(K.tblock&&K.task)){c.hidden=true;return}
- c.hidden=false;$('adtT').textContent=T('adt_t');$('adtH').textContent=T('adt_hint',{a:K.task.ash,g:fmt(K.task.gold)});
+ c.hidden=false;$('adtT').textContent=T('adt_t');$('adtH').textContent=K.task.ashN?T('adt_hint2',{a:K.task.ash0||15,g:fmt(K.task.gold),n:K.task.ashN,l:K.task.ashLeft}):T('adt_hint',{a:K.task.ash,g:fmt(K.task.gold)});
  $('adtD').textContent=K.task.done?T('adt_done',{n:K.task.done}):'';$('adtNone').textContent=T('adt_none');
  if(adTaskEl){if(!c.contains(adTaskEl))$('adTaskBox').appendChild(adTaskEl);$('adtNone').hidden=true;return}
  $('adtNone').hidden=!adTaskGone; // картку не ховаємо (Влад 12.11): немає нових завдань — пишемо про це, виконані лишаються в лічильнику
@@ -1404,8 +1404,8 @@ function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
  if(Date.now()-adTaskTry<15e3)return;adTaskTry=Date.now();
  const gone=(w,e)=>{adTaskGone=Date.now();adTaskWait=w;if(e)e.remove();if(!e||adTaskEl===e)adTaskEl=null;const n=$('adtNone');if(n)n.hidden=false};
  adsgram(()=>{if(adTaskEl)return;const e=document.createElement('adsgram-task');e.className='adtask';e.setAttribute('data-block-id',String(K.tblock));
-  e.innerHTML=`<span slot="reward" class="adt-rw">⚱️${K.task.ash} · 💰${fmt(K.task.gold)}</span><button slot="button" class="btn pri adt-b">${T('adt_go')}</button><button slot="claim" class="btn pri adt-b">${T('adt_claim')}</button><span slot="done" class="adt-ok">✅ ${T('adt_got')}</span>`;
-  e.addEventListener('reward',()=>{const c=adtC;act('adTaskSeen',{c},r=>{const o=r.out||{};if(o.dup||o.known)toast(T('adt_dup'));else{toast(T('adt_ok',{a:K.task.ash,g:fmt(K.task.gold)}));haptic('medium')}setTimeout(()=>{lastSync=0;sync()},3000);setTimeout(()=>{lastSync=0;sync()},9000)})});
+  e.innerHTML=`<span slot="reward" class="adt-rw">${K.task.ash?'⚱️'+K.task.ash+' · ':''}💰${fmt(K.task.gold)}</span><button slot="button" class="btn pri adt-b">${T('adt_go')}</button><button slot="claim" class="btn pri adt-b">${T('adt_claim')}</button><span slot="done" class="adt-ok">✅ ${T('adt_got')}</span>`;
+  e.addEventListener('reward',()=>{const c=adtC;act('adTaskSeen',{c},r=>{const o=r.out||{};if(o.dup||o.known)toast(T('adt_dup'));else{toast(K.task.ash?T('adt_ok',{a:K.task.ash,g:fmt(K.task.gold)}):T('adt_ok_g',{g:fmt(K.task.gold)}));haptic('medium')}setTimeout(()=>{lastSync=0;sync()},3000);setTimeout(()=>{lastSync=0;sync()},9000)})});
   e.addEventListener('onBannerNotFound',()=>gone(15e4,e));['onError','onTooLongSession'].forEach(n=>e.addEventListener(n,()=>gone(6e5,e)));
   adTaskEl=e;adTaskGone=0;$('adTaskBox').appendChild(e);const n=$('adtNone');if(n)n.hidden=true;
   setTimeout(()=>{const m=$('adtNone');if(m&&adTaskEl===e&&e.getBoundingClientRect().height<20&&!$('adTaskCard').hidden&&$('adTaskCard').offsetParent)m.hidden=false},8000)},true,()=>gone(6e5,null))}
