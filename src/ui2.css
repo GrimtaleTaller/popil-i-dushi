@@ -139,7 +139,7 @@ body.hs-open{overflow:hidden}
 #hsheet .hs-bg{backdrop-filter:none;background:#0b090d}
 
 /* ── швидкі кнопки у Спорядженні ── */
-.qrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 8px}
+.qrow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:0 0 8px}.qrow .qb{font-size:10.5px;letter-spacing:-.2px;padding:8px 1px 7px}
 .qb{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 7px;border-radius:12px;background:var(--glass);border:1px solid #e2b97a2a;color:#e8d6b0;font-size:11.5px;font-weight:650;box-shadow:inset 0 1px 0 #ffffff08;transition:transform .12s}
 .qb span{font-size:20px;line-height:1}.qb:active{transform:scale(.95)}
 .qdot{position:absolute;top:6px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)}

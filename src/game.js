@@ -310,7 +310,7 @@ function invite(){
  try{navigator.clipboard.writeText(link);toast(T('link_copied'))}catch(e){toast(link)}
 }
 function renderHero(){
- let h=`<div class="qrow">${[['bag','🎒',T('sub_bag')],['pet','🐾',T('sub_pet')],['train','💪',T('sub_train')],['market','⚖️',T('sub_market')]].map(([k,i,n])=>`<button class="qb" data-hq="${k}"><span>${i}</span>${n}${k==='bag'&&G.inv.some(x=>x.nw)?'<i class="qdot"></i>':''}</button>`).join('')}</div><div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
+ let h=`<div class="qrow">${[['bag','🎒',T('sub_bag')],['pet','🐾',T('sub_pet')],['train','💪',T('sub_train')],['market','⚖️',T('sub_market')],['wd','💸',T('sub_wd').replace(/^💸\s*/,'')]].map(([k,i,n])=>`<button class="qb" data-hq="${k}"><span>${i}</span>${n}${k==='bag'&&G.inv.some(x=>x.nw)?'<i class="qdot"></i>':''}</button>`).join('')}</div><div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
  for(const s of SLOTS){const it=G.eq[s];
   h+=`<div class="slot" ${it?`data-rf="${it.id}" style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
    (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)} ${starsOf(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>${refOk(it)?`<div class="sn ref">⬆️ ${T('ref_btn')}</div>`:''}`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
