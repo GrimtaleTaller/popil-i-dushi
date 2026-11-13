@@ -484,7 +484,7 @@ function gemPane(){const C=gemCfg();
  const all=[...SLOTS.map(s=>G.eq[s]).filter(Boolean),...G.inv.filter(i=>sockN(i))].filter(i=>sockN(i));
  if(gemSel&&!all.some(i=>i.id===gemSel))gemSel=null;
  let h=gemMergeCard();
- h+=`<div class="card"><h4>${T('gem_items')}</h4><p class="hint">${T('gem_hint',{p:C.pts})}</p><p class="hint">${T('gem_items_hint',{o:C.out.join(' / ')})}</p>`;
+ h+=`<div class="card"><h4>${T('gem_items')}</h4><p class="hint" style="color:var(--gold)">💡 ${T('gem_lvl_ex',{l1:Math.max(1,G.lvl-4),v1:gemTxt('a1',Math.max(1,G.lvl-4)),l2:G.lvl,v2:gemTxt('a1',G.lvl)})}</p><p class="hint">${T('gem_hint',{p:C.pts})}</p><p class="hint">${T('gem_items_hint',{o:C.out.join(' / ')})}</p>`;
  {const lo=[...G.inv,...(G.vault||[])].filter(i=>i.gm&&i.gm.length),gn=lo.reduce((a,i)=>a+i.gm.length,0),gc=lo.reduce((a,i)=>a+i.gm.reduce((b,k)=>b+C.out[gemP(k).l-1],0),0);
   if(gn)h+=`<div class="row" style="margin-top:0"><button class="btn" id="gOutAll" data-n="${gn}" data-c="${gc}" data-i="${lo.length}">◆ ${T('gem_out_all',{n:gn})} · ⚱️${fmt(gc)}</button></div>`} // витягнути всі камені з невдягнених речей (05.11)
  if(!all.length)h+=`<p class="hint">${T('gem_no_items')}</p>`;
