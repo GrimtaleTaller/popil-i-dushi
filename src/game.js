@@ -114,6 +114,12 @@ function lnchLock(l){let e=$('lnchLock');if(!e){e=document.createElement('div');
 const GAME_CH='https://t.me/GRIMTALENEWS'; // канал новин гри (картка 6)
 function openCh(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CH);else window.open(GAME_CH,'_blank','noopener')}
 const GAME_CHAT='https://t.me/GRIMTALECHAT'; // чат гравців (08.11)
+// 13.11 (Влад «А»): гравці зі startapp-посилання не мали чату з ботом — просимо дозвіл Telegram (requestWriteAccess),
+// після згоди бот вітає в приватних з кнопкою «Грати» (botHello); відмовили — питаємо знову не раніше ніж за 3 дні
+function askPm(){const w=tg();if(!w||!V||V.pm!==0||typeof w.requestWriteAccess!=='function')return;let last=0;try{last=+localStorage.getItem('gt_pm')||0}catch(e){}if(Date.now()-last<3*864e5)return;
+ try{localStorage.setItem('gt_pm',String(Date.now()))}catch(e){}
+ try{w.requestWriteAccess(ok=>{if(ok)api('botHello').then(r=>{if(r&&r.out&&r.out.sent)toast(T('pm_ok'))}).catch(()=>{})})}catch(e){}}
+function openBot(){const u='https://t.me/Grimtalebot';const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')}
 function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CHAT);else window.open(GAME_CHAT,'_blank','noopener')}
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
@@ -845,12 +851,12 @@ function renderProfile(){
   <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
   <div><span>${T('dng_runs')}</span><b>${(G.dng&&G.dng.runs)||0}</b></div><div><span>${T('power',{n:''}).trim()}</span><b>${fmt(H.power)}</b></div></div></div>`;
  if(V.isAdmin)h+=adminHtml();
- h+=`<div class="card"><h4>📢 ${T('comm')}</h4><div class="row" style="margin:0"><button class="btn" id="pCh">📣 ${T('lnch_ch')}</button><button class="btn" id="pChat">💬 ${T('chat_pl')}</button></div></div>`;
+ h+=`<div class="card"><h4>📢 ${T('comm')}</h4><div class="row" style="margin:0"><button class="btn" id="pCh">📣 ${T('lnch_ch')}</button><button class="btn" id="pChat">💬 ${T('chat_pl')}</button></div><button class="btn" id="pBot" style="margin-top:8px;width:100%">🤖 ${T('chat_bot')}</button></div>`;
  h+=`<div class="card"><h4>🔔 ${T('ntf')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${T('ntf_hint')}</span><button class="btn" id="pNtf">${G.ntf===0?T('ntf_off'):T('ntf_on')}</button></div></div>`;
  h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button><button class="btn" id="pTut">${T('tut_restart')}</button></div>`;
  el.innerHTML=h;
  $('pTut').onclick=tutRestart;
- $('pCh').onclick=openCh;$('pChat').onclick=openChat;
+ $('pCh').onclick=openCh;$('pChat').onclick=openChat;$('pBot').onclick=()=>{const w=tg();if(V&&V.pm===0&&w&&typeof w.requestWriteAccess==='function'){try{w.requestWriteAccess(ok=>{if(ok)api('botHello').catch(()=>{});openBot()});return}catch(e){}}openBot()};
  $('pNtf').onclick=()=>act('notify',{on:G.ntf===0},()=>{dirty.prof=1});
  $('cpId').onclick=e=>{e.preventDefault();copyText(String(P.id))};
  $('pInv').onclick=invite;$('pCopy').onclick=()=>copyText(link);
@@ -1303,7 +1309,7 @@ async function start(){
  if(w){try{w.ready();w.expand();w.setHeaderColor&&w.setHeaderColor('#19161d');w.setBackgroundColor&&w.setBackgroundColor('#0e0c10')}catch(e){}}
  if(!w&&!DEV){boot(T('only_tg'));return}
  boot(T('loading'));
- try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r)}
+ try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r);setTimeout(askPm,4000)}
  catch(e){if(e.message==='prelaunch'){boot();return}boot(errT(e),true)}
 }
 // ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
