@@ -869,6 +869,7 @@ let shopData=null,shopBusy=false,tcUI=null,tcLoading=null,shopPoll=0;
 const SHOP_DESC={ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
+function vipLine(k){const n=k==='starter'?3:VIP_D[k];if(!n||!vipActive())return '';return `<p class="hint" style="color:var(--gold)">${T('shop_vip_on',{d:dt(G.vip)})} — ${T('shop_vip_ext',{n,d:dt(G.vip+n*864e5)})}</p>`} // 13.11 (Влад): VIP активний — покупка продовжить дні
 function loadTC(){ // TON Connect вантажимо лише тоді, коли гравець обирає оплату криптою
  if(tcUI)return Promise.resolve(tcUI);
  if(!tcLoading)tcLoading=new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://unpkg.com/@tonconnect/ui@2/dist/tonconnect-ui.min.js';sc.onload=()=>{try{tcUI=new TON_CONNECT_UI.TonConnectUI({manifestUrl:new URL('tonconnect-manifest.json',location.href).href});tcUI.onStatusChange(()=>{dirty.shop=1;flush()});ok(tcUI)}catch(e){no(e)}};sc.onerror=()=>{tcLoading=null;no(new Error('net'))};document.head.appendChild(sc)});
@@ -905,7 +906,7 @@ function renderShop(){
  for(const it of list){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||''),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
   h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${save}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4><p class="hint">${desc}</p>${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
-   ${cardLine(it.k)}${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
+   ${done?"":vipLine(it.k)}${cardLine(it.k)}${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
    ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
     ${it.gram?`<button class="btn" data-buy="${it.k}" data-m="gram"${soon?' disabled':''}>💎 ${it.gram} GRAM</button>`:''}
