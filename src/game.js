@@ -78,8 +78,14 @@ let pend={gold:0,xp:0,kills:0}; // візуальні нарахування м�
 let busy=false;
 
 // ---------- мережа ----------
+// 13.11 (Влад): відбиток пристрою для пошуку мультиакаунтів — сервер зберігає лише його HMAC (без самих даних)
+let devFpS=null;
+function devFp(){if(devFpS!==null)return devFpS;let c='';
+ try{const cv=document.createElement('canvas');cv.width=220;cv.height=40;const x=cv.getContext('2d');x.textBaseline='top';x.font='16px Arial';x.fillStyle='#f60';x.fillRect(100,1,62,20);x.fillStyle='#069';x.fillText('Grimtale ⚔️ 13.11',2,15);x.fillStyle='rgba(102,204,0,0.7)';x.fillText('Grimtale ⚔️ 13.11',4,17);const d=cv.toDataURL();let h=0;for(let i=0;i<d.length;i++)h=(h*31+d.charCodeAt(i))|0;c=(h>>>0).toString(36)}catch(e){}
+ const w=tg(),sc=window.screen||{},n=navigator;let tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(e){}
+ devFpS=[w&&w.platform||'',(sc.width||0)+'x'+(sc.height||0),window.devicePixelRatio||1,tz,n.language||'',n.hardwareConcurrency||0,n.deviceMemory||0,n.maxTouchPoints||0,c].join('|');return devFpS}
 async function api(action,args){
- const body={action,args:args||{}};const headers={'content-type':'application/json'};
+ const body={action,args:args||{}};body.fp=devFp();const headers={'content-type':'application/json'};
  lastSync=Date.now();const base=VC;if(base&&VH)body.vh=VH; // дельта екрана (11.11): сервер не надсилає частини, які вже є
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}
