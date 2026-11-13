@@ -361,3 +361,33 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .shash{margin:6px 0 2px;font-size:16px}.shash s{color:var(--mute,#8a8a8a);font-size:13px;margin-right:4px}.shash b{color:var(--gold,#e8b14a)}.shash em{font-style:normal;font-size:12px;font-weight:800;margin-left:6px;color:#7fd67f}
 /* 13.11: Конюшня — перемикач «з 💎» видно, коли увімкнено */
 .btn.pgcat.on{border-color:var(--gold,#e8b14a);color:#fff;background:#3a2a12;box-shadow:0 0 0 1px var(--gold,#e8b14a) inset}
+/* 13.11 (Влад): злиття окремого каменя — ⬆ на камені й вікно злиття */
+.gmA-r{grid-template-columns:34px repeat(4,minmax(0,1fr))}
+.gmA-c{position:relative}.gmA-c.tap{cursor:pointer}.gmA-c.tap:active{transform:scale(.97)}
+.gmA-c.ok{border-color:#e2b97a80;background:linear-gradient(180deg,#e2b97a1f,#ffffff05)}
+.gmUp{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#2a1a05;background:radial-gradient(circle at 35% 30%,#fff1c2,#f0b545 55%,#9a6512);box-shadow:0 0 0 2px #1b1520,0 0 9px #f2c14e99;animation:gmPulse 1.8s ease-in-out infinite}
+.gmUp.off{filter:grayscale(1) brightness(.8);animation:none;box-shadow:0 0 0 2px #1b1520}
+@keyframes gmPulse{50%{box-shadow:0 0 0 2px #1b1520,0 0 16px #f2c14ecc}}
+.gmA-c .gmx{color:#8fdc6a;font-size:10.5px;font-weight:700}
+.gmm h3{margin:0 0 8px;text-align:center}
+.gmm-vis{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 6px 8px;border-radius:14px;background:radial-gradient(ellipse at center,#e2b97a1c,transparent 70%)}
+.gmm-g{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:96px}
+.gmm-g .gem.gimg.big{width:64px;height:64px}.gmm-g .gem.gimg.big i{font-size:11px}
+.gmm-g.to .gem.gimg{filter:drop-shadow(0 0 10px var(--gc)) drop-shadow(0 0 3px var(--gc))}
+.gmm-g b{font-size:16px}.gmm-g small{color:var(--mut);font-size:12px}
+.gmm-arr{font-size:24px;color:#f2c14e;text-shadow:0 0 8px #f2c14e88}
+.gmm-st{text-align:center;font-size:13px;color:var(--mut);margin:2px 0 10px}.gmm-st b{color:#8fdc6a}
+.gmm-q{display:flex;align-items:center;gap:8px;justify-content:space-between;background:#ffffff0a;border:1px solid #ffffff10;border-radius:12px;padding:7px 10px;font-size:13px}
+.gmm-step{display:flex;align-items:center;gap:6px}.gmm-step b{min-width:30px;text-align:center;font-size:18px}
+.gmm-step button,.gmm-mx{border:1px solid #e2b97a55;background:#2a2230;color:#fff;border-radius:9px;min-width:34px;height:34px;font-size:18px;cursor:pointer}
+.gmm-mx{font-size:13px;padding:0 10px;white-space:nowrap;font-weight:700;color:#f2c14e}
+.gmm-step button:disabled,.gmm-mx:disabled{opacity:.35}
+.gmm-req{margin-top:10px;border-radius:12px;background:#00000038;border:1px solid #ffffff0d;padding:6px 10px 2px}
+.gmm-rh{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin:2px 0 2px}
+.gmm-r{display:grid;grid-template-columns:26px minmax(0,1fr) auto auto 16px;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #ffffff0d;font-size:14px;text-align:left}
+.gmm-r span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gmm-r b{font-size:15px}.gmm-r em{font-style:normal;font-size:11.5px;color:var(--mut);white-space:nowrap}.gmm-r i{font-style:normal;font-weight:900;text-align:center}
+.gmm-r.ok i{color:#56c271}.gmm-r.no b,.gmm-r.no i{color:#ff6b5a}
+.gmm-r .gem.gimg{width:24px;height:24px}.gmmi{font-size:17px;text-align:center}
+.gmm-left{text-align:center;font-size:12.5px;color:var(--mut);margin:8px 0}
+#gmmGo{width:100%;font-size:16px;padding:12px 10px;margin-top:2px}#gmmGo:disabled{opacity:.6;background:#3a2f35;color:#c9b9b0}

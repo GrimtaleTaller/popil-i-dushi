@@ -480,9 +480,26 @@ function gemMergeCard(){const M=gmCfg(),{A,hi:gHi}=gmAllPlan(),Mt=G.mats||[],mx=
  if(A)h+=`<button class="btn pri big gmall" id="gmAll" ${A.n?'':'disabled'}>⬆ ${T('gem_all')}${A.n?' · '+plT('gem_all_n',A.n):''}</button>${A.n?`<div class="gmspend">${T('gem_spend')}: ${gmSpend(A)}${gHi?' · ⚠️ '+T('gem_all_hi_s'):''}</div>`:''}`;
  h+=`<div class="gmA"><div class="gmA-h"><span></span>${GEMS.map(t=>`<b style="color:${GEMC[t]}">${T('gem_'+t)}<small>${T('gem_st_'+t)}</small></b>`).join('')}</div>`;
  for(let l=1;l<=mx;l++){const c=l<mx?M.cost[l-1]:null;
-  h+=`<div class="gmA-r"><span class="gmA-l"><b>${ROM[l-1]}</b>${c?`<small>→${ROM[l]}</small><small class="pr">${gmPrice(c)}</small>`:`<small>${T('gem_max')}</small>`}</span>`+
-   GEMS.map(t=>{const k=t+l,I=gmInfo(k);return `<div class="gmA-c${I.n?'':' dim'}${I.x?' ok':''}">${gemIc(k,1)}<b>${I.n}</b>${I.max?'':I.x?`<button class="btn mini" data-gm="${k}" data-x="${I.x}">${T('gem_merge_btn')}${I.x>1?' ×'+I.x:''}</button>`:I.n?`<em class="lack">${gmLack(I.lack[0])}</em>`:''}</div>`}).join('')+'</div>'}
+  h+=`<div class="gmA-r"><span class="gmA-l"><b>${ROM[l-1]}</b><small>${c?'→'+ROM[l]:T('gem_max')}</small></span>`+
+   GEMS.map(t=>{const k=t+l,I=gmInfo(k),tp=!I.max&&I.n>0;return `<div class="gmA-c${I.n?'':' dim'}${I.x?' ok':''}${tp?' tap':''}"${tp?` data-gmc="${k}"`:''}>${gemIc(k,1)}${tp&&I.n>=M.need?`<span class="gmUp${I.x?'':' off'}">⬆</span>`:''}<b>${I.n}</b>${I.max?'':I.x?`<small class="gmx">${T('gem_mm_can',{n:I.x})}</small>`:I.n?`<em class="lack">${gmLack(I.lack[0])}</em>`:''}</div>`}).join('')+'</div>'}
  return h+'</div></div>'}
+// 13.11 (Влад): злиття окремого каменя — ⬆ на самому камені → вікно: що вийде, скільки злиттів, потреби (є/треба), підтвердження
+function gemMergeModal(k){const M=gmCfg(),l=+k[1],nk=k[0]+(l+1),L=Math.max(1,G.lvl||1);if(gmInfo(k).max)return;let q=1;
+ const rows=(I,c)=>[{ic:gemIc(k),nm:gemName(k),need:M.need*q,have:I.n},
+  ...(c.matN?[{ic:'<span class="gmmi">⛏️</span>',nm:T('gem_mm_mat',{m:MATN[c.mat]}),need:c.matN*q,have:matsFrom(c.mat)}]:[]),
+  ...(c.sh?[{ic:'<span class="gmmi">🔩</span>',nm:T('gem_mm_sh'),need:c.sh*q,have:G.shards||0}]:[]),
+  ...(c.gold?[{ic:'<span class="gmmi">💰</span>',nm:T('gem_mm_gold'),need:c.gold*q,have:G.gold||0}]:[])];
+ const body=()=>{const I=gmInfo(k),c=I.c,mx=I.x;q=Math.max(1,Math.min(q,mx||1));const R=rows(I,c),ok=mx>0&&R.every(r=>r.have>=r.need);
+  return `<h3>⬆ ${T('gem_mm_t')}</h3>
+  <div class="gmm-vis"><div class="gmm-g">${gemIc(k,1)}<b>×${fmt(M.need*q)}</b><small>${gemName(k)}</small></div><div class="gmm-arr">➜</div><div class="gmm-g to">${gemIc(nk,1)}<b>×${fmt(q)}</b><small>${gemName(nk)}</small></div></div>
+  <div class="gmm-st">${T('gem_mm_stat',{l:L})}: <span>${gemTxt(k,L)}</span> ➜ <b>${gemTxt(nk,L)}</b></div>
+  <div class="gmm-q"><span>${T('gem_mm_qty')}</span><div class="gmm-step"><button data-q="-1" ${q<=1?'disabled':''}>−</button><b>${fmt(q)}</b><button data-q="1" ${q>=mx?'disabled':''}>+</button></div>${mx>1?`<button class="gmm-mx" data-q="max" ${q<mx?'':'disabled'}>${T('gem_mm_max')} ${fmt(mx)}</button>`:''}</div>
+  <div class="gmm-req"><div class="gmm-rh">${T('gem_mm_need')}</div>${R.map(r=>{const y=r.have>=r.need;return `<div class="gmm-r ${y?'ok':'no'}">${r.ic}<span>${r.nm}</span><b>${fmt(r.need)}</b><em>${T('gem_mm_have',{n:fmt(r.have)})}</em><i>${y?'✓':'✗'}</i></div>`}).join('')}</div>
+  <p class="gmm-left">${ok?T('gem_mm_left',{n:fmt(Math.max(0,I.n-M.need*q)),g:gemName(k)}):T('gem_mm_lackh')}</p>
+  <button class="btn pri" id="gmmGo" ${ok?'':'disabled'}>${ok?'⬆ '+T('gem_mm_go',{n:fmt(q)}):T('gem_mm_lack')}</button>`};
+ const bind=()=>{const B=$('gmmBox');if(!B)return;B.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const v=b.dataset.q,mx=gmInfo(k).x||1;q=v==='max'?mx:Math.max(1,Math.min(mx,q+(+v)));B.innerHTML=body();bind()});
+  const go=$('gmmGo');if(go)go.onclick=()=>{const c=gmInfo(k).c,n=q;queue.shift();showModal();act('gemMerge',{k,n,max:c.gold||0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')})}};
+ modal(`<div class="gmm" id="gmmBox">${body()}</div>`,null,null,bind,'gmm')}
 function gemPane(){const C=gemCfg();
  const all=[...SLOTS.map(s=>G.eq[s]).filter(Boolean),...G.inv.filter(i=>sockN(i))].filter(i=>sockN(i));
  if(gemSel&&!all.some(i=>i.id===gemSel))gemSel=null;
@@ -500,6 +517,7 @@ function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.i
  modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),null,()=>{},()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),'gempick')} // 05.11: замість «Скасувати» внизу довгого списку — ✕ і тап поза вікном
 function bindGem(){const P=$('p-forge');
  // злиття в клітинці — усі доступні; якщо бракує матеріалу свого рівня й підуть вищі — спершу питаємо (matAsk, як у тренуванні)
+ P.querySelectorAll('[data-gmc]').forEach(b=>b.onclick=()=>gemMergeModal(b.dataset.gmc));
  P.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{const k=b.dataset.gm,c=gmCfg().cost[+k[1]-1];const x=+b.dataset.x||1;const go=()=>act('gemMerge',{k,n:x,max:c.gold||0},r=>{toast(T('gem_merged',{n:r.out.n,g:gemName(r.out.k)}));haptic('light')});
   if(c.gold&&c.gold*x>=(G.gold||0)*0.05){const ms=[0,0,0,0];ms[c.mat]=c.matN*x;modal(`<div class="big">◆</div><p>${T('gem_x_q',{n:x,g:gemName(k[0]+(+k[1]+1))})}</p><p class="gmspend">${T('gem_spend')}: ${gmSpend({mats:ms,sh:c.sh*x,gold:c.gold*x})}</p>`,T('gem_all_ok'),go,null,'gemx')}else go()});
  if($('gmAll'))$('gmAll').onclick=()=>{const {A,hi}=gmAllPlan();if(!A||!A.n)return;
