@@ -787,14 +787,14 @@ function renderWd(){const el=$('p-wd');
  el.querySelectorAll('[data-wdok]').forEach(b=>b.onclick=()=>modal(`<p>${T('wd_paid_q',{id:b.dataset.wdok})}</p>`,'✅',()=>mark(+b.dataset.wdok,'paid'),null,'wdpaid'+b.dataset.wdok));
  el.querySelectorAll('[data-wdno]').forEach(b=>b.onclick=()=>modal(`<p>${T('wd_rej_q',{id:b.dataset.wdno})}</p>`,'❌',()=>mark(+b.dataset.wdno,'rejected'),null,'wdrej'+b.dataset.wdno));
 }
-// ---------- пітомці ----------
+// ---------- вихованці ----------
 const PETIC={wolf:'🐺',golem:'🗿',raven:'🐦‍⬛',owl:'🦉',ghost:'👻',phoenix:'🐦‍🔥'},PETS_ORD=['wolf','golem','raven','owl','ghost','phoenix'];
 const SVG_SADDLE='<svg class="svi" viewBox="0 0 32 32"><path d="M4 13.5c3.5-4.5 8-6 12-6s8.5 1.5 12 6c-1.4 2.2-3.6 3-6 3.4-.4 3-2.6 5.6-6 5.6s-5.6-2.6-6-5.6c-2.4-.4-4.6-1.2-6-3.4z" fill="#8a5a33" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.3 13.4c3.2-3.7 7-4.9 10.7-4.9v12.8c-2.8 0-4.5-2.3-4.8-5-2.6-.3-4.6-1-5.9-2.9z" fill="#b07a45"/><path d="M10 16.9c1.8.5 4 .7 6 .7s4.2-.2 6-.7" fill="none" stroke="#2b2f36" stroke-width="1.1" opacity=".55" stroke-dasharray="1.6 1.3"/><path d="M11 21.5v4.5M21 21.5v4.5" stroke="#6b4a2a" stroke-width="1.6"/><path d="M8.5 25.5h5v3.5h-5zM18.5 25.5h5v3.5h-5z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.2" stroke-linejoin="round"/><circle cx="16" cy="11" r="1.6" fill="#b98a3e" stroke="#2b2f36" stroke-width="1"/></svg>',SVG_PARM='<svg class="svi" viewBox="0 0 32 32"><path d="M3 9.5 9 6h14l6 3.5-1.5 9.5c-3.3 1-7 1.5-11.5 1.5S7.8 20 4.5 19z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M9.3 6.8H16v12.9c-4.2 0-7.6-.5-10.7-1.4L4 10z" fill="#c9d0d8"/><path d="M16 6v14.5M4.2 13.5c3.7 1 7.6 1.5 11.8 1.5s8.1-.5 11.8-1.5" fill="none" stroke="#2b2f36" stroke-width="1.2" opacity=".55"/><path d="M6 20.5l-1 6h4.5l1-5.3M26 20.5l1 6h-4.5l-1-5.3" fill="#8a5a33" stroke="#2b2f36" stroke-width="1.2" stroke-linejoin="round"/><g fill="#b98a3e" stroke="#2b2f36" stroke-width=".8"><circle cx="9" cy="10" r="1.1"/><circle cx="23" cy="10" r="1.1"/><circle cx="12" cy="17" r="1.1"/><circle cx="20" cy="17" r="1.1"/></g></svg>',SVG_PHELM='<svg class="svi" viewBox="0 0 32 32"><path d="M5 4l5 6M27 4l-5 6" stroke="#2b2f36" stroke-width="3.6" stroke-linecap="round"/><path d="M5 4l5 6M27 4l-5 6" stroke="#c9d0d8" stroke-width="1.6" stroke-linecap="round"/><path d="M16 7c-6 0-9.5 4-9.5 9 0 3 1.2 5.5 3.5 7.5L16 29l6-5.5c2.3-2 3.5-4.5 3.5-7.5 0-5-3.5-9-9.5-9z" fill="#9aa4b0" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 7.7c-5.3 0-8.7 3.6-8.7 8.3 0 2.8 1.1 5 3.2 6.9L16 28z" fill="#c9d0d8"/><path d="M10 15.5h4.3v2.4H10zM17.7 15.5H22v2.4h-4.3z" fill="#16181d"/><path d="M16 8v20" stroke="#2b2f36" stroke-width="1.1" opacity=".5"/><path d="M13 22.5h6" stroke="#2b2f36" stroke-width="1.2" opacity=".6"/></svg>';
 const PGSLOTS=['saddle','parmor','phelmet'],PGIC={saddle:SLOTIMG('saddle'),parmor:SLOTIMG('parmor'),phelmet:SLOTIMG('phelmet')};let pgCat=false;
 const pgSt=it=>[['ab','pg_ab'],['atk','pg_atk'],['hp','pg_hp'],['def','pg_def'],['crit','pg_crit'],['xp','pg_xp'],['gold','pg_gold']].filter(([k])=>it.st[k]).map(([k,t])=>T(t,{v:it.st[k]})).join(' · ');
 const petImg=(sp,l)=>IMG('pet_'+sp+(1+petEvoN(l||1)));
 const petIc=(sp,big,l)=>PETIC[sp]?`<img class="pet-ic${big?' big':''}" src="${petImg(sp,l)}" alt="">`:`<span class="pet-ic${big?' big':''}">❔</span>`,eggIc=e=>`<span class="egg ${e==='r'?'r':''}">🥚</span>`;
-// рамка пітомця за зірками (картка 3, варіант B, 08.11): товста градієнтна рамка, ромби в кутах, стрічка з зірками внизу.
+// рамка вихованця за зірками (картка 3, варіант B, 08.11): товста градієнтна рамка, ромби в кутах, стрічка з зірками внизу.
 // ★1 сіра · ★2 зелена · ★3 синя · ★4 фіолетова · ★5 золота з м'яким сяйвом; колір — CSS-змінна --pf у класі .s1…s5
 const petFrame=(sp,l,s,big)=>{s=Math.max(1,Math.min(5,s||1));return `<span class="pfB s${s}${big?' big':''}"><span class="pfB-in"><img src="${petImg(sp,l)}" alt=""></span><i class="o1"></i><i class="o2"></i><i class="o3"></i><i class="o4"></i><span class="pfst">${'★'.repeat(s)}</span></span>`};
 const petEvoN=l=>l>=20?2:l>=10?1:0,stars=(s,m=5)=>'<span class="stars">'+'★'.repeat(s)+'<i>'+'★'.repeat(m-s)+'</i></span>';
@@ -809,7 +809,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
    h+=`<p class="hint">${nx.cat?T('pet_evo_hint',{f:ROM[f+1]}):T('pet_feed_hint')}</p><div class="st">${T('pet_cost')}: ${matTxt(nx.mat,nx.matN)} · 🔩${fmt(nx.shards)}${nx.cat?' · 💎1':''}</div><div class="row"><button class="btn pri" id="pFeed" data-m="${nx.mat}" data-n="${nx.matN}" ${ok?'':'disabled'}>${nx.cat?T('pet_evo_btn'):T('pet_feed')}</button>${nx.cat?'':`<button class="btn" id="pFeedM" ${ok?'':'disabled'}>${T('pet_feed_max')}</button>`}</div>`}
   else h+=`<p class="hint">${T('max_reached')}</p>`;
   h+=`<div class="petfind"><span>🎒 ${T('pet_finds',{n:P.fn||0,m:C.findMax||3})}${(P.fn||0)<(C.findMax||3)&&I.findIn?' · '+T('pet_next',{t:hms(I.findIn)}):''}</span><button class="btn pri" id="pFind" ${P.fn?'':'disabled'}>${T('take')}</button></div></div>`;
-  // вміння й спорядження пітомця (31.10)
+  // вміння й спорядження вихованця (31.10)
   const GI=D.gear||{},ab=GI.abil,sum=GI.sum||{},PE=(P.eqs||{})[P.act]||{},PI=(P.inv||[]).slice().sort((x,y)=>((x.sp&&x.sp!==P.act)?1:0)-((y.sp&&y.sp!==P.act)?1:0)),cost=GI.cost;
   if(ab)h+=`<div class="card"><h4>✨ ${T('pg_ab_t')}: ${T('ab_'+ab.k)}</h4><p>${T('abd_'+ab.k,{v:ab.v,w:2*ab.v})}</p></div>`;
   h+=`<div class="card"><h4>${T('pg_t')}</h4><p class="hint">${T('pg_hint')}</p><div class="slots">`+PGSLOTS.map(s=>{const it=PE[s];return `<div class="slot" ${it?`style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):PGIC[s]}</div><div class="sn">${T('pslot_'+s)}</div>`+(it?`<div class="it" style="color:${RAR[it.r].c}">${RAR[it.r].n}</div><div class="sn">${T('lvl',{n:it.il})}${it.il>a.l?' ⚠️':''}</div><div class="sn">${pgSt(it)}</div><button class="btn" data-pgoff="${s}" style="margin-top:6px">${T('pg_take_off')}</button>`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}).join('')+`</div>`;
@@ -1471,13 +1471,13 @@ function wbResult(o){
 }
 // головні вкладки й підвкладки
 const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'tasks'};
-// 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Пітомець, Тренування, Журнал, Профіль — у вікні героя на весь екран
+// 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Вихованець, Тренування, Журнал, Профіль — у вікні героя на весь екран
 // 10.11 (Влад, Штаб #4): магазин — окрема виділена вкладка в центрі нижньої панелі (була підвкладка вікна Героя)
-// 13.11 (Влад): у вікні Сумки без Пітомця й Тренування (вони є кнопками на головному екрані), Журнал — у самому кінці, щоб легше знайти «💸 Вивід»
+// 13.11 (Влад): у вікні Сумки без Вихованця й Тренування (вони є кнопками на головному екрані), Журнал — у самому кінці, щоб легше знайти «💸 Вивід»
 const groupOf=t=>['bag','market','pet','train','log','prof','wd'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
 function showPane(){if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
-// «Герой» (Спорядження / Пітомець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
+// «Герой» (Спорядження / Вихованець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
 // Підвкладки й панелі героя переносяться в шторку й повертаються назад при закритті. Закрити: ✕, тап по затемненню, свайп униз по шапці.
 let prevTab='hero';const HERO_PANES=['bag','market','pet','train','log','prof','wd'];
 function heroSheet(open){
