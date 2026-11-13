@@ -467,6 +467,11 @@ function renderMarket(){
  el.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>mktAct('marketCancel',{lot:+b.dataset.mc},()=>toast(T('mkt_cancelled'))));
 }
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
+// 13.11 (Влад): розібрати всі речі однієї рідкості (зелені / сині / фіолетові) — з сумки, без каменів і вкладених зірок; кращі за надіте (і на майбутнє — вищого рівня) лишаємо
+function disRarIds(r){return G.inv.filter(i=>i.r===r&&!(i.gm&&i.gm.length)&&!(i.sr||i.rr)&&!((powDelta(i)||0)>0)).map(i=>i.id)}
+function disRar(r){const ids=disRarIds(r);if(!ids.length)return;const keep=G.inv.filter(i=>i.r===r&&!ids.includes(i.id)).length;
+ const its=G.inv.filter(i=>ids.includes(i.id)),xp=G.dismode==='xp',sh=its.reduce((a,i)=>a+Math.round((i.r+1)*(i.r+1)*(1+i.il/10)),0);
+ modal(`<div class="big">⚒️</div><p>${T('dis_rar_q',{n:ids.length,w:T('dis_r'+r).toLowerCase()})}</p>${xp?`<p class="hint">${T('to_xp')}</p>`:`<p><b>🔩 +${fmt(sh)}</b></p>`}${keep?`<p class="hint">${T('dis_rar_keep',{n:keep})}</p>`:''}`,T('dis_go'),()=>act('dismantle',{ids,mode:G.dismode},x=>{toast(disMsg(x.out));haptic('medium')}))}
 function dismantle(ids){act('dismantle',{ids,mode:G.dismode},r=>toast(disMsg(r.out)))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
 let mSlot=null,mN=3,fsub='res',gemSel=null,aSlot=null,aSel=null;
@@ -562,6 +567,7 @@ function renderForge(){
  if(fsub==='res')h+=`<div class="card"><h4>${T('dis_title')}</h4>
   <div class="chips"><button data-dm="shards" class="${G.dismode!=='xp'?'act':''}">${T('to_shards')}</button><button data-dm="xp" class="${G.dismode==='xp'?'act':''}">${T('to_xp')}</button></div>
   <div class="row"><button class="btn pri" id="disJunk" ${F.junk?'':'disabled'}>${T('dis_junk',{n:F.junk})}</button></div>
+  <p class="hint" style="margin:8px 0 4px">${T('dis_rar_t')}</p><div class="row disrar">${[1,2,3].map(r=>{const n=disRarIds(r).length;return `<button class="btn" data-disr="${r}" ${n?'':'disabled'}><i class="dot" style="background:${RAR[r].c}"></i>${T('dis_r'+r)} (${n})</button>`}).join('')}</div>
   <div class="row"><button class="btn" id="smelt" ${G.shards>=(V.smelt||400)?'':'disabled'}>${T('smelt_btn',{s:V.smelt||400})}</button><button class="btn" id="smeltAll" ${G.shards>=(V.smelt||400)*2?'':'disabled'}>${T('smelt_all',{n:Math.min(20,Math.floor(G.shards/(V.smelt||400)))})}</button></div>
   <p class="hint">${T('dis_hint')}</p></div>`;
  if(fsub==='ench')h+=`<div class="card"><h4>${T('ench_title',{l:G.ench,m:F.enchMax})}</h4>
@@ -608,6 +614,7 @@ function renderForge(){
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
  if($('smelt')){$('smelt').onclick=()=>act('smelt',{n:1},r=>toast(T('smelted',{n:r.out.n})));$('smeltAll').onclick=()=>act('smelt',{n:20},r=>toast(T('smelted',{n:r.out.n})))}
  if($('disJunk'))$('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
+ $('p-forge').querySelectorAll('[data-disr]').forEach(b=>b.onclick=()=>disRar(+b.dataset.disr));
  const eb=$('ench');if(eb)eb.onclick=()=>{const it=enchPicked(enchLegs());if(!it)return;act('enchant',{id:it.id},r=>{enchSel=null;toast(T('ench_done',{n:r.out.ench}));haptic('heavy')})};
  if($('enchPick'))$('enchPick').onclick=enchPickModal;
  $('p-forge').querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mSlot=b.dataset.ms;mN=need;renderForge()});
