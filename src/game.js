@@ -86,6 +86,13 @@ async function api(action,args){
  apply(j.view);
  return j;
 }
+// 13.11 (Влад): вікна з даними з сервера (рейтинги, ринок, профіль, магазин) самі оновлюються раз на 20 с, поки відкриті;
+// перемальовуємо лише якщо дані змінились. Перший показ після завантаження — точка відліку.
+const fAt={},fBusy={},same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const liveFn={};
+function live(key,load,put,ms){liveFn[tab]=()=>live(key,load,put,ms);const t=fAt[key];if(t===undefined){fAt[key]=Date.now();return}
+ if(fBusy[key]||Date.now()-t<(ms||2e4)||document.visibilityState!=='visible')return;fBusy[key]=1;fAt[key]=Date.now();
+ load().then(o=>{if(o&&put(o)){dirty[tab]=1;flush()}}).catch(()=>{}).finally(()=>{fBusy[key]=0})}
 // збирає повний view: частини з відповіді + незмінені з попереднього (за списком хешів vh — ключі, яких немає в vh, зникли)
 function vmerge(base,part,vh){const v={},s={},ps=part.s||{};
  for(const k in vh){if(k.startsWith('s.')){const sk=k.slice(2);s[sk]=sk in ps?ps[sk]:base.s?.[sk]}else if(k!=='s')v[k]=k in part?part[k]:base[k]}
@@ -416,6 +423,7 @@ function renderMarket(){
  const el=$('p-market');
  if(!mktData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;mktLoad();return}
  const M=mktData;
+ live('mkt',()=>api('market',{...mktF}).then(r=>r.out),o=>{if(same(o,mktData))return false;mktData=o;return true},3e4);
  let h=`<div class="chestbar" style="background:var(--panel);border-color:var(--line)">⚱️<span>${fmt(G.ash||0)} · 💰${fmt(G.gold)}</span><button class="btn" id="mRef">🔄</button></div><p class="hint">${T('mkt_hint',{p:Math.round(M.fee*100),r:RAR[M.minR].n})}</p>`;
  if(M.mine.length)h+=`<div class="card"><h4>📦 ${T('mkt_mine',{n:M.mine.length,m:M.maxLots})}</h4>`+M.mine.map(l=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${curIc(l.cur)} ${fmt(l.price)}</div></div><div class="acts"><button class="btn" data-mc="${l.id}">${T('mkt_cancel')}</button></div></div>`}).join('')+'</div>';
  const have=(G.mats||[])[mktMat]||0;
@@ -748,7 +756,7 @@ let wdData=null,wdBusy=false,wdAdm=null,wdCur='gram',wdAt=0;
 const wdLoad=()=>{if(wdBusy)return;wdBusy=true;api('wdInfo').then(r=>{wdData=r.out;wdAt=Date.now()}).catch(e=>toast(errT(e))).finally(()=>{wdBusy=false;dirty.wd=1})};
 const WD_ST={new:'⏳',paid:'✅',rejected:'❌'};
 function renderWd(){const el=$('p-wd');
- if(wdData&&Date.now()-wdAt>6e4)wdLoad(); // свіжі статуси заявок раз на хвилину (поки показуємо старі)
+ if(wdData)live('wd',()=>api('wdInfo').then(r=>r.out),o=>{if(same(o,wdData))return false;wdData=o;wdAt=Date.now();return true}); // свіжі статуси заявок раз на хвилину (поки показуємо старі)
  if(!wdData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;wdLoad();return}
  const D=wdData,A=D.acc,mn=D.min[wdCur],left=Math.max(0,Math.round((D.cap-D.used)*100)/100);
  const why=!A.ok?T('wd_need'):!D.wallet?T('wd_need_wallet'):D.pending?T('wd_pending_t'):D.bal<=0?T('wd_empty'):D.bal<mn?T('wd_low',{m:mn}):left<mn?T('wd_cap_t'):'';
@@ -840,6 +848,7 @@ function renderProfile(){
  if(!profData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
   if(!profBusy){profBusy=true;api('profile').then(r=>{profData=r.out}).catch(e=>toast(errT(e))).finally(()=>{profBusy=false;dirty.prof=1})}return}
  const P=profData,R=P.refs,link=inviteLink();
+ live('prof',()=>api('profile').then(r=>r.out),o=>{if(same(o,profData))return false;profData=o;return true},3e4);
  let h=`<div class="card"><h4>👤 ${T('profile')}</h4><div class="resg">
   <div><span>ID</span><b>${P.id} <a href="#" id="cpId">📋</a></b></div><div><span>${T('joined')}</span><b>${dt(P.joined)}</b></div>
   <div><span>${T('act_days')}</span><b>${P.days}</b></div><div><span>${T('lvl_word')}</span><b>${G.lvl}</b></div>
@@ -897,6 +906,7 @@ function renderShop(){
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
   if(!shopBusy){shopBusy=true;api('shopInfo').then(r=>{shopData=r.out}).catch(e=>toast(errT(e))).finally(()=>{shopBusy=false;dirty.shop=1;flush()})}return}
  const S=shopData,soon=V.launch&&!V.isAdmin,w=tcUI&&tcUI.account;
+ live('shop',()=>api('shopInfo').then(r=>r.out),o=>{if(same(o,shopData))return false;shopData=o;return true},3e4);
  let h=`<div class="card"><h4>🛒 ${T('shop_t')}</h4><p class="hint">${T('shop_hint')}</p><div class="resg"><div><span>💰 ${T('shop_pool')}</span><b>$${S.pool.toFixed(2)}</b></div>${vipActive()?`<div><span>👑 VIP</span><b>${dt(G.vip)}</b></div>`:''}</div>
   ${soon?`<p class="hint" style="color:var(--gold)">${T('shop_soon_t')}</p>`:''}
   ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
@@ -1018,7 +1028,7 @@ function adminHtml(){
 let clanAt=0;let csub='main',clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
 const roleT=r=>T('role_'+r);
 function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
-setInterval(()=>{if(tab==='clan'&&clanData&&clanData.clan&&document.visibilityState==='visible'){dirty.clan=1;flush()}},2e4);
+setInterval(()=>{if(document.visibilityState==='visible'&&liveFn[tab])liveFn[tab]()},5e3); // 13.11: живі вікна — див. live(); перемальовка лише при змінах
 function clanAct(a,args,cb){return act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(cb)cb(r)})}
 function renderClan(){
  const el=$('p-clan');
@@ -1027,7 +1037,7 @@ function renderClan(){
   if(!clanBusy){clanBusy=true;api('clan').then(r=>{clanData=r.out;clanAt=Date.now()}).catch(e=>toast(errT(e))).finally(()=>{clanBusy=false;dirty.clan=1})}return}
  const C=clanData;let h='';
  // 13.11 (Влад): клан оновлювався лише при вході в гру — тепер тихо підтягуємо раз на 20 с, поки вкладка відкрита; перемальовуємо лише якщо щось змінилось
- if(C.clan&&!clanBusy&&Date.now()-clanAt>2e4){clanBusy=true;clanAt=Date.now();api('clan').then(r=>{if(clanData&&clanData.clan&&r.out&&JSON.stringify(r.out)!==JSON.stringify(clanData)){clanData=r.out;dirty.clan=1;flush()}}).catch(()=>{}).finally(()=>{clanBusy=false})}
+ if(C.clan)live('clan',()=>api('clan').then(r=>r.out),o=>{if(!clanData||!clanData.clan||!o||same(o,clanData))return false;clanData=o;return true});
  if(!C.clan){
   h+=`<div class="card"><h4>🏰 ${T('clan_create')}</h4><p class="hint">${T('clan_create_hint',{n:C.createStage,m:C.max})}</p>
    <div class="row" style="align-items:center"><input id="cName" maxlength="20" placeholder="${T('clan_name')}" class="inp"><button class="btn pri" id="cMake" ${G.maxStage>=C.createStage&&G.gold>=(V.clanCost||C.createCost)?'':'disabled'}>💰 ${fmt(V.clanCost||C.createCost)}</button></div></div>`;
@@ -1154,6 +1164,7 @@ function renderRank(){
  if(!d){h+=`<div class="empty">${T('loading')}</div>`;
   if(!topBusy){topBusy=true;api('top',{kind:topKind}).then(r=>{topData[r.out.kind]=r.out}).catch(e=>toast(errT(e))).finally(()=>{topBusy=false;dirty.top=1})}}
  else{
+  live('top:'+topKind,()=>api('top',{kind:topKind}).then(r=>r.out),o=>{if(same(o,topData[o.kind]))return false;topData[o.kind]=o;return o.kind===topKind});
   const kinds=(d.kinds||[]).concat('clan'),hasPrize=kinds.includes(topKind),P=topKind==='clan'?(d.clanPrizes||[]):(d.prizes||[]);
   const prizeOf=pl=>{const x=P.find(q=>pl>=q.from&&pl<=q.to);return x?x.ash:0};
   if(d.prizes){const ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
