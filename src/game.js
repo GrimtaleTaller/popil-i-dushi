@@ -134,7 +134,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;heroPen();lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -261,6 +261,9 @@ function setK(it){if(it.r==null)return 1;const cur=setPowWith(null,-1);return(1+
 // внесок речі в Силу (скільки Сили додає річ порівняно з порожнім слотом) — для показу в Кузні
 // внесок самої речі без впливу на сет (02.11: інакше легендарки на ковадлі показували мінус — «розбили б» сет прадавніх)
 function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore(it,1)-itemScore({slot:it.slot,st:{},il:it.il,gm:[]},1)}
+// 13.11 (Влад): вимпел клану біля ніку (src/pen.js малює з назви; p = [назва клану, ступінь рамки])
+function penI(p,w=18){return p&&p[0]&&window.penSvg?`<span class="pen">${window.penSvg(p[0],p[1],w)}</span>`:''}
+var heroPenK='';function heroPen(){const hn=document.querySelector('.f.hero .fname');if(!hn)return;const k=JSON.stringify(V&&V.pen||null)+T('hero_name');if(k===heroPenK)return;heroPenK=k;hn.innerHTML=penI(V&&V.pen,17)+esc(T('hero_name'))}
 function renderTop(){
  {const hs=$('hsSub');if(hs&&G&&document.body.classList.contains('hs-open'))hs.textContent=T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)})} // 13.11 (Влад): рівень і Сила в шапці «Герой» оновлюються разом із верхньою панеллю
  if(!G)return;
@@ -864,7 +867,7 @@ function renderProfile(){
  let h=`<div class="card"><h4>👤 ${T('profile')}</h4><div class="resg">
   <div><span>ID</span><b>${P.id} <a href="#" id="cpId">📋</a></b></div><div><span>${T('joined')}</span><b>${dt(P.joined)}</b></div>
   <div><span>${T('act_days')}</span><b>${P.days}</b></div><div><span>${T('lvl_word')}</span><b>${G.lvl}</b></div>
-  <div><span>${T('clan')}</span><b>${P.clan?esc(P.clan):'—'}</b></div><div><span>🏆 ${T('top_rating')}</span><b>${P.arena.rating} (${P.arena.w}/${P.arena.l})</b></div></div></div>`;
+  <div><span>${T('clan')}</span><b>${P.clan?penI([P.clan,P.clanT],14)+esc(P.clan):'—'}</b></div><div><span>🏆 ${T('top_rating')}</span><b>${P.arena.rating} (${P.arena.w}/${P.arena.l})</b></div></div></div>`;
  h+=`<div class="card"><h4>👥 ${T('refs')}</h4><p class="hint">${T('refs_hint',{a:R.pct[0],b:R.pct[1],c:R.pct[2]})}</p>
   <div class="arenah"><div><b>${R.n1}</b><span>${T('ref_lvl',{n:1})} · ${R.pct[0]}%</span></div><div><b>${R.n2}</b><span>${T('ref_lvl',{n:2})} · ${R.pct[1]}%</span></div><div><b>${R.n3}</b><span>${T('ref_lvl',{n:3})} · ${R.pct[2]}%</span></div></div>
   ${P.refUsd>0?`<p class="hint">💵 ${T('ref_usd',{n:P.refUsd.toFixed(2)})}</p>`:''}<div class="reflink">${esc(link)}</div><div class="row"><button class="btn pri" id="pInv">${T('invite')}</button><button class="btn" id="pCopy">📋 ${T('copy')}</button></div>
@@ -1057,7 +1060,7 @@ function renderClan(){
   h+=`<div class="card"><h4>🔎 ${T('clan_list')}</h4><div class="row" style="align-items:center;margin-top:0"><input id="cQ" maxlength="20" class="inp" placeholder="${T('clan_search')}" value="${esc0(C.q||'')}"><button class="btn" id="cQgo">🔎</button></div>`+(C.list.length?C.list.map(c=>{
    const mine=apps.includes(c.id),full=c.members>=(c.max||C.max),reqs=(c.min_stage?`${T('stage',{n:c.min_stage})}`:'')+(c.min_power?`${c.min_stage?' · ':''}💪 ${fmt(c.min_power)}`:'');
    const btn=mine?`<button class="btn" data-cu="${c.id}">${T('app_cancel')}</button>`:c.join_mode==='closed'?`<button class="btn" disabled>🔒 ${T('clan_mode_closed')}</button>`:`<button class="btn pri" data-cj="${c.id}" ${!full&&c.ok?'':'disabled'}>${c.join_mode==='apply'?T('apply'):T('join')}</button>`;
-   return `<div class="item" style="border-left-color:#7a5a26"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${c.max||C.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${reqs?`<div class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</div>`:''}${mine?`<div class="st up">${T('app_sent')}</div>`:''}</div><div class="acts">${btn}</div></div>`}).join(''):`<p class="hint">${T(C.q?'clan_nothing':'clan_none_yet')}</p>`)+'</div>';
+   return `<div class="item" style="border-left-color:#7a5a26"><div class="ic">${penI([c.name,c.pt],24)||'🛡️'}</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${c.max||C.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${reqs?`<div class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</div>`:''}${mine?`<div class="st up">${T('app_sent')}</div>`:''}</div><div class="acts">${btn}</div></div>`}).join(''):`<p class="hint">${T(C.q?'clan_nothing':'clan_none_yet')}</p>`)+'</div>';
   {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]})}renderSub(); // не губимо введене при оновленні
   const srch=()=>{clanBusy=true;api('clan',{q:$('cQ').value.trim()}).then(r=>{clanData=r.out}).catch(e=>toast(errT(e))).finally(()=>{clanBusy=false;dirty.clan=1})};
   $('cQgo').onclick=srch;$('cQ').onkeydown=e=>{if(e.key==='Enter')srch()};
@@ -1067,7 +1070,7 @@ function renderClan(){
   return}
  const S={main:'',keys:'',castle:'',members:'',log:''}; // розділи клану (04.11): кожен — окрема підвкладка
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
- h+=`<div class="card arenah"><div><b>🏰 ${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.clan.max||C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
+ h+=`<div class="card arenah"><div><b>${penI([C.clan.name,C.clan.pt],18)||'🏰 '}${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.clan.max||C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
  const bank=C.clan.bank||0;
  S.main+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
   <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div>
@@ -1152,7 +1155,7 @@ function renderArena(){
  let h=`<div class="card arenah"><div><b>🏆 ${A.rating}</b><span>${dv}</span></div><div><b>⚔️ ${A.left}/${A.daily}</b><span>${T('fights_left')}</span></div><div><b>🎖️ ${A.pts}</b><span>${T('arena_pts')}</span></div></div>
  <div class="row" style="margin:0 0 8px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('arena_w_l',{w:A.w,l:A.l})}</span><button class="btn" id="aRef">🔄 ${T('refresh')}</button></div>`;
  A.opps.forEach((o,i)=>{const c=o.power>H.power*1.05?'#e0484e':o.power<H.power*0.95?'#56c271':'#f2c14e';
-  h+=`<div class="item" style="border-left-color:${c}"><div class="ic">🛡️</div><div class="info"><div class="nm">${esc(o.name)}</div><div class="sub">${T('lvl',{n:o.lvl})} · 🏆 ${o.rating}</div><div class="st" style="color:${c}">${T('power',{n:fmt(o.power)})}</div></div><div class="acts"><button class="btn pri" data-af="${i}" ${A.left&&!busy?'':'disabled'}>${T('to_fight')}</button></div></div>`});
+  h+=`<div class="item" style="border-left-color:${c}"><div class="ic">${penI(o.pn,24)||'🛡️'}</div><div class="info"><div class="nm">${esc(o.name)}</div><div class="sub">${T('lvl',{n:o.lvl})} · 🏆 ${o.rating}</div><div class="st" style="color:${c}">${T('power',{n:fmt(o.power)})}</div></div><div class="acts"><button class="btn pri" data-af="${i}" ${A.left&&!busy?'':'disabled'}>${T('to_fight')}</button></div></div>`});
  h+=`<div class="card"><h4>🎖️ ${T('arena_shop')}</h4><div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">🎟️ ${T('ticket')}<br><span class="hint" style="margin:0">${T('ticket_hint')}</span></span><button class="btn" id="aTk" ${G.ash>=A.ticket&&!busy?'':'disabled'}>⚱️ ${A.ticket}</button></div>`+Object.entries(A.shop).map(([k,v])=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:2">${T('shop_'+k)}</span><button class="btn" data-ab="${k}" ${A.pts>=v.pts?'':'disabled'}>🎖️ ${v.pts}</button></div>`).join('')+'</div>';
  h+=`<div class="card"><h4>🗓️ ${T('season')}</h4><p class="hint" style="margin:0">${T('season_hint',{t:tLeft(A.seasonEnd-Date.now())})}</p></div>`;
  h+=`<p class="hint">${T('arena_hint',{n:A.daily,w:A.win,l:A.lose})}</p>`;
@@ -1164,7 +1167,7 @@ function renderArena(){
 }
 function pvpResult(o){
  modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T(o.win?'pvp_win':'pvp_lose')}</h3>
- <div class="pvp"><div><span>${esc(T('hero_name'))}</span><div class="hpb"><i id="pA" style="width:100%;background:linear-gradient(90deg,#2f9a52,#5fd07c)"></i></div></div><div><span>${esc(o.opp.name)} · ${T('lvl',{n:o.opp.lvl})}</span><div class="hpb"><i id="pD" style="width:100%"></i></div></div></div>
+ <div class="pvp"><div><span>${penI(V&&V.pen,12)}${esc(T('hero_name'))}</span><div class="hpb"><i id="pA" style="width:100%;background:linear-gradient(90deg,#2f9a52,#5fd07c)"></i></div></div><div><span>${penI(o.opp.pn,12)}${esc(o.opp.name)} · ${T('lvl',{n:o.opp.lvl})}</span><div class="hpb"><i id="pD" style="width:100%"></i></div></div></div>
  <p>🏆 <b>${o.delta>=0?'+':''}${o.delta}</b>${o.rating!=null?' → '+o.rating:''} · 🎖️ +${o.pts}</p>`,T('ok'));
  let ha=o.hpA,hd=o.hpD;const step=Math.min(110,2600/Math.max(1,o.ev.length));
  o.ev.forEach((e,i)=>setTimeout(()=>{if(e[1]===0)hd-=e[2];else ha-=e[2];const a=$('pA'),d=$('pD');if(a)a.style.width=Math.max(0,ha/o.hpA*100)+'%';if(d)d.style.width=Math.max(0,hd/o.hpD*100)+'%'},250+i*step));
@@ -1182,7 +1185,7 @@ function renderRank(){
   if(d.prizes){const ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
    h+=`<div class="card"><h4>🏆 ${T('prize_t')}</h4><p class="hint">${T('prize_hint')}</p>${hasPrize?`<div class="chips">${P.map(q=>`<span class="chip">${q.from===q.to?q.from:q.from+'–'+q.to}: ⚱️${q.ash}</span>`).join('')}</div>`:`<p class="hint">${T('prize_none')}</p>`}
    <p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
-  const row=r=>`<div class="${r.me?'me':''}"><b>${r.place<=3?['🥇','🥈','🥉'][r.place-1]:r.place}</b><span>${esc(r.name)}${hasPrize&&prizeOf(r.place)?` <small style="color:var(--gold)">⚱️${prizeOf(r.place)}</small>`:''}</span><i>${val(r)}</i></div>`;
+  const row=r=>`<div class="${r.me?'me':''}"><b>${r.place<=3?['🥇','🥈','🥉'][r.place-1]:r.place}</b><span>${penI(r.pn)}${esc(r.name)}${hasPrize&&prizeOf(r.place)?` <small style="color:var(--gold)">⚱️${prizeOf(r.place)}</small>`:''}</span><i>${val(r)}</i></div>`;
   h+='<div class="rank">'+d.rows.map(row).join('')+'</div>';
   if(d.me&&!d.rows.some(r=>r.me))h+='<div class="rank" style="margin-top:8px">'+row(d.me)+'</div>';
   h+=`<p class="hint">${T('top_total',{n:d.total})}</p><div class="row"><button class="btn" id="tRef">🔄 ${T('refresh')}</button></div>`}
@@ -1235,7 +1238,7 @@ function applyLang(){
  Object.assign(ERR,L.err);
  document.documentElement.lang=LANG;
  document.querySelectorAll('.tabs button').forEach(b=>{if(b.dataset.t==='shop')b.querySelector('span').textContent=T('shop_t');else b.firstChild.nodeValue=T('tab_'+b.dataset.t)}); // магазин — кругла кнопка з 💎 і підписом
- const hn=document.querySelector('.f.hero .fname');if(hn)hn.textContent=T('hero_name');
+ heroPen();
  $('dead').textContent=T('dead');
 }
 function setLang(l){
@@ -1463,15 +1466,15 @@ function renderWb(){
  let h=`<div class="card wbc"><img class="wbimg" src="${IMG('boss8')}" alt=""><h4>${T('wb_name')} · ${T('lvl',{n:B0.lvl})}</h4><div class="bar" style="height:12px"><i style="width:${B0.hp/B0.hp_max*100}%;background:linear-gradient(90deg,#9b2c2c,#e0484e)"></i></div>
  <div class="sub" style="text-align:center;margin-top:3px">❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)} · ${T('wb_killed',{n:B0.lvl-1})} · ${T('pass_end',{t:tLeft(D.end-Date.now())})}</div>
  <div class="row" style="margin-top:8px"><button class="btn pri" id="wbHit" ${busy||(!free&&G.ash<W.price)?'disabled':''}>⚔️ ${free?T('wb_hit',{n:W.left,m:W.free}):T('wb_hit_pay',{p:W.price})}</button><button class="btn" id="wbRef">🔄</button></div></div>`;
- h+=`<div class="card"><h4>🏆 ${T('wb_top')}</h4>${D.me?`<p class="hint" style="margin:0 0 6px">${T('wb_me',{p:D.me.place,d:fmt(D.me.dmg),h:D.me.hits})}</p>`:''}<div class="rank">`+(D.top.length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('wb_empty')}</span></div>`)+'</div>';
- if(D.clans.length)h+=`<h4 style="margin-top:10px">🏰 ${T('wb_clans')}</h4><div class="rank">`+D.clans.map(x=>`<div><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join('')+'</div>';
+ h+=`<div class="card"><h4>🏆 ${T('wb_top')}</h4>${D.me?`<p class="hint" style="margin:0 0 6px">${T('wb_me',{p:D.me.place,d:fmt(D.me.dmg),h:D.me.hits})}</p>`:''}<div class="rank">`+(D.top.length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('wb_empty')}</span></div>`)+'</div>';
+ if(D.clans.length)h+=`<h4 style="margin-top:10px">🏰 ${T('wb_clans')}</h4><div class="rank">`+D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join('')+'</div>';
  h+=`</div><p class="hint">${T('wb_hint',{p:D.prizes.map(x=>(x.from===x.to?x.from:x.from+'–'+x.to)+': '+x.ash).join(', '),b:D.part.base,l:D.part.perLvl,c:D.clanPrizes.join('/')})}</p>`;
  el.innerHTML=h;
  $('wbRef').onclick=()=>{wbData=null;dirty.wboss=1;flush()};
  $('wbHit').onclick=()=>act('wbAttack',{pay:!free},r=>{const o=r.out;wbResult(o);if(o.boss){wbData.boss={lvl:o.boss.lvl,hp:o.boss.hp,hp_max:o.boss.hp_max,kills:0}}setTimeout(()=>{wbData=null;dirty.wboss=1;flush()},2500)});
 }
 function wbResult(o){
- modal(`<div class="big">👹</div><h3>${T('wb_res',{d:fmt(o.dmg)})}</h3><div class="pvp"><div><span>${esc(T('hero_name'))}</span><div class="hpb"><i id="wA" style="width:100%;background:linear-gradient(90deg,#2f9a52,#5fd07c)"></i></div></div></div>
+ modal(`<div class="big">👹</div><h3>${T('wb_res',{d:fmt(o.dmg)})}</h3><div class="pvp"><div><span>${penI(V&&V.pen,12)}${esc(T('hero_name'))}</span><div class="hpb"><i id="wA" style="width:100%;background:linear-gradient(90deg,#2f9a52,#5fd07c)"></i></div></div></div>
  <p>${o.died?T('wb_died',{t:Math.round(o.t)}):T('wb_alive')}${o.boss&&o.boss.killed?' · <b style="color:var(--gold)">'+T('wb_down',{n:o.boss.killed})+'</b>':''}</p>${o.paid?`<p class="hint">⚱️ −${o.paid}</p>`:''}`,T('ok'));
  let hp=o.heroHp;const step=Math.min(90,2400/Math.max(1,o.ev.length));
  o.ev.forEach((e,i)=>setTimeout(()=>{if(e[1]===1){hp-=e[2]}else if(e[1]===5){hp=e[2]}const a=$('wA');if(a)a.style.width=Math.max(0,hp/o.heroHp*100)+'%'},250+i*step));
