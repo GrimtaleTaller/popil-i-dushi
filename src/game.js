@@ -296,6 +296,10 @@ function renderBoss(){
  if(G.autoBoss&&!autoOffSent&&!busy){autoOffSent=true;api('settings',{autoBoss:false}).catch(()=>{})} // авто-бос прибрано (рішення Влада 04.11)
 }
 // g — камені речі: показується базове значення, а різниця рахується з каменями (02.11: раніше камені надітої речі не враховувались)
+// 13.11 (Влад «А»): одна цифра «💪 ±N» — як зміниться Сила, якщо вдягнути річ замість надітої (стрілки по статах плутали: крит важить більше за атаку)
+function powDelta(it){if(!V||!V.sc||!it||!SLOT[it.slot])return null;const eq=G.eq[it.slot];
+ const base=eq?itemScore(eq):itemScore({id:-1,slot:it.slot,r:0,il:it.il,st:{}});return itemScore(it)-base}
+function powTag(it){const d=powDelta(it);if(d==null||Math.abs(d)<1)return '';return ` · <span class="${d>0?'up':'dn'} pwd">💪 ${d>0?'+':'−'}${fmt(Math.abs(d))}</span>`}
 function statLine(st,cmp,g){
  return Object.keys(STATN).filter(k=>st[k]||(cmp&&cmp[k])).map(k=>{
   const v=st[k]||0,o=cmp?(cmp[k]||0):null,f=k==='crit'?v.toFixed(1)+'%':fmt(v);
@@ -390,7 +394,7 @@ function renderBag(){
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
  for(const it of list){const eq=G.eq[it.slot],better=!eq||itemScore(it)>itemScore(eq);
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
-   <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}</div>
+   <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
    <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
@@ -427,7 +431,7 @@ function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const
 function lotView(l){const it=l.item||{};
  if(it.kind==='mat')return {c:'#8a7a5a',ic:'⛏️',nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
- return {c:RAR[it.r].c,ic:gearIc(it),nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il}),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
+ return {c:RAR[it.r].c,ic:gearIc(it),nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il})+powTag(it),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
 let mktMatOpen=false;
 function renderMarket(){
  const el=$('p-market');

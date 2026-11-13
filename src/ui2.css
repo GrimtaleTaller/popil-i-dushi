@@ -394,3 +394,5 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 /* 13.11: «Мої реферали» */
 .reflv{gap:6px;margin:6px 0 0}.reflv .btn{flex:1;padding:6px 4px;font-size:12.5px}.reflv .btn.on{color:#fff}
 .reflist>div{align-items:center}.reflist span{display:flex;flex-direction:column;min-width:0}.reflist span small{color:var(--mut);font-weight:500;font-size:11px;line-height:1.3;white-space:normal}
+/* 13.11: зміна Сили на картці речі */
+.pwd{font-weight:800;white-space:nowrap}
