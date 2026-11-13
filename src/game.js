@@ -271,12 +271,14 @@ var giftBusy=0;function giftShow(L){if(!L||!L.length)return;for(const g of L){if
  modal(`<div class="gift"><div class="gift-ic">🎁</div><h3>${T('gift_t')}</h3><div class="gift-tx">${esc(g.t).replace(/\n/g,'<br>')}</div>${g.ash?`<div class="gift-rw">⚱️ <b>${String(g.ash)}</b></div>`:''}<button class="btn pri" id="giftGo${g.id}">${g.ash?T('gift_claim_a',{a:String(g.ash)}):T('gift_claim')}</button></div>`,null,null,()=>{const b=$('giftGo'+g.id);if(b)b.onclick=()=>{if(giftBusy)return;giftBusy=1;b.disabled=true;
   act('giftClaim',{id:g.id},r=>{haptic('heavy');if(r.out&&r.out.ash)toast(T('gift_got',{a:String(r.out.ash)}))}).then(()=>{giftBusy=0;if(queue[0]&&queue[0].tag==='gift'+g.id){queue.shift();showModal()}})}},'gift'+g.id)}} // невдача (мережа) — вікно закривається, подарунок прийде знову з наступним sync
 var heroPenK='';function heroPen(){const hn=document.querySelector('.f.hero .fname');if(!hn)return;const k=JSON.stringify(V&&V.pen||null)+T('hero_name');if(k===heroPenK)return;heroPenK=k;hn.innerHTML=penI(V&&V.pen,22)+esc(T('hero_name'))}
+let lvlSyncAt=0;
 function renderTop(){
  {const hs=$('hsSub');if(hs&&G&&document.body.classList.contains('hs-open'))hs.textContent=T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)})} // 13.11 (Влад): рівень і Сила в шапці «Герой» оновлюються разом із верхньою панеллю
  if(!G)return;
  const gold=G.gold+pend.gold;let xp=G.xp+pend.xp;
  $('lvl').textContent=G.lvl;$('gold').textContent=fmt(gold);$('souls').textContent=fmt(G.souls||0);$('ashv').textContent=fmt(G.ash||0);$('pw').textContent=T('power',{n:fmt(power(H))});
  $('xpt').textContent=fmt(xp)+'/'+fmt(xpNeed(G.lvl));$('xpb').style.width=Math.min(100,xp/xpNeed(G.lvl)*100)+'%';
+ if(xp>=xpNeed(G.lvl)&&Date.now()-lvlSyncAt>8000){lvlSyncAt=Date.now();setTimeout(()=>sync(true),300)} // 13.11 (Влад): смуга повна, а рівень чекав синхронізації до хвилини — тепер одразу
  const mhp=B.rep?B.rep.maxHp:H.hp;
  $('hhp').style.width=Math.max(0,B.hp/mhp*100)+'%';$('hhpt').textContent=fmt(Math.max(0,B.hp))+' / '+fmt(mhp);
  if(B.m){$('mhp').style.width=Math.max(0,B.m.hp/B.m.max*100)+'%';$('mhpt').textContent=fmt(Math.max(0,B.m.hp))+' / '+fmt(B.m.max)}
@@ -1391,7 +1393,8 @@ function boot(msg,retry){
  if(retry)$('bootR').onclick=start;
 }
 let syncing=false;
-async function sync(){if(syncing||busy||B.rep||!G)return;if(Date.now()-lastSync<(document.hidden?80000:55000))return;/* згорнута гра — раз на 80 с: менше трафіку, але в межах «онлайн» сервера (ONLINE_WINDOW 90 с), фарм у фоні не сповільнюється */lastSync=Date.now();syncing=true;try{const r=await api('sync');afterSync(r)}catch(e){if(e.message==='auth')boot(ERR.auth)}finally{syncing=false}}
+async function sync(force){if(syncing||busy||B.rep||!G)return;if(force!==true&&Date.now()-lastSync<(document.hidden?80000:55000))return; // force — підняти рівень одразу (13.11)
+ /* згорнута гра — раз на 80 с: менше трафіку, але в межах «онлайн» сервера (ONLINE_WINDOW 90 с), фарм у фоні не сповільнюється */lastSync=Date.now();syncing=true;try{const r=await api('sync');afterSync(r)}catch(e){if(e.message==='auth')boot(ERR.auth)}finally{syncing=false}}
 async function start(){
  applyLang();
  const w=tg();
