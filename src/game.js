@@ -1318,6 +1318,10 @@ async function start(){
  catch(e){if(e.message==='prelaunch'){boot();return}boot(errT(e),true)}
 }
 // ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
+// 13.11 (Влад): платну стежку купують прямо в пропуску — ⭐ одразу, GRAM/USDT — у магазині (вкладка VIP, там усі способи)
+function passBuyHtml(){const it=shopData&&shopData.items&&shopData.items.find(x=>x.k==='pass'),st=it?it.stars:125,soon=V.launch&&!V.isAdmin;
+ return `<p style="margin:2px 0 6px"><b>🎫 ${T('pass_buy_t')}</b></p><p class="hint" style="margin:0 0 8px">${T('pass_buy_h')}</p><div class="row shopb"><button class="btn pri" data-pbuy="stars"${soon?' disabled':''}>⭐ ${st}</button><button class="btn" data-pbuy="shop">💎 GRAM · 💵 USDT ›</button></div>`}
+function passBuyBind(el){el.querySelectorAll('[data-pbuy]').forEach(b=>b.onclick=()=>{if(b.dataset.pbuy==='stars')shopBuy('pass','stars');else{ssub='vip';dirty.shop=1;const t=document.querySelector('.tabs button[data-t="shop"]');if(t)t.click();else{tab='shop';flush()}}})}
 function tLeft(ms){ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);return d?T('t_dh',{d,h}):h?T('t_hm',{h,m}):T('t_m',{m})}
 function rwTxt(x){const a=[];if(x.gold)a.push('💰'+fmt(x.gold));if(x.shards)a.push('🔩'+fmt(x.shards));if(x.matN)a.push('⛏️'+MATN[x.mat]+'×'+x.matN);if(x.ash)a.push('⚱️'+x.ash);if(x.ch)a.push(chestIc(x.ch[0])+'×'+x.ch[1]);if(x.gem)a.push('💠'+MATN[x.gem-1]);if(x.cat)a.push('💎'+x.cat);if(x.egg)a.push(eggIc(x.egg));return a.join(' ')}
 const qTxt=q=>T('q_'+q.k,{n:fmt(q.n)});
@@ -1328,16 +1332,17 @@ function renderQuest(){
  let h=`<div class="card"><h4>🎟️ ${T('pass_title')} · ${T('pass_lv',{l:P.lv,m:P.max})}</h4><div class="bar" style="height:10px"><i style="width:${P.lv>=P.max?100:inLv/P.per*100}%;background:linear-gradient(90deg,#b98a3e,#f2c14e)"></i></div>
  <div class="row" style="align-items:center;margin:6px 0 0"><span class="hint" style="flex:2;margin:0">${T('pass_pts',{p:P.pts})} · ${T('pass_end',{t:tLeft(P.end-Date.now())})}</span><button class="btn pri" id="qClaim" ${can&&!busy?'':'disabled'}>🎁 ${T('claim_all')}</button></div></div>`;
  
+ if(!P.prem)h+=`<div class="card">${passBuyHtml()}</div>`; // 13.11: купівля платної стежки одразу під прогресом пропуску
  const dr=rwTxt(P.dqR);
  const BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
  h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_in_tasks')}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
  h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`</div>`; // 09.11: тижневий Сувій прибрано (лише з Відьми в Болоті) → Сувій вічності
- h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#<small class="ptp">${T('pass_ptsh')}</small></b><span>${T('pass_free')}</span><span>👑 ${T('pass_paid')}</span></div>`;
+ h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#<small class="ptp">${T('pass_ptsh')}</small></b><span>${T('pass_free')}</span><span>🎫 ${T('pass_paid')}</span></div>`;
  for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i);
   h+=`<div class="${ok?'on':''}"><b>${i}<small class="ptp">${i*P.per}</small></b><span>${f?'✓ ':''}${rwTxt(P.free[i-1])}</span><span class="${P.prem?'':'lock'}">${p?'✓ ':P.prem?'':'🔒 '}${rwTxt(P.paid[i-1])}</span></div>`}
- h+=`</div><p class="hint">${P.prem?T('pass_prem_on'):T('pass_prem_soon')}</p></div>`;
+ h+=`</div>${P.prem?`<p class="hint">${T('pass_prem_on')}</p>`:''}</div>`;
  h+=`<p class="hint">${T('pass_hint')}</p>`;
- el.innerHTML=h;
+ el.innerHTML=h;passBuyBind(el);
  $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
