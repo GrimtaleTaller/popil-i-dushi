@@ -892,7 +892,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  // інкубатор
  h+=`<div class="card"><h4>🥚 ${T('pet_inc')}</h4>`;
  if(P.inc){const left=Math.max(0,P.inc.at-now);h+=`<div class="petinc">${eggIc(P.inc.e)}<div><b>${T(P.inc.e==='r'?'egg_r':'egg_c')}</b><div class="sub">${left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed" ${G.ash>=I.speed?'':'disabled'}>⚡ ⚱️${I.speed}</button>`:`<button class="btn pri" id="pClaim">${T('pet_claim')}</button>`}</div>`;
-  const E=V.tasks&&V.tasks.egg;if(E&&left&&V.tasks.block){const wt=Math.max(0,(E.next||0)-now),can=E.n<E.max&&!wt;h+=`<div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('pet_ad_hint',{t:dur(E.cut),n:E.n,x:E.max})}${wt&&E.n<E.max?' '+T('pet_ad_wait',{t:hms(wt)}):''}</span><button class="btn" id="pAd" ${can?'':'disabled'}>${'📺 −'+dur(E.cut)}</button></div>`}}
+  const E=V.tasks&&V.tasks.egg;if(E&&left&&V.tasks.block){const wt=Math.max(0,(E.next||0)-now),can=E.n<E.max&&!wt;clearTimeout(adEggT);if(wt&&E.n<E.max)adEggT=setTimeout(()=>{dirty.pet=1;flush()},Math.min(wt+500,6e4));h+=`<div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('pet_ad_hint',{t:dur(E.cut),n:E.n,x:E.max})}${wt&&E.n<E.max?' '+T('pet_ad_wait',{t:hms(wt)}):''}</span><button class="btn" id="pAd" ${can?'':'disabled'}>${can||E.n>=E.max?'📺 −'+dur(E.cut):'📺 ⏳ '+hms(wt)}</button></div>`}}
  h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&!P.inc?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||216e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||576e5)/36e5)})}</p></div>`;
  // колекція
  h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc pfc ${P.act===sp?'act':''}" data-pset="${sp}">${P.act===sp?`<em class="pact">${T('pet_active')}</em>`:''}${petFrame(sp,p.l,p.s,0)}<b>${T('pet_'+sp)}</b><small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
@@ -1258,7 +1258,7 @@ function renderRank(){
 // дія на сервері: блокує кнопки, показує помилки
 async function act(a,args,ok){
  if(busy)return;busy=true;renderBoss();
- try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50)}finally{busy=false;renderBoss();paintArena()}
+ try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/ad_gap|ad_limit/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
 }
 
 // ---------- модалки ----------
@@ -1441,7 +1441,7 @@ function renderQuest(){
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
 let adCtl=null,adLoading=false,adQ=[];
 function adsgram(cb,quiet,fail){if(window.Adsgram)return cb();if(adLoading&&!quiet&&adQ.some(x=>!x.quiet))return;adQ.push({cb,quiet,fail});if(adLoading)return;adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;const q=adQ;adQ=[];q.forEach(x=>x.cb())};sc.onerror=()=>{adLoading=false;sc.remove();const q=adQ;adQ=[];q.forEach(x=>{if(x.fail)x.fail();if(!x.quiet){adEggDrop();toast(T('ad_err'))}})};document.head.appendChild(sc)} // 12.11: черга колбеків (відео й рекламні завдання), quiet — без тосту
-let adEggAt=0;const adEggOn=()=>Date.now()-adEggAt<170e3;
+let adEggAt=0,adEggT=0;const adEggOn=()=>Date.now()-adEggAt<170e3;
 // реклама на яйці (09.11): сервер віддає перегляд тому, на що поставлено намір; якщо реклама не показалась — намір скидаємо
 const adEggDrop=()=>{if(adEggOn()){adEggAt=0;api('adIntent',{k:''}).catch(()=>{})}};
 // 12.11 (Влад): рекламні завдання AdsGram (блок Task) — один елемент на весь сеанс, між перемальовуваннями лише переноситься в картку;
@@ -1469,7 +1469,7 @@ function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
   adTaskEl=e;adTaskGone=0;$('adTaskBox').appendChild(e);const n=$('adtNone');if(n)n.hidden=true;
   setTimeout(()=>{const m=$('adtNone');if(m&&adTaskEl===e&&e.getBoundingClientRect().height<20&&!$('adTaskCard').hidden&&$('adTaskCard').offsetParent)m.hidden=false},8000)},true,()=>gone(6e5,null))}
 function watchAd(){const K=V.tasks;if(!K||!K.block)return toast(T('ad_soon'));
- adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){adEggAt=0;toast(T('ad_wait'));setTimeout(()=>sync(),3000);setTimeout(()=>sync(),9000)}else adEggDrop()}).catch(()=>{adEggDrop();toast(T('ad_none'))})}catch(e){adEggDrop();toast(T('ad_err'))}})}
+ adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){const E=adEggOn()&&V&&V.tasks&&V.tasks.egg;if(E){E.n=(E.n||0)+1;E.next=Date.now()+(E.gap||7200e3);dirty.pet=1;flush()}adEggAt=0;toast(T('ad_wait'));setTimeout(()=>sync(true),3000);setTimeout(()=>sync(true),9000)} /* 13.11 (Влад): кнопка й таймер оновлюються одразу, а не після наступної синхронізації */else adEggDrop()}).catch(()=>{adEggDrop();toast(T('ad_none'))})}catch(e){adEggDrop();toast(T('ad_err'))}})}
 const SUB_N={news:'@GRIMTALENEWS',chat:'@GRIMTALECHAT',pay:'@GRIMTALEPAYOUTS'};
 function tgOpen(u){const w=window.Telegram&&Telegram.WebApp;if(/^https:\/\/t\.me\//.test(u)&&w&&w.openTelegramLink)w.openTelegramLink(u);else if(w&&w.openLink)w.openLink(u);else window.open(u,'_blank')}
 function renderTasks(){
