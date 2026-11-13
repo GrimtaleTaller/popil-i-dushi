@@ -1510,9 +1510,11 @@ function renderSub(){
  e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
 }
 // 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває «Арена → Рейтинги»
-function rkPaint(){const e=$('rkPl');if(!e)return;const d=topData&&topData.power;let pl=0;if(d){const m=(d.rows||[]).find(r=>r.me)||d.me;pl=m&&m.place||0}e.textContent=pl?'#'+pl:''}
-function rkLoad(){if(document.visibilityState!=='visible')return;api('top',{kind:'power'}).then(r=>{topData[r.out.kind]=r.out;rkPaint()}).catch(()=>{})}
-if($('rkBtn'))$('rkBtn').onclick=()=>{haptic('light');topKind='power';lastSub.arena='top';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();setTimeout(()=>{const t=document.querySelector('.tabsw');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})},50)};
+const rkPlace=k=>{const d=topData&&topData[k];if(!d)return 0;const m=(d.rows||[]).find(r=>r.me)||d.me;return m&&m.place||0};
+function rkPaint(){const e=$('rkPl');if(!e)return;const p=rkPlace('power'),s=rkPlace('stage');e.innerHTML=[p?`<small>💪</small>#${p}`:'',s?`<small>🗺️</small>#${s}`:''].filter(Boolean).join(' · ')}
+function rkLoad(){if(document.visibilityState!=='visible')return;for(const k of ['power','stage'])api('top',{kind:k}).then(r=>{topData[r.out.kind]=r.out;rkPaint()}).catch(()=>{})}
+// тап — рейтинг, де в тебе найкраще місце (Сила чи Етап; при рівності — Сила). Влад 13.11
+if($('rkBtn'))$('rkBtn').onclick=()=>{haptic('light');const p=rkPlace('power'),s=rkPlace('stage');topKind=s&&(!p||s<p)?'stage':'power';lastSub.arena='top';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();setTimeout(()=>{const t=document.querySelector('.tabsw');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})},50)};
 setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
 $('lvl').onclick=$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click(); // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
