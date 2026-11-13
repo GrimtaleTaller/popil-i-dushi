@@ -303,7 +303,8 @@ function renderBoss(){
 // 13.11 (Влад «А»): одна цифра «💪 ±N» — як зміниться Сила, якщо вдягнути річ замість надітої (стрілки по статах плутали: крит важить більше за атаку)
 function powDelta(it){if(!V||!V.sc||!it||!SLOT[it.slot])return null;const eq=G.eq[it.slot];
  const base=eq?itemScore(eq):itemScore({id:-1,slot:it.slot,r:0,il:it.il,st:{}});return itemScore(it)-base}
-function powTag(it){const d=powDelta(it);if(d==null||Math.abs(d)<1)return '';return ` · <span class="${d>0?'up':'dn'} pwd">💪 ${d>0?'+':'−'}${fmt(Math.abs(d))}</span>`}
+function powTag(it){const d=powDelta(it);if(d==null||Math.abs(d)<1)return '';const lk=it.il>G.lvl; // річ вищого рівня: Сила — на майбутнє, сіро й із замком (13.11, Влад: «показує краще, але не вдягається»)
+ return ` · <span class="${lk?'pwlk':d>0?'up':'dn'} pwd">💪 ${d>0?'+':'−'}${fmt(Math.abs(d))}${lk?` · 🔒 ${T('lvl',{n:it.il})}`:''}</span>`}
 function statLine(st,cmp,g){
  return Object.keys(STATN).filter(k=>st[k]||(cmp&&cmp[k])).map(k=>{
   const v=st[k]||0,o=cmp?(cmp[k]||0):null,f=k==='crit'?v.toFixed(1)+'%':fmt(v);
@@ -396,7 +397,7 @@ function renderBag(){
  <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · 🔥${fmt(V.inv.cost)}</button>`:''}</div>`;
  const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
- for(const it of list){const eq=G.eq[it.slot],better=!eq||itemScore(it)>itemScore(eq);
+ for(const it of list){const eq=G.eq[it.slot],better=it.il<=G.lvl&&(!eq||itemScore(it)>itemScore(eq)); // «краще» лише для того, що можна вдягти зараз
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>

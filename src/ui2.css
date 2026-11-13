@@ -403,3 +403,4 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .gift-tx{text-align:left;font-size:14px;line-height:1.5;background:#ffffff08;border:1px solid #e2b97a33;border-radius:12px;padding:10px 12px;max-height:46vh;overflow:auto}
 .gift-rw{margin:12px 0 4px;font-size:20px}.gift-rw b{color:#f2c14e}
 .gift .btn{width:100%;margin-top:10px;font-size:16px;padding:12px}
+.pwd.pwlk{color:var(--mut,#8a8a8a);font-weight:700}
