@@ -1418,24 +1418,48 @@ function passBuyBind(el){el.querySelectorAll('[data-pbuy]').forEach(b=>b.onclick
 function tLeft(ms){ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);return d?T('t_dh',{d,h}):h?T('t_hm',{h,m}):T('t_m',{m})}
 function rwTxt(x){const a=[];if(x.gold)a.push('💰'+fmt(x.gold));if(x.shards)a.push('🔩'+fmt(x.shards));if(x.matN)a.push('⛏️'+MATN[x.mat]+'×'+x.matN);if(x.ash)a.push('⚱️'+x.ash);if(x.ch)a.push(chestIc(x.ch[0])+'×'+x.ch[1]);if(x.gem)a.push('💠'+MATN[x.gem-1]);if(x.cat)a.push('💎'+x.cat);if(x.egg)a.push(eggIc(x.egg));return a.join(' ')}
 const qTxt=q=>T('q_'+q.k,{n:fmt(q.n)});
+var passAll=false;function ptList(x){const a=[];if(x.ash)a.push(['⚱️',x.ash]);if(x.gold)a.push(['💰',fmt(x.gold)]);if(x.shards)a.push(['🔩',fmt(x.shards)]);if(x.matN)a.push(['⛏️',MATN[x.mat]+'×'+fmt(x.matN)]);if(x.ch)a.push([chestIc(x.ch[0]),'×'+x.ch[1]]);if(x.gem)a.push(['💠',MATN[x.gem-1]]);if(x.cat)a.push(['💎',x.cat]);if(x.egg)a.push([x.egg==='r'?'<span class="egg r">🥚</span>':'🥚',T(x.egg==='r'?'pass_egg_r':'pass_egg')]);return a}
+// 13.11: нагорода пропуску плитками — великий значок + кількість; got — забрано ✓, can — можна забрати (сяє), lk — платна закрита 🔒
+function ptTiles(x,st){const a=[];if(x.gold)a.push(['💰',fmt(x.gold)]);if(x.shards)a.push(['🔩',fmt(x.shards)]);if(x.matN)a.push(['⛏️',MATN[x.mat]+'×'+fmt(x.matN)]);if(x.ash)a.push(['⚱️',x.ash]);if(x.ch)a.push([chestIc(x.ch[0]),'×'+x.ch[1]]);if(x.gem)a.push(['💠',MATN[x.gem-1]]);if(x.cat)a.push(['💎',x.cat]);if(x.egg)a.push([x.egg==='r'?'<span class="egg r">🥚</span>':'🥚',T(x.egg==='r'?'pass_egg_r':'pass_egg')]);
+ return a.map(([i,n])=>`<div class="pt2-t ${st}"><b>${i}</b><span>${n}</span>${st==='got'?'<i>✓</i>':st==='lk'?'<i>🔒</i>':''}</div>`).join('')}
 function qRow(q,pts,rw){return `<div class="item" style="border-left-color:${q.ok?'#56c271':'#3a3340'}"><div class="ic">${q.ok?'✅':'📜'}</div><div class="info"><div class="nm">${qTxt(q)}</div><div class="bar"><i style="width:${Math.min(100,q.c/q.n*100)}%;background:${q.ok?'#56c271':'#f2c14e'}"></i></div><div class="sub">${fmt(Math.max(0,q.c))}/${fmt(q.n)} · +${pts} ${T('pass_pts_s')}${rw?' · '+rw:''}</div></div></div>`}
 function renderQuest(){
  const P=V.pass,el=$('p-quest');if(!P){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
  const can=P.lv>P.f.length||(P.prem&&P.lv>P.p.length),inLv=P.lv>=P.max?P.per:P.pts-P.lv*P.per;
- let h=`<div class="card"><h4>🎟️ ${T('pass_title')} · ${T('pass_lv',{l:P.lv,m:P.max})}</h4><div class="bar" style="height:10px"><i style="width:${P.lv>=P.max?100:inLv/P.per*100}%;background:linear-gradient(90deg,#b98a3e,#f2c14e)"></i></div>
- <div class="row" style="align-items:center;margin:6px 0 0"><span class="hint" style="flex:2;margin:0">${T('pass_pts',{p:P.pts})} · ${T('pass_end',{t:tLeft(P.end-Date.now())})}</span><button class="btn pri" id="qClaim" ${can&&!busy?'':'disabled'}>🎁 ${T('claim_all')}</button></div></div>`;
+ // 13.11 (Влад): пропуск яскравіше — медаль рівня з кільцем прогресу, смуга «X / Y очок до рівня N», дорога нагород з плитками
+ const mx=P.lv>=P.max,pct=mx?100:Math.max(0,Math.min(100,inLv/P.per*100)),nCl=[...Array(Math.min(P.lv,P.max)).keys()].reduce((a,k)=>a+(P.f.includes(k+1)?0:1)+(P.prem&&!P.p.includes(k+1)?1:0),0);
+ let h=`<div class="card pt2-top"><div class="pt2-tr"><div class="pt2-medal"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" class="bg"/><circle cx="24" cy="24" r="21" class="fg" stroke-dasharray="131.9" stroke-dashoffset="${(131.9*(1-pct/100)).toFixed(1)}"/></svg><b>${P.lv}</b><small>${T('pass_lv_s')}</small></div>
+ <div class="pt2-ti"><h4>🎟️ ${T('pass_title')}</h4><div class="pt2-sub">${T('pass_lv',{l:P.lv,m:P.max})} · ${T('pass_pts',{p:fmt(P.pts)})}</div><div class="pt2-time">⏳ ${T('pass_end',{t:tLeft(P.end-Date.now())})}${P.prem?' · <b class="pt2-on">🎫 '+T('pass_paid')+'</b>':''}</div></div></div>
+ <div class="pt2-bar"><i style="width:${pct}%"></i><span>${mx?T('pass_maxed',{m:P.max}):T('pass_next',{a:fmt(inLv),b:fmt(P.per),l:P.lv+1})}</span></div>
+ <p class="pt2-hint">${mx?T('pass_maxed_h'):T('pass_need',{n:fmt(P.per-inLv)})}</p>
+ <button class="btn pri pt2-claim${can?' glow':''}" id="qClaim" ${can&&!busy?'':'disabled'}>🎁 ${T('claim_all')}${can&&nCl?' · '+nCl:''}</button></div>`;
  
- if(!P.prem)h+=`<div class="card">${passBuyHtml()}</div>`; // 13.11: купівля платної стежки одразу під прогресом пропуску
+ // 14.11 (Влад, варіант Е): фокус на наступній нагороді + «далі на шляху» + розгортний список усіх рівнів
+ {const nx=Math.min(P.lv+1,P.max),pick=x=>x.egg?[x.egg==='r'?'<span class="egg r">🥚</span>':'🥚',T(x.egg==='r'?'pass_egg_r':'pass_egg')]:x.gem?['💠',MATN[x.gem-1]]:x.cat?['💎',x.cat]:x.ch?[chestIc(x.ch[0]),'×'+x.ch[1]]:ptList(x)[0];
+  h+=`<div class="card pe-f${mx?' done':''}">`;
+  if(mx)h+=`<div class="pe-t">🏆 ${T('pass_maxed',{m:P.max})}</div><p class="pt2-hint" style="text-align:center">${T('pass_maxed_h')}</p>`;
+  else{const fi=ptList(P.free[nx-1]),pi=ptList(P.paid[nx-1]);
+   h+=`<div class="pe-t">${T('pass_e_t',{l:nx,n:fmt(P.per-inLv)})}</div><div class="pe-two"><div class="pe-b">${fi.map(y=>`<div class="pe-i"><b>${y[0]}</b><span>${y[1]}</span></div>`).join('')}<small>${T('pass_free')}</small></div><div class="pe-b pd${P.prem?'':' lk'}">${pi.map(y=>`<div class="pe-i"><b>${y[0]}</b><span>${y[1]}</span></div>`).join('')}<small>🎫 ${T('pass_paid')}${P.prem?'':' 🔒'}</small></div></div><div class="pe-go">${T('pass_e_go')}</div>`}
+  h+=`</div><div class="card pe-w">`;
+  if(!mx&&nx<P.max){h+=`<p class="pe-ms" style="margin-top:0">${T('pass_e_next')}</p><div class="pe-mini">`;for(let i=nx+1;i<=Math.min(P.max,nx+5);i++){const m=pick(P.paid[i-1])||pick(P.free[i-1]);h+=`<div class="pe-m${i%5===0?' big':''}"><small>${T('pass_e_lv',{l:i})}</small><b>${m[0]}</b><span>${m[1]}</span></div>`}h+=`</div>`;
+   const bg=[...Array(P.max).keys()].map(k=>k+1).find(i=>i>nx&&i%5===0);if(bg){const m=pick(P.paid[bg-1]);h+=`<div class="pe-bigr"><b>${m[0]}</b><div>${T('pass_e_big',{l:bg})}<br><span>${ptList(P.paid[bg-1]).map(y=>y[0]+' '+y[1]).join(' + ')} · 🎫 ${T('pass_paid')}</span></div></div>`}}
+  h+=`<button class="pe-all" id="peAll">📜 ${T('pass_e_all',{m:P.max})} ${passAll?'▴':'▾'}</button>`;
+  if(passAll){h+=`<div class="pe-tbl"><div class="pe-th"><span>${T('pass_lv_s')}</span><span>${T('pass_free')}</span><span class="pd">🎫 ${T('pass_paid')}</span></div>`;
+   for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i),cell=(x,c,mk)=>`<div class="c ${c}">${ptList(x).map(y=>`<span class="ic">${y[0]}</span>${y[1]}`).join(' ')}${mk}</div>`;
+    h+=`<div class="pe-r${ok?' ok':''}${i===P.lv+1?' nx':''}"><div class="lv">${i}<small>${fmt(i*P.per)}</small></div>${cell(P.free[i-1],'fr',f?'<i class="ck">✓</i>':ok?'<i class="cn">🎁</i>':'')}${cell(P.paid[i-1],'pd',!P.prem?'<i class="lk">🔒</i>':p?'<i class="ck">✓</i>':ok?'<i class="cn">🎁</i>':'')}</div>`}
+   h+=`</div>`}
+  if(P.prem)h+=`<p class="hint">${T('pass_prem_on')}</p>`;h+=`</div>`}
+ if(!P.prem){const S={ash:0,cat:0,gem:0,ch:0,egg:0};P.paid.forEach(x=>{S.ash+=x.ash||0;S.cat+=x.cat||0;S.gem+=x.gem?1:0;S.ch+=x.ch?x.ch[1]:0;S.egg+=x.egg?1:0});
+  const it=shopData&&shopData.items&&shopData.items.find(x=>x.k==='pass'),st=it?it.stars:125,soon=V.launch&&!V.isAdmin;
+  h+=`<div class="card pt2-buy"><div class="pt2-buy-h">🎫 ${T('pass_buy_t')}</div><p class="pt2-buy-s">${T('pass_buy_sum')}</p><div class="pt2-buy-g">${S.ash?`<span>⚱️<b>${fmt(S.ash)}</b><small>${T('pass_s_ash')}</small></span>`:''}${S.gem?`<span>💠<b>×${S.gem}</b><small>${T('pass_s_gem')}</small></span>`:''}${S.ch?`<span>${chestIc(3)}<b>×${S.ch}</b><small>${T('pass_s_ch')}</small></span>`:''}${S.cat?`<span>💎<b>×${S.cat}</b><small>${T('pass_s_cat')}</small></span>`:''}${S.egg?`<span>🥚<b>×${S.egg}</b><small>${T('pass_s_egg')}</small></span>`:''}</div>
+  <p class="hint" style="margin:8px 0">${T('pass_buy_h')}</p><div class="row shopb"><button class="btn pri" data-pbuy="stars"${soon?' disabled':''}>⭐ ${st}</button><button class="btn" data-pbuy="shop">💎 GRAM · 💵 USDT ›</button></div></div>`} // 13.11: купівля платної стежки одразу під прогресом пропуску
  const dr=rwTxt(P.dqR);
  const BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
  h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_in_tasks')}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
  h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`</div>`; // 09.11: тижневий Сувій прибрано (лише з Відьми в Болоті) → Сувій вічності
- h+=`<div class="card"><h4>🏅 ${T('pass_track')}</h4><div class="ptrack"><div class="ph"><b>#<small class="ptp">${T('pass_ptsh')}</small></b><span>${T('pass_free')}</span><span>🎫 ${T('pass_paid')}</span></div>`;
- for(let i=1;i<=P.max;i++){const ok=i<=P.lv,f=P.f.includes(i),p=P.p.includes(i);
-  h+=`<div class="${ok?'on':''}"><b>${i}<small class="ptp">${i*P.per}</small></b><span>${f?'✓ ':''}${rwTxt(P.free[i-1])}</span><span class="${P.prem?'':'lock'}">${p?'✓ ':P.prem?'':'🔒 '}${rwTxt(P.paid[i-1])}</span></div>`}
- h+=`</div>${P.prem?`<p class="hint">${T('pass_prem_on')}</p>`:''}</div>`;
+ 
  h+=`<p class="hint">${T('pass_hint')}</p>`;
- el.innerHTML=h;passBuyBind(el);
+ el.innerHTML=h;passBuyBind(el);if($('peAll'))$('peAll').onclick=()=>{passAll=!passAll;renderQuest()};
  $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
