@@ -241,7 +241,7 @@ function sockView(it){const n=sockN(it);if(!n)return '';const gm=it.gm||[];let h
 function itemScore(it,noSet){const x=V&&V.sc,g=gemSum(it);if(!x)return((it.st.atk||0)+g.atk)*2+((it.st.hp||0)+g.hp)*0.25+((it.st.def||0)+g.def)*1.5;
  const em=x.em*(1+starStep()*(it.sr||0)),o=x.eqs[it.slot]||{a:0,h:0,d:0,c:0},va=(it.st.atk||0)*em+g.atk,vh=(it.st.hp||0)*em+g.hp,vd=(it.st.def||0)*em+g.def,vc=(it.st.crit||0)+g.crit;
  const cur=G.eq[it.slot],AF=x.af||{},fo=afOf(cur&&cur.id!==it.id?cur:null),fn=afOf(cur&&cur.id===it.id?null:it),f=k=>(1+((AF[k]||0)-fo[k]+fn[k])/100)/(1+(AF[k]||0)/100); // властивості й зірки (05.11), як itemScore на сервері
- const k=noSet?1:setK(it),atk=(x.a-o.a+va)*x.ma*k*f('atk'),cc=x.c-o.c+vc,crit=Math.min(60,cc),cd=2+Math.max(0,cc-60)*((V.crit&&V.crit.over)||0)/100+((AF.cdm||0)-fo.cdm+fn.cdm)/100;return Math.round(atk*(1+crit/100*(cd-1))*2+(x.h-o.h+vh)*x.mh*k*f('hp')*0.25+(x.d-o.d+vd)*x.md*k*f('def')*1.5)}
+ const k=noSet?1:setK(it),atk=(x.a-o.a+va)*x.ma*k*f('atk'),cc=x.c-o.c+vc,crit=Math.min(60,cc),cd=2+Math.max(0,cc-60)*((V.crit&&V.crit.over)||0)/100+((AF.cdm||0)-fo.cdm+fn.cdm)/100;return Math.round((atk*(1+crit/100*(cd-1))*2+(x.h-o.h+vh)*x.mh*k*f('hp')*0.25+(x.d-o.d+vd)*x.md*k*f('def')*1.5)*(1+0.18*Math.max(0,((AF.boss||0)-fo.boss+fn.boss)/100)))} // 13.11 (баг від Влада): «урон по босах» теж у Силі, як POW_EQ.bd=0.18 на сервері — без нього гірші речі позначались «краще»
 // ---------- властивості й зірки речей (05.11) ----------
 const AFK=['atk','hp','def','boss','gold','xp','cdm'],AFI={atk:'⚔️',hp:'❤️',def:'🛡️',boss:'👑',gold:'💰',xp:'📘',cdm:'💥'};
 const starStep=()=>(V&&V.afx&&V.afx.star.step)||0.08;
