@@ -251,6 +251,7 @@ function setK(it){if(it.r==null)return 1;const cur=setPowWith(null,-1);return(1+
 // внесок самої речі без впливу на сет (02.11: інакше легендарки на ковадлі показували мінус — «розбили б» сет прадавніх)
 function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore(it,1)-itemScore({slot:it.slot,st:{},il:it.il,gm:[]},1)}
 function renderTop(){
+ {const hs=$('hsSub');if(hs&&G&&document.body.classList.contains('hs-open'))hs.textContent=T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)})} // 13.11 (Влад): рівень і Сила в шапці «Герой» оновлюються разом із верхньою панеллю
  if(!G)return;
  const gold=G.gold+pend.gold;let xp=G.xp+pend.xp;
  $('lvl').textContent=G.lvl;$('gold').textContent=fmt(gold);$('souls').textContent=fmt(G.souls||0);$('ashv').textContent=fmt(G.ash||0);$('pw').textContent=T('power',{n:fmt(power(H))});
