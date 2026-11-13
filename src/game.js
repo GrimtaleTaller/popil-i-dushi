@@ -1,5 +1,8 @@
 (function(){
 'use strict';
+// 13.11 (баг від GameFi): годинник телефона може відставати/поспішати (яйце «ще 1 год», а сервер — «вже вилупилось»).
+// Усі таймери гри рахуємо за часом сервера: view.now задає зсув, якщо різниця > 1 хв.
+const __now0=Date.now.bind(Date);let SKEW=0;Date.now=()=>__now0()+SKEW;
 // ---------- налаштування ----------
 const API='https://fatpfzstkjtfcunlwnvx.supabase.co/functions/v1/game';
 var lastSync=0,VC=null,VH=null; // остання синхронізація; повний view і хеші його частин (дельта, 11.11)
@@ -130,6 +133,7 @@ function openBot(){const u='https://t.me/Grimtalebot';const w=tg();if(w&&w.openT
 function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CHAT);else window.open(GAME_CHAT,'_blank','noopener')}
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
+ if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
  V=v;G=v.s;H=v.hero;lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
