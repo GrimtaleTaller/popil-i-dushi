@@ -507,6 +507,12 @@ function bindGem(){const P=$('p-forge');
  P.querySelectorAll('[data-gr]').forEach(b=>b.onclick=()=>{const[id,i]=b.dataset.gr.split(':').map(Number);const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(x=>x&&x.id===id);const k=it&&it.gm&&it.gm[i];if(!k)return;const c=gemCfg().out[gemP(k).l-1];
   modal(`<div class="big">◆</div><h3>${gemName(k)}</h3><p>${T('gem_out_q',{c})}</p>`,T('gem_out_btn',{c}),()=>act('gemRemove',{id,i},()=>toast(T('gem_out_ok',{g:gemName(k)}))))}); // закрити — червоним ✕ (кнопку «Скасувати» прибрано)
  if(gemSel){const e=P.querySelector(`[data-gi="${gemSel}"],[data-gr^="${gemSel}:"]`);if(e)e.scrollIntoView({block:'center'});gemSel=null}}
+// 13.11 (Влад): вибір легендарки, яку спалює руна. Без каменів (як на сервері); за замовчуванням — найслабша, що не краща за надіту
+let enchSel=null;
+function enchLegs(){return G.inv.filter(i=>i.r===4&&!(i.gm&&i.gm.length)).sort((a,b)=>itemVal(a)-itemVal(b))}
+function enchPicked(L){if(enchSel){const x=L.find(i=>i.id===enchSel);if(x)return x}const eqOf=i=>G.eq[i.slot];return L.find(i=>!eqOf(i)||itemScore(i)<=itemScore(eqOf(i)))||L[0]||null}
+function enchPickModal(){const L=enchLegs(),cur=enchPicked(L);if(!L.length)return;
+ modal(`<div class="big">🔥</div><h3>${T('ench_pick_t')}</h3><div class="gpick">${L.map(i=>`<button class="btn${cur&&cur.id===i.id?' pri':''}" data-epk="${i.id}" style="text-align:left;display:flex;gap:8px;align-items:center"><span style="width:34px;flex:0 0 34px">${gearIc(i)}</span><span><b style="color:${RAR[i.r].c}">${itemName(i)}</b><small style="display:block">${SLOT[i.slot].n} · ${T('lvl',{n:i.il})} · ≈ ${T('power',{n:fmt(Math.round(itemVal(i)))})}</small></span></button>`).join('')}</div>`,null,null,()=>document.querySelectorAll('[data-epk]').forEach(b=>b.onclick=()=>{enchSel=+b.dataset.epk;queue.shift();showModal();renderForge()}),'epick')}
 function renderForge(){
  const F=V.forge,legs=s=>G.inv.filter(i=>i.r===4&&i.slot===s);
  if(!mSlot||!legs(mSlot).length)mSlot=SLOTS.find(s=>legs(s).length>=3)||SLOTS.find(s=>legs(s).length)||'weapon';
@@ -514,7 +520,7 @@ function renderForge(){
  mN=Math.max(need,Math.min(mN,Math.max(need,maxN)));
  const extra=Math.max(0,mN-need),fails=G.mythFails||0,chance=Math.min(F.myth.cap,F.myth.base+F.myth.extra*extra+F.myth.fail*fails);
  const il=LG.length?Math.max(...LG.slice(0,mN).map(i=>i.il)):0,souls=Math.round(150+il*5);
- const ec=F.ench,legAll=G.inv.filter(i=>i.r===4).length,eMax=G.ench>=F.enchMax;
+ const ec=F.ench,eLegs=enchLegs(),legAll=eLegs.length,eMax=G.ench>=F.enchMax,eIt=enchPicked(eLegs);
  let h='';if(fsub==='res')h+=`<div class="card"><h4>${T('res')}</h4><div class="resg">
   <div><span>${T('souls')}</span><b>${fmt(G.souls)}</b></div><div><span>${T('ash')}</span><b>${fmt(G.ash)}</b></div>
   <div><span>${T('shards')}</span><b>${fmt(G.shards)}</b></div><div><span>${T('cats')}</span><b>${G.cat}</b></div>
@@ -528,7 +534,8 @@ function renderForge(){
  if(fsub==='ench')h+=`<div class="card"><h4>${T('ench_title',{l:G.ench,m:F.enchMax})}</h4>
   <p class="hint">${T('ench_hint',{p:Math.round(F.enchStep*100),c:Math.round(G.ench*F.enchStep*100)})}</p>
   ${eMax?`<p>${T('max_reached')}</p>`:`<p class="hint">${T('ench_cost',{n:legAll})} · 🔩 ${fmt(ec.shards)} · 💰 ${fmt(ec.gold)}</p>
-  <div class="row"><button class="btn pri" id="ench" ${legAll&&G.shards>=ec.shards&&G.gold>=ec.gold?'':'disabled'}>${T('ench_btn',{n:G.ench+1})}</button></div>`}</div>`;
+  ${eIt?`<div class="item" style="border-left-color:${RAR[eIt.r].c};margin:8px 0"><div class="ic">${gearIc(eIt)}</div><div class="info"><div class="sub">🔥 ${T('ench_burn')}</div><div class="nm" style="color:${RAR[eIt.r].c}">${itemName(eIt)} ${starsOf(eIt)}</div><div class="sub">${SLOT[eIt.slot].n} · ${T('lvl',{n:eIt.il})} · ≈ ${T('power',{n:fmt(Math.round(itemVal(eIt)))})}</div></div><div class="act"><button class="btn" id="enchPick">${T('ench_change')}</button></div></div>`:''}
+  <div class="row"><button class="btn pri" id="ench" ${eIt&&G.shards>=ec.shards&&G.gold>=ec.gold?'':'disabled'}>${T('ench_btn',{n:G.ench+1})}</button></div>`}</div>`;
  const ST=F.set||{a:0,e:0,n:6},SC=F.setCfg||{anc:{each:6,souls:40,pow:15},eter:{each:16,souls:60,pow:30}};
  const setBan=(k,c,ic)=>{const x=SC[k],have=k==='anc'?ST.a+ST.e:ST.e,on=k==='anc'?ST.fullA&&!ST.fullE:ST.fullE;return `<div class="setban" style="border-color:${c}55"><span style="color:${c}">${ic}</span><div>${T(k==='anc'?'set_anc':'set_eter',{e:x.each,s:x.souls,p:x.pow})}<div class="sub">${T('set_have',{n:have,m:ST.n})}${k==='anc'&&ST.e?' '+T('set_incl_e',{a:ST.a,e:ST.e}):''}${on?' · <b style="color:var(--green)">'+T('set_on')+'</b>':''}</div></div></div>`};
  const slotG=(cnt,sel,attr,need)=>`<div class="slotg">${SLOTS.map(s=>{const n=cnt(s);return `<button ${attr}="${s}" class="${s===sel?'act':''}"><i class="${n>=need?'ok':''}">${n}</i>${SLOT[s].ic}<span>${SLOT[s].n}</span></button>`}).join('')}</div>`;
@@ -568,7 +575,8 @@ function renderForge(){
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
  if($('smelt')){$('smelt').onclick=()=>act('smelt',{n:1},r=>toast(T('smelted',{n:r.out.n})));$('smeltAll').onclick=()=>act('smelt',{n:20},r=>toast(T('smelted',{n:r.out.n})))}
  if($('disJunk'))$('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
- const eb=$('ench');if(eb)eb.onclick=()=>act('enchant',{},r=>{toast(T('ench_done',{n:r.out.ench}));haptic('heavy')});
+ const eb=$('ench');if(eb)eb.onclick=()=>{const it=enchPicked(enchLegs());if(!it)return;act('enchant',{id:it.id},r=>{enchSel=null;toast(T('ench_done',{n:r.out.ench}));haptic('heavy')})};
+ if($('enchPick'))$('enchPick').onclick=enchPickModal;
  $('p-forge').querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mSlot=b.dataset.ms;mN=need;renderForge()});
  if($('mMinB'))$('mMinB').onclick=()=>{mN=need;renderForge()};
  if($('mMaxB'))$('mMaxB').onclick=()=>{mN=Math.min(Math.max(need,maxN),need+maxExtra);renderForge()};
