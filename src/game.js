@@ -915,7 +915,9 @@ function shopReload(){shopData=null;dirty.shop=1;flush()}
 function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
 // 12.11 (Влад): підкатегорії магазину — Вигідне / VIP / Зручність / Покупки; новий товар без категорії — у «Зручність»
 let ssub='deal';
-const SHOP_CAT={ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
+const n3=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'\u202f'); // 1 500 — точна сума пакета без «K»
+const ASH_BON={ash100:1,ash500:1,ash1000:1,ash5000:1}; // пакети з бонусом +50% на першу покупку за добу (сервер — SHOP.bon)
+const SHOP_CAT={ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
 function renderShop(){
  const el=$('p-shop');if(!el)return;
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
@@ -926,12 +928,13 @@ function renderShop(){
   ${soon?`<p class="hint" style="color:var(--gold)">${T('shop_soon_t')}</p>`:''}
   ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
  const vips=S.items.filter(x=>VIP_D[x.k]),pd=x=>x.stars/VIP_D[x.k],best=vips.length?vips.reduce((a,b)=>pd(b)<pd(a)?b:a):null,base=vips.find(x=>x.k==='vip1');
- const list=ssub==='deal'?[...S.items.filter(x=>x.k==='starter'&&x.left!==0),...(best?[best]:[])]:ssub==='mine'?[]:S.items.filter(x=>(SHOP_CAT[x.k]||'conv')===ssub);
+ const ashB=S.items.find(x=>x.ash&&x.bon>0),list=ssub==='deal'?[...S.items.filter(x=>x.k==='starter'&&x.left!==0),...(best?[best]:[]),...(ashB?[ashB]:[])]:ssub==='mine'?[]:S.items.filter(x=>(SHOP_CAT[x.k]||'conv')===ssub);
  if(ssub!=='deal')h=''; // шапка з пулом — лише на «Вигідне»
  if(ssub==='deal')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_deal_h')}</p>`;
+ if(ssub==='ash')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_ash_h',{a:fmt(G.ash||0)})}</p><p class="hint" style="margin:0 4px 10px">🔥 ${T('shop_d_ash')}</p>`;
  for(const it of list){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||''),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
-  h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${save}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4><p class="hint">${desc}</p>${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
+  h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${save}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}${it.bon>0?`<div class="shtag">🔥 ${T('shop_bon_tag')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4>${desc?`<p class="hint">${desc}</p>`:''}${it.ash?`<p class="shash">${it.bon>0?`<s>⚱️ ${n3(it.ash)}</s> <b>⚱️ ${n3(it.ash+it.bon)}</b> <em>+${n3(it.bon)}</em>`:`<b>⚱️ ${n3(it.ash)}</b>`}</p>${it.bon===0&&ASH_BON[it.k]?`<p class="hint">${T('shop_bon_used')}</p>`:''}`:''}${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
    ${done?"":vipLine(it.k)}${cardLine(it.k)}${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
    ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
@@ -1514,7 +1517,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}</button>`).join('');
