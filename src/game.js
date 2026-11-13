@@ -316,7 +316,7 @@ function renderHero(){
   <div><span>${T('ench')}</span><b>+${Math.round((G.ench||0)*V.forge.enchStep*100)}%</b></div><div><span>${T('souls_h')}</span><b>${fmt(V.forge.soulsPerHour)}</b></div>
   <div><span>${T('act_days')}</span><b>${V.payout?V.payout.myDays:'—'}</b></div></div>
   <p class="hint">${T('crit_hint',{v:(V.crit&&V.crit.over)||0})}</p><p class="hint">${T('hero_hint')}</p></details>`;
- $('p-hero').innerHTML=h;$('hStats').ontoggle=e=>{statsOpen=e.target.open}; /* характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями */$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best')));
+ $('p-hero').innerHTML=h;$('hStats').ontoggle=e=>{statsOpen=e.target.open}; /* характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями */$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>{toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best'));gemMoveAsk(r.out.gm)});
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
  $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
  $('p-hero').querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{const k=b.dataset.hq,keep=lastSub.bag;lastSub.bag=k;document.querySelector(tabBtn('bag')).click();if(k==='pet'||k==='train')lastSub.bag=keep});
@@ -392,7 +392,7 @@ function renderBag(){
  if(cc)$('openC').onclick=()=>act('openChests',{},r=>{toast(T('opened',{n:r.out.n})+(r.out.best>=3?' · '+RAR[r.out.best].n+'!':''));if(r.out.best>=3)haptic('heavy')});
  if(G.inv.some(i=>i.nw)){G.inv.forEach(i=>delete i.nw);api('seen').catch(()=>{})}
  $('p-bag').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{bagFilter=b.dataset.f;renderBag()});
- $('p-bag').querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>act('equip',{id:+b.dataset.eq},()=>haptic('light')));
+ $('p-bag').querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>act('equip',{id:+b.dataset.eq},r=>{haptic('light');gemMoveAsk(r.out&&r.out.gm)}));
  $('p-bag').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell([+b.dataset.sell]));
  $('p-bag').querySelectorAll('[data-dis]').forEach(b=>b.onclick=()=>dismantle([+b.dataset.dis]));
  $('p-bag').querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>{const it=G.inv.find(i=>i.id===+b.dataset.rel);if(!it)return;modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p>${T('relic_ask',{a:(V.forge.relicAsh||{})[it.r]||0})}</p>`,T('relic_btn'),()=>act('relicAsh',{ids:[it.id]},r=>toast('⚱️ +'+r.out.ash)))});
@@ -1187,6 +1187,10 @@ async function act(a,args,ok){
 
 // ---------- модалки ----------
 const queue=[];
+// 13.11 (ідея GameFi, Влад «А»): у знятій речі камені — пропонуємо перенести в нову за ціну вилучення
+function gemMoveAsk(o){if(!o||!o.pairs)return;const n=o.moved+o.back,bk=o.back?`<p class="hint">${T('gm_mv_back',{b:o.back})}</p>`:'';
+ if((G.ash||0)<o.cost){modal(`<div class="big">💎</div><p>${T('gm_mv_noash',{n,c:fmt(o.cost)})}</p>`,'OK',null,null,'gmmv');return}
+ modal(`<div class="big">💎</div><p>${T('gm_mv_q',{n,c:fmt(o.cost)})}</p>${bk}`,T('gm_mv_go'),()=>act('gemMove',{pairs:o.pairs},r=>{haptic('light');toast(T('gm_mv_ok',{m:r.out.moved,c:fmt(r.out.cost)})+(r.out.back?' · '+T('gm_mv_bk',{b:r.out.back}):''))}),null,'gmmv')}
 function modal(html,btn,cb,on,tag){if(tag&&queue.some(q=>q.tag===tag))return;queue.push({html,btn,cb,on,tag});if(queue.length===1)showModal()} // on — підключити обробники саме цього вікна, коли воно показане (05.11); tag — не відкривати те саме вікно двічі
 // вікно з дією (cb) завжди можна закрити без дії: червоний ✕ у куті або тап поза вікном (04.11)
 function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb||!q.btn;$('mbox').innerHTML=(cl?`<button class="mx" id="mcl" aria-label="${T('m_close')}">✕</button>`:'')+q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{if(q.cb&&q.cb()===false)return;queue.shift();showModal()}; // cb може повернути false — вікно лишається (напр., не обрано отримувача)
