@@ -524,3 +524,12 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .ctg .row .btn{flex:0 0 auto}
 .rules{text-align:left}.rules h3{text-align:center}.rules ol{padding-left:20px;margin:6px 0;font-size:13.5px;line-height:1.5}.rules li{margin-bottom:7px}.rules b{color:var(--gold)}
 .newsimg{width:100%;aspect-ratio:1280/716;object-fit:cover;background:#1a1420;border-radius:12px;margin:0 0 10px;display:block;box-shadow:0 4px 16px #000a}
+/* 14.11: чат клану на весь екран */
+body.chfull{overflow:hidden}
+.chat.full{position:fixed;left:0;right:0;top:0;height:100vh;height:100dvh;z-index:18;background:#0e0c10;padding:calc(var(--tg-content-safe-area-inset-top,0px) + var(--tg-safe-area-inset-top,0px) + 6px) 10px calc(var(--tg-safe-area-inset-bottom,0px) + 6px);box-sizing:border-box}
+.chat.full .chwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.chat.full .chfeed{flex:1;min-height:0;height:auto}
+.chhead{display:flex;align-items:center;gap:10px;margin:0 0 6px}
+.chhead .chback{flex:none;font-size:20px}
+.chht{display:flex;flex-direction:column;min-width:0;line-height:1.2}.chht b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chht #chOn{font-size:12px}
+.chat.full .chtop{margin:0 2px 4px}.chat.full .chtop .sub{text-align:left}

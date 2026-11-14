@@ -1163,11 +1163,14 @@ var chatU=0;const CH={clan:0,msgs:[],sys:[],pin:null,after:0,since:0,logAfter:0,
 const CHQ=['chq_dng','chq_keys','chq_help','chq_hi'];
 async function chatApi(action,args){const body={action,args:args||{},fp:devFp()};const headers={'content-type':'application/json'};const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}const j=await r.json().catch(()=>({ok:false,err:'bad'}));if(!j.ok)throw new Error(j.err||'err');return j.out}
-function chShell(){return `<div id="chatRoot" class="chat"><div class="chtop"><span id="chOn"></span><span class="sub">${T('chat_hint')}</span></div><div id="chPin"></div><div class="chwrap"><div id="chFeed" class="chfeed"><p class="hint" style="text-align:center">${T('loading')}</p></div><button id="chDown" class="chdown" style="display:none">↓</button></div><div id="chTyping" class="chtyping"></div><div id="chReply"></div>
+// 14.11 (Влад: «незручно читати») — чат клану на весь екран: шапка з «назад», назвою клану й онлайном; системна «Назад» Telegram теж закриває
+function chShell(){const cn=(clanData&&clanData.clan&&clanData.clan.name)||'';return `<div id="chatRoot" class="chat full"><div class="chhead"><button class="chb chback" id="chBack" aria-label="back">←</button><div class="chht"><b>💬 ${esc(cn)}</b><span id="chOn"></span></div></div><div class="chtop"><span class="sub">${T('chat_hint')}</span></div><div id="chPin"></div><div class="chwrap"><div id="chFeed" class="chfeed"><p class="hint" style="text-align:center">${T('loading')}</p></div><button id="chDown" class="chdown" style="display:none">↓</button></div><div id="chTyping" class="chtyping"></div><div id="chReply"></div>
  <div class="chqp">${CHQ.map(k=>`<button data-chq="${k}">${T(k)}</button>`).join('')}</div><div class="chin" id="chIn"><button class="chb" id="chItem" title="${T('ch_item')}">🎒</button><textarea id="chText" rows="1" maxlength="300" placeholder="${T('ch_ph')}"></textarea><button class="chb chsend" id="chSend">➤</button></div></div>`}
-function chStop(){clearTimeout(CH.t);CH.t=null}
+function chExit(){if(csub!=='chat')return;csub='main';dirty.clan=1;showPane()}
+function chFull(on){document.body.classList.toggle('chfull',!!on);try{const b=tg()&&tg().BackButton;if(b){if(on){b.onClick(chExit);b.show()}else{b.offClick(chExit);b.hide()}}}catch(e){}}
+function chStop(){clearTimeout(CH.t);CH.t=null;if(document.body.classList.contains('chfull'))chFull(0)}
 function chMount(C){if(CH.clan!==C.clan.id){Object.assign(CH,{clan:C.clan.id,msgs:[],sys:[],pin:null,after:0,since:0,logAfter:0,first:1,reply:null,bottom:1})}
- const F=$('chFeed'),fit=()=>{if(!document.body.contains(F))return;const r=F.getBoundingClientRect(),vh=(tg()&&tg().viewportHeight)||innerHeight;F.style.height=Math.max(180,vh-r.top-176)+'px'};fit();CH.fit=fit;
+ const F=$('chFeed'),fit=()=>{if(!document.body.contains(F))return;const r=F.getBoundingClientRect(),vh=(tg()&&tg().viewportHeight)||innerHeight;const R=$('chatRoot');if(R&&R.classList.contains('full')){R.style.height=vh+'px';F.style.height='';return}F.style.height=Math.max(180,vh-r.top-176)+'px'};fit();CH.fit=fit;chFull(1);if($('chBack'))$('chBack').onclick=chExit;
  if(!CH.fitOn){CH.fitOn=1;addEventListener('resize',()=>CH.fit&&CH.fit());try{const w=tg();if(w&&w.onEvent)w.onEvent('viewportChanged',()=>CH.fit&&CH.fit())}catch(e){}}
  F.onscroll=()=>{CH.bottom=F.scrollHeight-F.scrollTop-F.clientHeight<40;$('chDown').style.display=CH.bottom?'none':'';if(F.scrollTop<30&&CH.msgs.length>=60&&!CH.old)chOlder()};
  $('chDown').onclick=()=>{F.scrollTop=F.scrollHeight};
@@ -1728,7 +1731,7 @@ const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'tasks'};
 // 13.11 (Влад): у вікні Сумки без Вихованця й Тренування (вони є кнопками на головному екрані), Журнал — у самому кінці, щоб легше знайти «💸 Вивід»
 const groupOf=t=>['bag','market','pet','train','log','prof','wd'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
-function showPane(){if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
+function showPane(){if((tab!=='clan'||csub!=='chat')&&document.body.classList.contains('chfull'))chFull(0);if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 // «Герой» (Спорядження / Вихованець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
 // Підвкладки й панелі героя переносяться в шторку й повертаються назад при закритті. Закрити: ✕, тап по затемненню, свайп униз по шапці.
 let prevTab='hero';const HERO_PANES=['bag','market','pet','train','log','prof','wd'];
