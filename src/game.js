@@ -302,8 +302,8 @@ function renderTop(){
  if(B.m){$('mhp').style.width=Math.max(0,B.m.hp/B.m.max*100)+'%';$('mhpt').textContent=fmt(Math.max(0,B.m.hp))+' / '+fmt(B.m.max)}
  $('timer').style.display=B.rep?'block':'none';if(B.rep)$('timeri').style.width=Math.max(0,(BOSS_TIME-B.rep.t)/BOSS_TIME*100)+'%';
  const nw=G.inv.filter(i=>i.nw).length,nb=$('newb');nb.style.display=nw?'inline':'none';nb.textContent=nw;
- {const cb=document.querySelector('.tabs button[data-t="clan"]');if(cb){let b=cb.querySelector('.nbd');const n=chatU||0;if(n&&!b){b=document.createElement('i');b.className='nbd';cb.appendChild(b)}if(b){b.textContent=n>99?'99+':n;b.style.display=n?'':'none'}}} // 14.11: непрочитані в чаті клану
- {const qb=$('qb'),d=subDots();if(qb)qb.style.display=d.quest||d.ach||d.tasks?'inline':'none';document.querySelectorAll('#subtabs button[data-s]').forEach(b=>b.classList.toggle('sdot',!!d[b.dataset.s]))} // 09.11 (Влад): «!» на Завданнях — і крапка на тій підвкладці, де є що забрати
+ {const cb=document.querySelector('.tabs button[data-t="clan"]');if(cb){let b=cb.querySelector('.cbadge');const n=chatU||0;if(n&&!b){b=document.createElement('span');b.className='badge cbadge';cb.appendChild(b)}if(b){b.textContent=n>99?'99+':n;b.style.display=n?'':'none'}}} // 14.11: непрочитані в чаті клану
+ {const qb=$('qb'),d=subDots();if(qb)qb.style.display=d.quest||d.ach||d.tasks?'inline':'none';document.querySelectorAll('#subtabs button[data-s]').forEach(b=>b.classList.toggle('sdot',!!d[b.dataset.s]||(b.dataset.s==='chat'&&chatU>0&&csub!=='chat')))} // 09.11 (Влад): «!» на Завданнях — і крапка на тій підвкладці, де є що забрати
  {const hc=$('hsCur');if(hc&&document.body.classList.contains('hs-open'))hc.innerHTML=`<span>💰 ${fmt(gold)}</span><span>🔥 ${fmt(G.souls||0)} · ⚱️ ${fmt(G.ash||0)}</span>`} // баланс у шторці «Герой»: верхня панель під нею не видна (04.11)
  if(tab==='train')renderTrainBtns();
 }
@@ -1761,7 +1761,7 @@ function renderSub(){
  const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:tab;e.style.display='flex';
- const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}${k==='chat'&&chatU&&cur!=='chat'?`<i class="sbd">${chatU>99?'99+':chatU}</i>`:''}</button>`).join('');
+ const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}">${T(l)}</button>`).join('');
  e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
 }
 // 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває «Арена → Рейтинги»
