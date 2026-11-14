@@ -276,6 +276,11 @@ var wdUsd=null;function wdChip(u){if(u!=null)wdUsd=Number(u)||0;const c=$('wdChi
 var giftBusy=0;function giftShow(L){if(!L||!L.length)return;for(const g of L){if(queue.some(q=>q.tag==='gift'+g.id))continue;
  modal(`<div class="gift"><div class="gift-ic">🎁</div><h3>${T('gift_t')}</h3><div class="gift-tx">${esc(g.t).replace(/\n/g,'<br>')}</div>${g.ash?`<div class="gift-rw">⚱️ <b>${String(g.ash)}</b></div>`:''}<button class="btn pri" id="giftGo${g.id}">${g.ash?T('gift_claim_a',{a:String(g.ash)}):T('gift_claim')}</button></div>`,null,null,()=>{const b=$('giftGo'+g.id);if(b)b.onclick=()=>{if(giftBusy)return;giftBusy=1;b.disabled=true;
   act('giftClaim',{id:g.id},r=>{haptic('heavy');if(r.out&&r.out.ash)toast(T('gift_got',{a:String(r.out.ash)}))}).then(()=>{giftBusy=0;if(queue[0]&&queue[0].tag==='gift'+g.id){queue.shift();showModal()}})}},'gift'+g.id)}} // невдача (мережа) — вікно закривається, подарунок прийде знову з наступним sync
+// 14.11 (Влад бачив стару версію з кешу Telegram): перевірка нової версії гри — раз на 5 хв і при поверненні в гру; плашка «Оновити»
+var MYV=+((([...document.scripts].find(x=>/game\.js\?v=/.test(x.src))||{}).src||'').match(/v=(\d+)/)||[])[1]||0,updShown=0;
+function verCheck(){if(!MYV||updShown||document.visibilityState!=='visible')return;fetch('index.html?t='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/game\.js\?v=(\d+)/);if(m&&+m[1]>MYV)showUpd(+m[1])}).catch(()=>{})}
+function showUpd(nv){if(updShown)return;updShown=1;const b=document.createElement('div');b.className='updbar';b.innerHTML=`<span>🔄 ${T('upd_t')}</span><button class="btn pri" id="updGo">${T('upd_go')}</button>`;document.body.appendChild(b);$('updGo').onclick=()=>{haptic('light');location.replace(location.pathname+'?u='+nv+location.hash)}}
+setTimeout(verCheck,3e4);setInterval(verCheck,3e5);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(verCheck,1500)});
 var heroPenK='';function heroPen(){const hn=document.querySelector('.f.hero .fname');if(!hn)return;const k=JSON.stringify(V&&V.pen||null)+T('hero_name');if(k===heroPenK)return;heroPenK=k;hn.innerHTML=penI(V&&V.pen,22)+esc(T('hero_name'))}
 let lvlSyncAt=0;
 function renderTop(){
