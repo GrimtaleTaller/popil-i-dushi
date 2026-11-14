@@ -86,13 +86,13 @@ function devFp(){if(devFpS!==null)return devFpS;let c='';
  try{const cv=document.createElement('canvas');cv.width=220;cv.height=40;const x=cv.getContext('2d');x.textBaseline='top';x.font='16px Arial';x.fillStyle='#f60';x.fillRect(100,1,62,20);x.fillStyle='#069';x.fillText('Grimtale ⚔️ 13.11',2,15);x.fillStyle='rgba(102,204,0,0.7)';x.fillText('Grimtale ⚔️ 13.11',4,17);const d=cv.toDataURL();let h=0;for(let i=0;i<d.length;i++)h=(h*31+d.charCodeAt(i))|0;c=(h>>>0).toString(36)}catch(e){}
  const w=tg(),sc=window.screen||{},n=navigator;let tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(e){}
  devFpS=[w&&w.platform||'',(sc.width||0)+'x'+(sc.height||0),window.devicePixelRatio||1,tz,n.language||'',n.hardwareConcurrency||0,n.deviceMemory||0,n.maxTouchPoints||0,c].join('|');return devFpS}
-async function api(action,args){
+var banWhy='';async function api(action,args){
  const body={action,args:args||{}};body.fp=devFp();const headers={'content-type':'application/json'};
  lastSync=Date.now();const base=VC;if(base&&VH)body.vh=VH; // дельта екрана (11.11): сервер не надсилає частини, які вже є
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}
  const j=await r.json().catch(()=>({ok:false,err:'bad'}));
- if(!j.ok){if(j.err==='prelaunch'&&j.launch)lnchLock(j.launch);throw new Error(j.err||'err')}
+ if(!j.ok){if(j.err==='prelaunch'&&j.launch)lnchLock(j.launch);if(j.err==='acc_banned')banWhy=j.why||'';throw new Error(j.err||'err')}
  if(j.view){if(j.vd){if(!base){VC=null;VH=null;throw new Error('net')}j.view=vmerge(base,j.view,j.vh)}VC=j.view;VH=j.vh||null}
  apply(j.view);
  return j;
@@ -1422,7 +1422,7 @@ async function start(){
  if(!w&&!DEV){boot(T('only_tg'));return}
  boot(T('loading'));
  try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r);setTimeout(askPm,4000)}
- catch(e){if(e.message==='prelaunch'){boot();return}if(e.message==='acc_banned'){boot(T('acc_banned'));return}boot(errT(e),true)}
+ catch(e){if(e.message==='prelaunch'){boot();return}if(e.message==='acc_banned'){boot(T('acc_banned')+(banWhy&&L.t['ban_'+banWhy]?' '+T('ban_'+banWhy):''));return}boot(errT(e),true)}
 }
 // ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
 // 13.11 (Влад): платну стежку купують прямо в пропуску — ⭐ одразу, GRAM/USDT — у магазині (вкладка VIP, там усі способи)
