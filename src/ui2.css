@@ -541,3 +541,6 @@ body.chfull{overflow:hidden}
 .wdsub{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0}.wdsub .btn{flex:none;padding:7px 12px}
 .cinvtop{display:block;width:calc(100% - 4px);margin:-4px 2px 12px;padding:11px;border-radius:12px;border:1px solid #4f93f266;background:linear-gradient(180deg,#4f93f222,#4f93f20d);color:#9cc4ff;font:inherit;font-size:14px;font-weight:700}
 .card.cinv.flash{animation:cinvFl 1.4s ease-out}@keyframes cinvFl{0%,40%{box-shadow:0 0 0 2px #4f93f2,0 0 18px #4f93f288}100%{box-shadow:none}}
+/* 14.11 Сумка: «Показати лише» + «Скинути» */
+.bshow button.on{background:color-mix(in srgb,var(--rc) 22%,transparent);box-shadow:0 0 0 1px var(--rc) inset}.bshow button.off{text-decoration:none}
+.mbar .bfreset{flex:0 0 auto;border-radius:999px;padding:8px 14px;font-size:13px}.mbar .bfreset:disabled{opacity:.35}

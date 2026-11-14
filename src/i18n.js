@@ -341,3 +341,6 @@ Object.assign(window.I18N.uk.t,{cinv_low2:'Тебе запросили в цей
 Object.assign(window.I18N.uk.t,{bag_sort_def:'Як випали',bag_sort_pow:'Найбільше Сили',bag_sort_r:'Вища рідкість',bag_sort_lvl:'Вищий рівень'});
 Object.assign(window.I18N.en.t,{bag_sort_def:'As dropped',bag_sort_pow:'Most Power',bag_sort_r:'Highest rarity',bag_sort_lvl:'Highest level'});
 Object.assign(window.I18N.ru.t,{bag_sort_def:'Как выпали',bag_sort_pow:'Больше Силы',bag_sort_r:'Выше редкость',bag_sort_lvl:'Выше уровень'});
+Object.assign(window.I18N.uk.t,{bag_show:'Показати лише:',bag_reset:'Скинути'});
+Object.assign(window.I18N.en.t,{bag_show:'Show only:',bag_reset:'Reset'});
+Object.assign(window.I18N.ru.t,{bag_show:'Показать только:',bag_reset:'Сбросить'});
