@@ -355,3 +355,6 @@ Object.assign(window.I18N.ru.t,{ref_spend:'Потратишь',ref_left:'Ост�
 Object.assign(window.I18N.uk.t,{sell_ask:'Продати цю річ? Повернути її не вийде.',sell_yes:'Продати'});
 Object.assign(window.I18N.en.t,{sell_ask:'Sell this item? This cannot be undone.',sell_yes:'Sell'});
 Object.assign(window.I18N.ru.t,{sell_ask:'Продать эту вещь? Вернуть её не получится.',sell_yes:'Продать'});
+Object.assign(window.I18N.uk.t,{pet_feed_go:'Нагодувати до {n}',pet_stop_mat:'Далі не вистачить матеріалів.',pet_stop_sh:'Далі не вистачить уламків.',pet_stop_evo:'Далі — еволюція: вона робиться окремою кнопкою.'});
+Object.assign(window.I18N.en.t,{pet_feed_go:'Feed up to {n}',pet_stop_mat:'Not enough materials to go further.',pet_stop_sh:'Not enough shards to go further.',pet_stop_evo:'Next is evolution — it has its own button.'});
+Object.assign(window.I18N.ru.t,{pet_feed_go:'Покормить до {n}',pet_stop_mat:'Дальше не хватит материалов.',pet_stop_sh:'Дальше не хватит осколков.',pet_stop_evo:'Дальше — эволюция: она делается отдельной кнопкой.'});
