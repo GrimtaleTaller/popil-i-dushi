@@ -25,7 +25,9 @@ function detectLang(){
  return c==='uk'?'uk':['ru','be','kk','uz','ky','tg','hy','az'].includes(c)?'ru':'en';
 }
 let LANG=detectLang(),L=I18N[LANG];
-function T(k,o){let s=L.t[k]!=null?L.t[k]:(I18N.uk.t[k]!=null?I18N.uk.t[k]:k);if(o)s=s.replace(/\{(\w+)\}/g,(m,x)=>o[x]!=null?o[x]:m);return s}
+function T(k,o){let s=L.t[k]!=null?L.t[k]:(I18N.uk.t[k]!=null?I18N.uk.t[k]:k);if(o)s=s.replace(/\{(\w+)\}/g,(m,x)=>o[x]==null?m:(typeof o[x]==='number'&&!Number.isInteger(o[x])?fmtN(o[x]):o[x]));return s}
+// 14.11 (Хасан: «+29.5999999999998%»): дробові числа в текстах — не більше 2 знаків після коми
+function fmtN(v){return String(Math.round(v*100)/100)}
 // emoji в іменах без FE0F (напр. 1⃣, 👁 з Telegram) на Android показуються квадратиками — додаємо селектор емодзі-вигляду
 let EMO_RE=null;try{EMO_RE=new RegExp('(?<!\\u200D)(?![\\u00A9\\u00AE\\u2122])(\\p{Extended_Pictographic})(?![\\uFE0F\\u200D\\u{1F3FB}-\\u{1F3FF}])','gu')}catch(e){}
 const emoFix=s=>{s=s.replace(/([0-9#*])⃣/g,'$1️⃣');return EMO_RE?s.replace(EMO_RE,'$1️'):s};
@@ -194,9 +196,11 @@ function tick(dt){
   if(B.hp<=0){B.dead=2.5;$('dead').style.display='grid';haptic('medium')}
  }
 }
+// 14.11 (Макс: бос з'являвся лише після переходу у вкладку): 10-та перемога на екрані → одразу питаємо сервер, а не чекаємо звичайної синхронізації раз на хвилину; не частіше за раз на 8 с
+let bsAt=0;function bossSoon(){if(G.stage!==G.maxStage||G.kills>=WAVES||G.kills+pend.kills<WAVES||Date.now()-bsAt<8000)return;bsAt=Date.now();sync(true)}
 function killFx(){
  // нагороду дає сервер; тут лише показ
- if(V.canFarm){pend.gold+=B.m.gold;pend.xp+=B.m.xp;pend.kills++}
+ if(V.canFarm){pend.gold+=B.m.gold;pend.xp+=B.m.xp;pend.kills++;bossSoon()}
  B.hp=Math.min(H.hp,B.hp+H.hp*0.15);B.m=null;deathFx();B.resp=0.45;renderBoss();
 }
 
@@ -599,7 +603,7 @@ function renderForge(){
   ${slotG(s=>legs(s).length,mSlot,'data-ms',need)}
   <div class="anrow"><span>${T('anvil',{a:Math.min(mN,LG.length),b:need})}${extra?' <b style="color:var(--gold)">+'+extra+'</b>':''}</span><button class="btn" id="mMinB">${T('btn_min')}</button><button class="btn" id="mMaxB" ${maxN>need?'':'disabled'}>${T('btn_max')}</button></div>
   <div class="anvil">${onA.map(tile).join('')}${Array.from({length:Math.max(0,need-onA.length)},()=>'<div class="atile empty">+</div>').join('')}</div>
-  <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${chance}%</b></div><div class="cbar"><i style="width:${chance}%"></i></div>
+  <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${fmtN(chance)}%</b></div><div class="cbar"><i style="width:${chance}%"></i></div>
    <p class="sub">${T('chance_parts',{b:F.myth.base,f:F.myth.fail*fails,e:F.myth.extra*extra,m:F.myth.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[5].c}">${RAR[5].n} · ${T('lvl',{n:ilA||'—'})}</b>${estM?`<span class="sub">≈ ${T('power',{n:fmt(estM)})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqM?T('power',{n:fmt(itemVal(eqM))}):'—'}</b></div></div>
    <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.cat,1,'💎')} · ${resC(G.souls,soA,'🔥')}</span></div></div>
@@ -615,7 +619,7 @@ function renderForge(){
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
   ${AM.length?`${AM.length>1?`<p class="hint">${T('ast_one')}</p>`:''}<div class="anvil ast">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b>${eqA&&eqA.id===it.id?`<em class="aon">${T('ast_on')}</em>`:''}${it.gm&&it.gm.length?`<em class="agm">◆${it.gm.length}</em>`:''}</div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
-  <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${F.astChance}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
+  <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${fmtN(F.astChance)}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*RAR[6].m/RAR[5].m))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
    <div class="chrow"><span class="sub">${T('price_t')}</span><span>${resC(G.souls,aSo,'🔥')} · ${resC(aScr,1,'📜')}${aEs?' · '+resC(G.ess||0,aEs,'✦'):''}</span></div><div class="chrow"><span class="sub">${T('ast_sac',{n:aNeed})}</span><span>${aSac.length>=aNeed?aSac.map((i,k)=>`<span class="gic r5" style="width:30px;height:30px;position:relative" title="${k?'':T('ast_burn1')}">${gearArt(i.slot,i.r,i.nm)}${k?'':'<i style="position:absolute;right:-4px;bottom:-4px;font-style:normal;font-size:12px">🔥</i>'}</span>`).join(' '):`<em class="lack">${T('ast_sac_lack',{n:aNeed-aSac.length})}</em>`}</span></div>${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
@@ -934,7 +938,7 @@ function renderProfile(){
   <div><span>${T('act_days')}</span><b>${P.days}</b></div><div><span>${T('lvl_word')}</span><b>${G.lvl}</b></div>
   <div><span>${T('clan')}</span><b>${P.clan?penI([P.clan,P.clanT],20)+esc(P.clan):'—'}</b></div><div><span>🏆 ${T('top_rating')}</span><b>${P.arena.rating} (${P.arena.w}/${P.arena.l})</b></div></div></div>`;
  h+=`<div class="card"><h4>👥 ${T('refs')}</h4><p class="hint">${T('refs_hint',{a:R.pct[0],b:R.pct[1],c:R.pct[2]})}</p>
-  <div class="arenah"><div><b>${R.n1}</b><span>${T('ref_lvl',{n:1})} · ${R.pct[0]}%</span></div><div><b>${R.n2}</b><span>${T('ref_lvl',{n:2})} · ${R.pct[1]}%</span></div><div><b>${R.n3}</b><span>${T('ref_lvl',{n:3})} · ${R.pct[2]}%</span></div></div>
+  <div class="arenah"><div><b>${R.n1}</b><span>${T('ref_lvl',{n:1})} · ${fmtN(R.pct[0])}%</span></div><div><b>${R.n2}</b><span>${T('ref_lvl',{n:2})} · ${fmtN(R.pct[1])}%</span></div><div><b>${R.n3}</b><span>${T('ref_lvl',{n:3})} · ${fmtN(R.pct[2])}%</span></div></div>
   ${P.refUsd>0?`<p class="hint">💵 ${T('ref_usd',{n:P.refUsd.toFixed(2)})}</p>`:''}<div class="reflink">${esc(link)}</div><div class="row"><button class="btn pri" id="pInv">${T('invite')}</button><button class="btn" id="pCopy">📋 ${T('copy')}</button></div>
   </div>`+refsCard('prof');
  h+=`<div class="card"><h4>📈 ${T('stats')}</h4><div class="resg">
@@ -999,7 +1003,7 @@ function renderShop(){
  if(ssub==='ash')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_ash_h',{a:fmt(G.ash||0)})}</p><p class="hint" style="margin:0 4px 10px">🔥 ${T('shop_d_ash')}</p>`;
  for(const it of list){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||''),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
-  h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${save}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}${it.bon>0?`<div class="shtag">🔥 ${T('shop_bon_tag')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'&&it.pool?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4>${desc?`<p class="hint">${desc}</p>`:''}${it.ash?`<p class="shash">${it.bon>0?`<s>⚱️ ${n3(it.ash)}</s> <b>⚱️ ${n3(it.ash+it.bon)}</b> <em>+${n3(it.bon)}</em>`:`<b>⚱️ ${n3(it.ash)}</b>`}</p>${it.bon===0&&ASH_BON[it.k]?`<p class="hint">${T('shop_bon_used')}</p>`:''}`:''}${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
+  h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${fmtN(save)}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}${it.bon>0?`<div class="shtag">🔥 ${T('shop_bon_tag')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'&&it.pool?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4>${desc?`<p class="hint">${desc}</p>`:''}${it.ash?`<p class="shash">${it.bon>0?`<s>⚱️ ${n3(it.ash)}</s> <b>⚱️ ${n3(it.ash+it.bon)}</b> <em>+${n3(it.bon)}</em>`:`<b>⚱️ ${n3(it.ash)}</b>`}</p>${it.bon===0&&ASH_BON[it.k]?`<p class="hint">${T('shop_bon_used')}</p>`:''}`:''}${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
    ${done?"":vipLine(it.k)}${cardLine(it.k)}${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
    ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
@@ -1543,9 +1547,9 @@ function renderAch(){
 function renderColl(){
  const C=V.coll,el=$('p-coll');if(!C){el.innerHTML='';return}
  const rs=Object.keys(C.b).map(Number).sort((a,b)=>a-b),has=(s,r)=>((C.m[s]||0)>>r)&1,max=rs.reduce((a,r)=>a+C.b[r],0);
- let h=`<div class="collban"><div class="cb-n">+${C.total}%</div><div><b>${T('coll_total')}</b><span>${T('coll_total_d',{m:max})}</span></div></div><p class="hint">${T('coll_how')}</p>`;
+ let h=`<div class="collban"><div class="cb-n">+${fmtN(C.total)}%</div><div><b>${T('coll_total')}</b><span>${T('coll_total_d',{m:max})}</span></div></div><p class="hint">${T('coll_how')}</p>`;
  for(const r of rs){const got=C.slots.filter(s=>has(s,r)).length,full=got===C.slots.length;
-  h+=`<div class="crow ${full?'done':''}" style="--rc:${RAR[r].c}"><div class="crh"><b style="color:${RAR[r].c}">${RAR[r].n}</b><span class="crp">${got}/${C.slots.length}</span><span class="crb">${full?'✓ ':''}+${C.b[r]}%</span></div><div class="crbar"><i style="width:${got/C.slots.length*100}%"></i></div><div class="crs">${C.slots.map(s=>`<div class="ccell ${has(s,r)?'got':'miss'}" title="${SLOT[s].n}">${gearIc({slot:s,r,nm:0})}${has(s,r)?'':'<i class="clock">🔒</i>'}<small>${SLOT[s].n}</small></div>`).join('')}</div></div>`}
+  h+=`<div class="crow ${full?'done':''}" style="--rc:${RAR[r].c}"><div class="crh"><b style="color:${RAR[r].c}">${RAR[r].n}</b><span class="crp">${got}/${C.slots.length}</span><span class="crb">${full?'✓ ':''}+${fmtN(C.b[r])}%</span></div><div class="crbar"><i style="width:${got/C.slots.length*100}%"></i></div><div class="crs">${C.slots.map(s=>`<div class="ccell ${has(s,r)?'got':'miss'}" title="${SLOT[s].n}">${gearIc({slot:s,r,nm:0})}${has(s,r)?'':'<i class="clock">🔒</i>'}<small>${SLOT[s].n}</small></div>`).join('')}</div></div>`}
  el.innerHTML=h;
 }
 let wbData=null,wbBusy=false;
