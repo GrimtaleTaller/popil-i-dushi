@@ -580,7 +580,7 @@ function renderForge(){
   <p class="hint">${T('dis_hint')}</p></div>`;
  if(fsub==='ench')h+=`<div class="card"><h4>${T('ench_title',{l:G.ench,m:F.enchMax})}</h4>
   <p class="hint">${T('ench_hint',{p:Math.round(F.enchStep*100),c:Math.round(G.ench*F.enchStep*100)})}</p>
-  ${eMax?`<p>${T('max_reached')}</p>`:`<p class="hint">${T('ench_cost',{n:legAll})} · 🔩 ${fmt(ec.shards)} · 💰 ${fmt(ec.gold)}</p>
+  ${eMax?`<p>${T('max_reached')}</p>`:`${needRows([['🟧',T('need_leg'),1,legAll],['🔩',T('gem_mm_sh'),ec.shards,G.shards||0],['💰',T('gem_mm_gold'),ec.gold,G.gold||0]])}${!legAll&&G.inv.some(i=>i.r===4)?`<p class="hint" style="margin-top:-4px">${T('need_leg_gm')}</p>`:''}
   ${eIt?`<div class="item" style="border-left-color:${RAR[eIt.r].c};margin:8px 0"><div class="ic">${gearIc(eIt)}</div><div class="info"><div class="sub">🔥 ${T('ench_burn')}</div><div class="nm" style="color:${RAR[eIt.r].c}">${itemName(eIt)} ${starsOf(eIt)}</div><div class="sub">${SLOT[eIt.slot].n} · ${T('lvl',{n:eIt.il})} · ≈ ${T('power',{n:fmt(Math.round(itemVal(eIt)))})}</div></div><div class="act"><button class="btn" id="enchPick">${T('ench_change')}</button></div></div>`:''}
   <div class="row"><button class="btn pri" id="ench" ${eIt&&G.shards>=ec.shards&&G.gold>=ec.gold?'':'disabled'}>${T('ench_btn',{n:G.ench+1})}</button></div>`}</div>`;
  const ST=F.set||{a:0,e:0,n:6},SC=F.setCfg||{anc:{each:6,souls:40,pow:15},eter:{each:16,souls:60,pow:30}};
@@ -639,7 +639,7 @@ const MATN=['I','II','III','IV'];
 // матеріали — лише свого тиру (12.11, Влад); hi-гілки нижче — legacy, тепер не спрацьовують
 function matUse(m,n){const M=G.mats||[],u=[];for(let i=m;i<=m&&n>0;i++){ /* 12.11 (Влад): лише свій рівень, вищі не підставляються */const k=Math.min(n,M[i]||0);if(k){u.push([i,k]);n-=k}}return u}
 // 14.11 (Влад: «не видно, чого не вистачає»): потреби таблицею «треба / є» з ✓/✗ і рядок «Бракує: …»
-function needRows(L){const lack=L.filter(r=>r[3]<r[2]);return `<div class="gmm-req nr"><div class="gmm-rh">${T('gem_mm_need')}</div>${L.map(([ic,nm,need,have])=>{const y=have>=need;return `<div class="gmm-r ${y?'ok':'no'}"><span class="gmmi">${ic}</span><span>${nm}</span><b>${fmt(need)}</b><em>${T('gem_mm_have',{n:fmt(have)})}</em><i>${y?'✓':'✗'}</i></div>`}).join('')}</div>${lack.length?`<p class="nr-lack">❗ ${T('need_lack')}: ${lack.map(r=>r[0]+' '+r[1]+' ×'+fmt(r[2]-r[3])).join(' · ')}</p>`:''}`}
+function needRows(L){const lack=L.filter(r=>r[3]<r[2]);return `<div class="gmm-req nr"><div class="gmm-rh">${T('gem_mm_need')}</div>${L.map(([ic,nm,need,have])=>{const y=have>=need;return `<div class="gmm-r ${y?'ok':'no'}"><span class="gmmi">${ic}</span><span>${nm}</span><b>${fmt(need)}</b><em>${T('gem_mm_have',{n:fmt(have)})}</em><i>${y?'✓':'✗'}</i></div>`}).join('')}</div>${lack.length?`<p class="nr-lack">❗ ${T('need_lack')}: ${lack.map(r=>r[1]+' '+r[0]+fmt(r[2]-r[3])).join(' · ')}</p>`:''}`}
 function matTxt(m,n){const u=matUse(m,n),hi=u.some(x=>x[0]>m),have=u.reduce((a,x)=>a+x[1],0);return '⛏️'+MATN[m]+'×'+fmt(n)+(have<n?` <span class="mhi">(${T('mat_lack',{n:fmt(n-have)})})</span>`:hi?` <span class="mhi">(${T('mat_use')}: ${u.map(x=>MATN[x[0]]+'×'+fmt(x[1])).join(', ')})</span>`:'')}
 // годування «до максимуму»: повторюємо цикл сервера (actPetFeed), щоб спитати про всі вищі матеріали, які піде (критик 08.11)
 function feedHi(l,want){const M=(G.mats||[]).slice(),hi={};let sh=G.shards,done=0;
