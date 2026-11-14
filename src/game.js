@@ -914,7 +914,9 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  // 14.11 (Влад): оренда другого місця на 12 год за $2; яйце, якому не вистачило оренди, — на паузі до вільного місця чи продовження
  {const rl=Math.max(0,(P.rent||0)-now),P2=P.inc2;
   if(P2){const pz=P2.left!=null,left=pz?P2.left:Math.max(0,(P2.at||0)-now);h+=`<div class="petinc inc2">${eggIc(P2.e)}<div><b>${T(P2.e==='r'?'egg_r':'egg_c')} · ${T('inc2_slot')}</b><div class="sub">${pz?T('inc2_pause',{t:hms(left)}):left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed2" ${G.ash>=(I.speed2||0)?'':'disabled'}>⚡ ⚱️${I.speed2||0}</button>`:`<button class="btn pri" id="pClaim2">${T('pet_claim')}</button>`}</div>`;if(pz)h+=`<p class="hint">${T('inc2_pause_h')}</p>`;else if(left>rl)h+=`<p class="hint">⚠️ ${T('inc2_short',{t:hms(rl)})}</p>`}
-  h+=`<div class="inc2rent"><span>🥚🥚 ${rl?T('inc2_on',{t:hms(rl)}):T('inc2_off')}</span><button class="btn ${rl?'':'pri'}" id="pRent">${rl?T('inc2_more'):T('inc2_buy')}</button></div>`;
+  // 14.11 (Влад: «негарно, не поміщається»): рядок як місце для яйця — порожня лунка з «+» / замком, назва, підпис, компактна кнопка
+  if(!P2)h+=`<div class="petinc inc2 inc2e"><div class="slot2ic ${rl?'on':''}">${rl?'+':'🔒'}</div><div><b>${T('inc2_t')}</b><div class="sub">${rl?T('inc2_on2',{t:hms(rl)}):T('inc2_off2')}</div></div><button class="btn ${rl?'':'pri'}" id="pRent">${rl?T('inc2_more'):T('inc2_buy')}</button></div>`;
+  else h+=`<div class="inc2rent"><span>${rl?T('inc2_on2',{t:hms(rl)}):T('inc2_end')}</span><button class="btn" id="pRent">${rl?T('inc2_more'):T('inc2_buy')}</button></div>`;
   var canHatch=!P.inc||(rl>0&&!P2)}
  h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&canHatch?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||216e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||576e5)/36e5)})}</p></div>`;
  // колекція
