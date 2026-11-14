@@ -442,7 +442,7 @@ function renderBag(){
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
-   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5&&!(it.gm&&it.gm.length)?`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`:''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
+   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  $('p-bag').innerHTML=h;
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
@@ -455,8 +455,8 @@ function renderBag(){
  $('p-bag').querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>act('equip',{id:+b.dataset.eq},r=>{haptic('light');gemMoveAsk(r.out&&r.out.gm)}));
  $('p-bag').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell([+b.dataset.sell]));
  $('p-bag').querySelectorAll('[data-dis]').forEach(b=>b.onclick=()=>dismantle([+b.dataset.dis]));
- $('p-bag').querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>{const it=G.inv.find(i=>i.id===+b.dataset.rel);if(!it)return;modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p>${T('relic_ask',{a:(V.forge.relicAsh||{})[it.r]||0})}</p>`,T('relic_btn'),()=>act('relicAsh',{ids:[it.id]},r=>toast('⚱️ +'+r.out.ash)))});
- if($('relJ'))$('relJ').onclick=()=>modal(`<div class="big">⚱️</div><p>${T('relic_junk_ask',{n:V.forge.relic})}</p>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
+ $('p-bag').querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>relicAsk([+b.dataset.rel],'relic'));
+ if($('relJ'))$('relJ').onclick=()=>askOnce('relicJ',`<div class="ask ask-a"><div class="ask-ic">⚱️</div><h3>${T('ask_relic_t')}</h3><p class="ask-q">${T('relic_junk_ask',{n:V.forge.relic})}</p></div>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
  $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
  $('sellC').onclick=()=>sellAsk(G.inv.filter(i=>i.r===0&&!(i.gm&&i.gm.length)).map(i=>i.id),'sellC');
@@ -535,6 +535,10 @@ function sellAsk(ids,key){if(!ids.length){toast(T('nothing_sell'));return}const 
  askOnce(key,askBox(its,sellPrice,{cls:'ask-g',ic:'💰',title:T('ask_sell_t'),q:T('sell_q',{n:its.length}),cur:'💰',have:G.gold}),`💰 ${T('sell_go')}`,()=>sell(ids))}
 function disAsk(ids,mode,key,go){if(!ids.length){toast(ERR.no_junk);return}const its=G.inv.filter(i=>ids.includes(i.id)),xp=mode==='xp';
  askOnce(key,askBox(its,xp?disXpOf:disShOf,{cls:xp?'ask-x':'ask-s',ic:xp?'✨':'⚒️',title:T(xp?'ask_dis_xp':'ask_dis_sh'),q:T(xp?'dis_q_xp':'dis_q_sh',{n:its.length}),cur:xp?'✨':'🔩',have:xp?null:G.shards}),`${xp?'✨':'🔩'} ${T('dis_go')}`,go)}
+// 14.11 (Влад «А»): прадавнє/вічне → Попіл — вікно як у продажу за золото
+const relicOf=i=>((V.forge&&V.forge.relicAsh)||{})[i.r]||0;
+function relicAsk(ids,key){const its=G.inv.filter(i=>ids.includes(i.id));if(!its.length)return;
+ askOnce(key,askBox(its,relicOf,{cls:'ask-a',ic:'⚱️',title:T('ask_relic_t'),q:T('relic_q',{n:its.length}),cur:'⚱️',have:G.ash}),T('relic_btn'),()=>act('relicAsh',{ids},r=>{toast('⚱️ +'+r.out.ash);haptic('medium')}))}
 let mSlot=null,mN=3,fsub='res',gemSel=null,aSlot=null,aSel=null;
 // ── Камені: злиття (картка 2, макет A «компактна таблиця», 08.11) ──
 // Правило й ціни — із сервера (V.gem.merge): need однакових каменів рівня l → 1 рівня l+1 (до V);
