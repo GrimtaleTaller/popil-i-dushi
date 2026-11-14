@@ -533,3 +533,11 @@ body.chfull{overflow:hidden}
 .chhead .chback{flex:none;font-size:20px}
 .chht{display:flex;flex-direction:column;min-width:0;line-height:1.2}.chht b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chht #chOn{font-size:12px}
 .chat.full .chtop{margin:0 2px 4px}.chat.full .chtop .sub{text-align:left}
+/* 14.11: вікно опису клану */
+.cdesc{position:relative}.cdesced{position:absolute;top:4px;right:4px;border:0;background:#ffffff12;border-radius:50%;width:30px;height:30px;font-size:14px;font-style:normal}
+.cdesc.ed{padding-right:40px}
+.cdescadd{display:block;width:calc(100% - 4px);margin:-4px 2px 12px;padding:11px;border-radius:12px;border:1px dashed #c9a24a88;background:#c9a24a0d;color:#e6c77a;font:inherit;font-size:13px;font-weight:700}
+.cdcnt{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-top:6px}.cdcnt b{font-size:12px;opacity:.7;white-space:nowrap}
+.wdsub{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0}.wdsub .btn{flex:none;padding:7px 12px}
+.cinvtop{display:block;width:calc(100% - 4px);margin:-4px 2px 12px;padding:11px;border-radius:12px;border:1px solid #4f93f266;background:linear-gradient(180deg,#4f93f222,#4f93f20d);color:#9cc4ff;font:inherit;font-size:14px;font-weight:700}
+.card.cinv.flash{animation:cinvFl 1.4s ease-out}@keyframes cinvFl{0%,40%{box-shadow:0 0 0 2px #4f93f2,0 0 18px #4f93f288}100%{box-shadow:none}}

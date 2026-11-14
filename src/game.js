@@ -86,8 +86,11 @@ function devFp(){if(devFpS!==null)return devFpS;let c='';
  try{const cv=document.createElement('canvas');cv.width=220;cv.height=40;const x=cv.getContext('2d');x.textBaseline='top';x.font='16px Arial';x.fillStyle='#f60';x.fillRect(100,1,62,20);x.fillStyle='#069';x.fillText('Grimtale ⚔️ 13.11',2,15);x.fillStyle='rgba(102,204,0,0.7)';x.fillText('Grimtale ⚔️ 13.11',4,17);const d=cv.toDataURL();let h=0;for(let i=0;i<d.length;i++)h=(h*31+d.charCodeAt(i))|0;c=(h>>>0).toString(36)}catch(e){}
  const w=tg(),sc=window.screen||{},n=navigator;let tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(e){}
  devFpS=[w&&w.platform||'',(sc.width||0)+'x'+(sc.height||0),window.devicePixelRatio||1,tz,n.language||'',n.hardwareConcurrency||0,n.deviceMemory||0,n.maxTouchPoints||0,c].join('|');return devFpS}
+// 14.11: сесія (id відкриття сторінки, версія, кількість дотиків)
+const SS={i:Math.random().toString(36).slice(2,10)+Date.now().toString(36),t:0};
+addEventListener('click',e=>{if(e.isTrusted)SS.t++},{capture:true,passive:true});
 var banWhy='';async function api(action,args){
- const body={action,args:args||{}};body.fp=devFp();const headers={'content-type':'application/json'};
+ const body={action,args:args||{}};body.fp=devFp();body.ss={i:SS.i,v:MYV||0,t:SS.t};const headers={'content-type':'application/json'};
  lastSync=Date.now();const base=VC;if(base&&VH)body.vh=VH; // дельта екрана (11.11): сервер не надсилає частини, які вже є
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}
@@ -852,8 +855,9 @@ const WD_ST={new:'⏳',paid:'✅',rejected:'❌'};
 // 13.11 (Влад «А»): «Мої реферали» — рівні 1·2·3, рівень і етап, прихід, останній вхід, скільки $ отримано з кожного; у Профілі й у Виводі
 let refData=null,refAt=0,refBusy=false,refLv=0,refAll=false;
 function refsCard(pane){
- if(!refData||Date.now()-refAt>6e4){if(!refBusy){refBusy=true;api('refList').then(r=>{refData=r.out;refAt=Date.now()}).catch(()=>{refAt=Date.now()}).finally(()=>{refBusy=false;dirty[pane]=1;flush()})}
-  if(!refData)return `<div class="card"><h4>👥 ${T('myrefs')}</h4><div class="empty">${T('loading')}</div></div>`}
+ if((!refData&&Date.now()-refAt>15e3)||(refData&&Date.now()-refAt>6e4)){if(!refBusy){refBusy=true;api('refList').then(r=>{refData=r.out;refAt=Date.now()}).catch(()=>{refAt=Date.now()}).finally(()=>{refBusy=false;dirty[pane]=1;flush()})}
+}
+ if(!refData)return `<div class="card"><h4>👥 ${T('myrefs')}</h4><div class="empty">${T('loading')}</div></div>`;
  const D=refData,L=D.lv[refLv]||[],now=Date.now(),day=864e5,shown=refAll?L:L.slice(0,30);
  const seen=x=>{if(!x.seen)return '';const d=Math.floor((now-Date.parse(x.seen))/day);return d<1?`🟢 ${T('ref_seen_now')}`:d<2?T('ref_seen_1'):T('ref_seen_d',{n:d})};
  return `<div class="card"><h4>👥 ${T('myrefs')}</h4>${D.usd>0?`<p style="margin:4px 0"><b>💵 ${T('ref_got',{n:D.usd.toFixed(2)})}</b></p>`:''}
@@ -866,24 +870,30 @@ function renderWd(){const el=$('p-wd');
  if(wdData)live('wd',()=>api('wdInfo').then(r=>r.out),o=>{if(same(o,wdData))return false;wdData=o;wdAt=Date.now();return true}); // свіжі статуси заявок раз на хвилину (поки показуємо старі)
  if(!wdData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;wdLoad();return}
  const D=wdData,A=D.acc,mn=D.min[wdCur],left=Math.max(0,Math.round((D.cap-D.used)*100)/100);
- const why=!A.ok?T('wd_need'):!D.wallet?T('wd_need_wallet'):D.pending?T('wd_pending_t'):D.bal<=0?T('wd_empty'):D.bal<mn?T('wd_low',{m:mn}):left<mn?T('wd_cap_t'):'';
+ const SB0=D.subs||{},subOk=['news','chat'].every(k=>SB0[k]==='in');
+ const subBad=['news','chat'].some(k=>SB0[k]==='kicked'),subErr=['news','chat'].some(k=>SB0[k]==='err');
+ const why=!A.ok?T('wd_need'):!subOk?T(subBad?'wd_sub_ban':subErr?'wd_sub_err':'wd_need_subs'):!D.wallet?T('wd_need_wallet'):D.pending?T('wd_pending_t'):D.bal<=0?T('wd_empty'):D.bal<mn?T('wd_low',{m:mn}):left<mn?T('wd_cap_t'):'';
  let h=`<div class="card"><h4>💸 ${T('wd_bal')}</h4><div class="wdbal">$${D.bal.toFixed(2)}</div><p class="hint" style="margin:4px 0 0">${T('wd_bal_hint')}</p></div>`;
  h+=`<div class="card"><h4>🔓 ${T('wd_acc')}</h4><p style="margin:4px 0">${A.lvl>=A.needLvl?'✅':'⏳'} ${T('wd_acc_lvl',{n:Math.min(A.lvl,A.needLvl),m:A.needLvl})}</p><p style="margin:4px 0">${A.days>=A.needDays?'✅':'⏳'} ${T('wd_acc_days',{n:Math.min(A.days,A.needDays),m:A.needDays})}</p></div>`;
+ // 14.11 (Влад): обов'язкові підписки на канал новин і чат гри — без них вивід недоступний
+ h+=`<div class="card wdsubs"><h4>📌 ${T('wd_subs_t')}</h4><p class="hint" style="margin:0 0 6px">${T('wd_subs_h')}</p>`+[['news','📢','GRIMTALENEWS'],['chat','💬','GRIMTALECHAT']].map(([k,ic,u])=>{const st=SB0[k];return `<div class="wdsub"><span>${st==='in'?'✅':st==='err'?'⚠️':st==='kicked'?'⛔':'❌'} ${ic} ${T('wd_sub_'+k)} <span class="hint" style="margin:0">@${u}</span></span>${st==='out'||!st?`<button class="btn" data-wdsub="${u}">${T('wd_sub_go')}</button>`:''}</div>`}).join('')+(subOk||subBad?'':`<div class="row" style="margin-top:6px"><button class="btn pri" id="wdSubChk">🔄 ${T('wd_sub_chk')}</button></div>`)+(subBad?`<p class="hint" style="margin:6px 0 0">${T('wd_sub_ban')}</p>`:subErr?`<p class="hint" style="margin:6px 0 0">${T('wd_sub_err')}</p>`:'')+`</div>`;
  h+=`<div class="card"><h4>👛 ${T('wd_wallet')}</h4>${D.wallet?`<p class="wdaddr">${esc(D.wallet)}</p>`:''}<p class="hint" style="margin:0 0 6px">${T('wd_wallet_hint')}</p><div class="row" style="gap:8px;align-items:center"><input id="wdAddr" class="inp" placeholder="UQ… / EQ…" autocomplete="off" spellcheck="false"><button class="btn" id="wdAddrGo" ${A.ok?'':'disabled'}>${D.wallet?T('wd_change'):T('wd_save')}</button></div>${A.ok?'':`<p class="hint" style="margin:6px 0 0">${T('wd_wallet_acc')}</p>`}</div>`;
  h+=`<div class="card"><h4>📤 ${T('wd_out')}</h4><div class="chips">${['gram','usdt'].map(c=>`<button data-wdc="${c}" class="${wdCur===c?'act':''}">${c==='gram'?'GRAM':'USDT'} (TON) · ${T('wd_from',{m:D.min[c]})}</button>`).join('')}</div><p class="hint" style="margin:6px 0">${T('wd_lim',{l:left.toFixed(2),c:D.cap})}</p><div class="row" style="gap:8px;align-items:center"><input id="wdUsd" class="inp" type="number" min="${mn}" step="0.01" inputmode="decimal" placeholder="$ ${mn}+"><button class="btn pri" id="wdGo" ${why?'disabled':''}>${T('wd_go')}</button></div>${why?`<p class="hint" style="margin:6px 0 0">${why}</p>`:''}<p class="hint" style="margin:6px 0 0">${T('wd_note')}</p></div>`;
  const R=D.ref||{sum:0,list:[]};h+=`<div class="card"><h4>👥 ${T('wd_ref')}</h4><p style="margin:4px 0"><b>${T('wd_ref_sum',{n:R.sum.toFixed(2)})}</b></p><p class="hint" style="margin:0 0 6px">${T('wd_ref_hint')}</p>`+(R.list.length?R.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${x.usd<0?'↩️ −':'💵 +'}$${Math.abs(x.usd).toFixed(2)} · ${T('wd_ref_lv',{n:x.lv})}</span><span class="hint" style="margin:0">${dt(x.at)}</span></div>`).join(''):`<p class="hint" style="margin:0">${T('wd_ref_none')}</p>`)+`</div>`+refsCard('wd'); // 13.11 (Влад): нарахування з покупок рефералів
  if(D.list.length)h+=`<div class="card"><h4>🧾 ${T('wd_hist')}</h4>`+D.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${WD_ST[x.status]||''} $${Number(x.usd).toFixed(2)} · ${String(x.cur).toUpperCase()}</span><span class="hint" style="margin:0">${dt(x.created_at)} · ${T('wd_st_'+x.status)}</span></div>`).join('')+`</div>`;
  if(V.isAdmin){h+=`<div class="card"><h4>🛠 ${T('wd_adm')}</h4><button class="btn" id="wdAdmLoad">🔄 ${T('wd_adm_load')}</button>`;
-  if(wdAdm)h+=wdAdm.list.length?wdAdm.list.map(x=>`<div class="wdadm"><b>#${x.id}</b> ${WD_ST[x.status]||''} $${Number(x.usd).toFixed(2)} ${String(x.cur).toUpperCase()}${x.first?' · ⚠️ '+T('wd_first'):''}<br><span class="hint" style="margin:0">${esc(x.name)} · id ${x.player_id} · ${dt(x.created_at)}</span><br><span class="wdaddr" data-wdcp="${esc(x.addr)}">${esc(x.addr)} 📋</span>${x.status==='new'?`<div class="row" style="gap:6px;margin-top:6px;align-items:center"><input class="inp" data-wdtx="${x.id}" placeholder="tx (${T('wd_opt')})"><button class="btn pri" data-wdok="${x.id}">✅</button><button class="btn" data-wdno="${x.id}">❌</button></div>`:x.tx?`<br><span class="hint" style="margin:0">tx ${esc(x.tx)}</span>`:''}</div>`).join(''):`<p class="hint">${T('wd_adm_none')}</p>`;
+  if(wdAdm)h+=wdAdm.list.length?wdAdm.list.map(x=>`<div class="wdadm"><b>#${x.id}</b> ${WD_ST[x.status]||''} $${Number(x.usd).toFixed(2)} ${String(x.cur).toUpperCase()}${x.first?' · ⚠️ '+T('wd_first'):''}<br><span class="hint" style="margin:0">${esc(x.name)} · id ${x.player_id} · ${dt(x.created_at)}${x.subs?` · 📢${x.subs.news==='in'?'✅':'❌'} 💬${x.subs.chat==='in'?'✅':'❌'}`:''}</span><br><span class="wdaddr" data-wdcp="${esc(x.addr)}">${esc(x.addr)} 📋</span>${x.status==='new'?`<div class="row" style="gap:6px;margin-top:6px;align-items:center"><input class="inp" data-wdtx="${x.id}" placeholder="tx (${T('wd_opt')})"><button class="btn pri" data-wdok="${x.id}">✅</button><button class="btn" data-wdno="${x.id}">❌</button></div>`:x.tx?`<br><span class="hint" style="margin:0">tx ${esc(x.tx)}</span>`:''}</div>`).join(''):`<p class="hint">${T('wd_adm_none')}</p>`;
   h+=`</div>`}
  const keep={};el.querySelectorAll('input').forEach(i=>{const k=i.id||'tx'+i.dataset.wdtx;if(i.value)keep[k]=i.value}); // синхронізація перемальовує вкладку — не губимо введене
  el.innerHTML=h;refsBind(el,'wd');
  el.querySelectorAll('input').forEach(i=>{const k=i.id||'tx'+i.dataset.wdtx;if(keep[k])i.value=keep[k]});
  el.querySelectorAll('[data-wdc]').forEach(b=>b.onclick=()=>{wdCur=b.dataset.wdc;dirty.wd=1;flush()});
+ el.querySelectorAll('[data-wdsub]').forEach(b=>b.onclick=()=>{haptic('light');tgOpen('https://t.me/'+b.dataset.wdsub)});
+ if($('wdSubChk'))$('wdSubChk').onclick=()=>{const b=$('wdSubChk');b.disabled=true;api('wdInfo',{fresh:1}).then(r=>{wdData=r.out;wdAt=Date.now();const S2=r.out.subs||{},ok=['news','chat'].every(k=>S2[k]==='in');toast(T(ok?'wd_sub_ok':Object.values(S2).includes('kicked')?'wd_sub_ban':Object.values(S2).includes('err')?'wd_sub_err':'wd_sub_no'));haptic(ok?'medium':'light');dirty.wd=1;flush()}).catch(e=>{toast(errT(e));b.disabled=false})};
  $('wdAddrGo').onclick=()=>{const a=$('wdAddr').value.trim();if(!a){toast(T('wd_addr_empty'));return}
   modal(`<div class="big">👛</div><p class="wdaddr">${esc(a)}</p><p>${T('wd_bind_q')}</p>`,T('wd_save'),()=>api('wdWallet',{addr:a}).then(()=>{toast(T('wd_saved'));$('wdAddr').value='';wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e))),null,'wdbind')};
  $('wdGo').onclick=()=>{const u=Math.floor((+$('wdUsd').value||0)*100+1e-6)/100;if(u<mn){toast(T('wd_low',{m:mn}));return}if(u>D.bal){toast(ERR.wd_funds||T('wd_low',{m:mn}));return}
-  modal(`<div class="big">💸</div><p>${T('wd_q',{u:u.toFixed(2),c:wdCur.toUpperCase()})}</p><p class="wdaddr">${esc(D.wallet)}</p>`,T('wd_go'),()=>api('wdReq',{cur:wdCur,usd:u}).then(()=>{toast(T('wd_sent'));wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e))),null,'wdq')};
+  modal(`<div class="big">💸</div><p>${T('wd_q',{u:u.toFixed(2),c:wdCur.toUpperCase()})}</p><p class="wdaddr">${esc(D.wallet)}</p>`,T('wd_go'),()=>api('wdReq',{cur:wdCur,usd:u}).then(()=>{toast(T('wd_sent'));wdData=null;dirty.wd=1;flush()}).catch(e=>{toast(errT(e));if(/wd_subs/.test(String(e&&e.message)))api('wdInfo',{fresh:1}).then(r=>{wdData=r.out;wdAt=Date.now();dirty.wd=1;flush()}).catch(()=>{})}),null,'wdq')};
  if($('wdAdmLoad'))$('wdAdmLoad').onclick=()=>api('wdAdmin').then(r=>{wdAdm=r.out;dirty.wd=1;flush()}).catch(e=>toast(errT(e)));
  el.querySelectorAll('[data-wdcp]').forEach(b=>b.onclick=()=>copyText(b.dataset.wdcp));
  const mark=(id,st)=>{const t=el.querySelector(`[data-wdtx="${id}"]`);api('wdMark',{id,st,tx:t?t.value.trim():''}).then(()=>{toast('#'+id+' '+T('wd_st_'+st));return api('wdAdmin')}).then(r=>{wdAdm=r.out;dirty.wd=1;flush()}).catch(e=>toast(errT(e)))};
@@ -933,7 +943,8 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
   const E=V.tasks&&V.tasks.egg;if(E&&left&&V.tasks.block){const wt=Math.max(0,(E.next||0)-now),can=E.n<E.max&&!wt;clearTimeout(adEggT);if(wt&&E.n<E.max)adEggT=setTimeout(()=>{dirty.pet=1;flush()},Math.min(wt+500,6e4));h+=`<div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('pet_ad_hint',{t:dur(E.cut),n:E.n,x:E.max})}${wt&&E.n<E.max?' '+T('pet_ad_wait',{t:hms(wt)}):''}</span><button class="btn" id="pAd" ${can?'':'disabled'}>${can||E.n>=E.max?'📺 −'+dur(E.cut):'📺 ⏳ '+hms(wt)}</button></div>`}}
  // 14.11 (Влад): оренда другого місця на 12 год за $2; яйце, якому не вистачило оренди, — на паузі до вільного місця чи продовження
  {const rl=Math.max(0,(P.rent||0)-now),P2=P.inc2;
-  if(P2){const pz=P2.left!=null,left=pz?P2.left:Math.max(0,(P2.at||0)-now);h+=`<div class="petinc inc2">${eggIc(P2.e)}<div><b>${T(P2.e==='r'?'egg_r':'egg_c')} · ${T('inc2_slot')}</b><div class="sub">${pz?T('inc2_pause',{t:hms(left)}):left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed2" ${G.ash>=(I.speed2||0)?'':'disabled'}>⚡ ⚱️${I.speed2||0}</button>`:`<button class="btn pri" id="pClaim2">${T('pet_claim')}</button>`}</div>`;if(pz)h+=`<p class="hint">${T('inc2_pause_h')}</p>`;else if(left>rl)h+=`<p class="hint">⚠️ ${T('inc2_short',{t:hms(rl)})}</p>`}
+  if(P2){const pz=P2.left!=null,left=pz?P2.left:Math.max(0,(P2.at||0)-now);h+=`<div class="petinc inc2">${eggIc(P2.e)}<div><b>${T(P2.e==='r'?'egg_r':'egg_c')} · ${T('inc2_slot')}</b><div class="sub">${pz?T('inc2_pause',{t:hms(left)}):left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed2" ${G.ash>=(I.speed2||0)?'':'disabled'}>⚡ ⚱️${I.speed2||0}</button>`:`<button class="btn pri" id="pClaim2">${T('pet_claim')}</button>`}</div>`;if(pz)h+=`<p class="hint">${T('inc2_pause_h')}</p>`;else if(left>rl)h+=`<p class="hint">⚠️ ${T('inc2_short',{t:hms(rl)})}</p>`;
+   const E2=V.tasks&&V.tasks.egg2;if(E2&&left&&!pz&&rl>180e3&&V.tasks.block){const wt=Math.max(0,(E2.next||0)-now),can=E2.n<E2.max&&!wt;clearTimeout(adEggT2);if(wt&&E2.n<E2.max)adEggT2=setTimeout(()=>{dirty.pet=1;flush()},Math.min(wt+500,6e4));h+=`<div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('pet_ad_hint',{t:dur(E2.cut),n:E2.n,x:E2.max})}${wt&&E2.n<E2.max?' '+T('pet_ad_wait',{t:hms(wt)}):''}</span><button class="btn" id="pAd2" ${can?'':'disabled'}>${can||E2.n>=E2.max?'📺 −'+dur(E2.cut):'📺 ⏳ '+hms(wt)}</button></div>`}} // 14.11 (Влад): реклама й на орендованому місці, свій ліміт
   // 14.11 (Влад: «негарно, не поміщається»): рядок як місце для яйця — порожня лунка з «+» / замком, назва, підпис, компактна кнопка
   if(!P2)h+=`<div class="petinc inc2 inc2e"><div class="slot2ic ${rl?'on':''}">${rl?'+':'🔒'}</div><div><b>${T('inc2_t')}</b><div class="sub">${rl?T('inc2_on2',{t:hms(rl)}):T('inc2_off2')}</div></div><button class="btn ${rl?'':'pri'}" id="pRent">${rl?T('inc2_more'):T('inc2_buy')}</button></div>`;
   else h+=`<div class="inc2rent"><span>${rl?T('inc2_on2',{t:hms(rl)}):T('inc2_end')}</span><button class="btn" id="pRent">${rl?T('inc2_more'):T('inc2_buy')}</button></div>`;
@@ -949,7 +960,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if($('pFeed'))$('pFeed').onclick=()=>fdAsk(1);if($('pFeedM'))$('pFeedM').onclick=()=>fdAsk(30);
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
   modal(`<div class="big">${petFrame(P.act,(P.list[P.act]||{}).l,(P.list[P.act]||{}).s,1)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
- if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));if($('pSpeed2'))$('pSpeed2').onclick=()=>act('petSpeed',{slot:2},()=>haptic('light'));if($('pRent'))$('pRent').onclick=()=>{haptic('light');ssub='conv';shopData=null;document.querySelector(tabBtn('shop')).click()};if($('pAd'))$('pAd').onclick=()=>act('adIntent',{k:'egg'},()=>{adEggAt=Date.now();watchAd()});
+ if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));if($('pSpeed2'))$('pSpeed2').onclick=()=>act('petSpeed',{slot:2},()=>haptic('light'));if($('pRent'))$('pRent').onclick=()=>{haptic('light');ssub='conv';shopData=null;document.querySelector(tabBtn('shop')).click()};if($('pAd'))$('pAd').onclick=()=>act('adIntent',{k:'egg'},()=>{adEggAt=Date.now();adEggK='egg';watchAd()});if($('pAd2'))$('pAd2').onclick=()=>act('adIntent',{k:'egg2'},()=>{adEggAt=Date.now();adEggK='egg2';watchAd()});
  const claimFx=slot=>r=>{const o=r.out;modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')};if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},claimFx(1));if($('pClaim2'))$('pClaim2').onclick=()=>act('petClaim',{slot:2},claimFx(2));
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
  if($('pgLvM'))$('pgLvM').onclick=()=>{pgLv=Math.max(1,pgLv-1);haptic('light');dirty.pet=1;flush()};if($('pgLvP'))$('pgLvP').onclick=()=>{pgLv++;haptic('light');dirty.pet=1;flush()};
@@ -987,7 +998,7 @@ function renderProfile(){
   h+=`<div class="card"><h4>❓ ${T('ask_t')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${na.length?T('ask_off',{n:na.length}):T('ask_on')}</span><button class="btn" id="pAsk" ${na.length?'':'disabled'}>${T('ask_reset')}</button></div></div>`}
  h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button><button class="btn" id="pTut">${T('tut_restart')}</button></div>`;
  el.innerHTML=h;refsBind(el,'prof');
- if($('pRules'))$('pRules').onclick=()=>modal(`<div class="rules"><h3>📜 ${T('rules_t')}</h3><ol>${[1,2,3,4,5,6,7].map(i=>`<li>${T('rule_'+i)}</li>`).join('')}</ol></div>`,T('ok')); // 14.11 (Влад): правила гри в грі, з пунктом про мультиакаунти
+ if($('pRules'))$('pRules').onclick=()=>modal(`<div class="rules"><h3>📜 ${T('rules_t')}</h3><ol>${[1,2,3,4,5,6,7,8].map(i=>`<li>${T('rule_'+i)}</li>`).join('')}</ol></div>`,T('ok')); // 14.11 (Влад): правила гри в грі, з пунктом про мультиакаунти
  if($('pAsk'))$('pAsk').onclick=()=>{try{Object.keys(localStorage).filter(k=>k.indexOf('gt_noask_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}haptic('light');toast(T('ask_done'));renderProfile()};
  $('pTut').onclick=tutRestart;
  $('pCh').onclick=openCh;$('pChat').onclick=openChat;$('pBot').onclick=()=>{const w=tg();if(V&&V.pm===0&&w&&typeof w.requestWriteAccess==='function'){try{w.requestWriteAccess(ok=>{if(ok)api('botHello').catch(()=>{});openBot()});return}catch(e){}}openBot()};
@@ -1156,12 +1167,15 @@ let clanAt=0,clogF='all';let csub='main',clanData=null,clanBusy=false,craftT=1,c
 const roleT=r=>T('role_'+r);
 function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
 setInterval(()=>{if(document.visibilityState==='visible'&&liveFn[tab])liveFn[tab]();if(tab==='clan'&&csub==='chat'&&$('chatRoot')&&!CH.t&&!CH.busy)chPoll(1)},5e3); // 13.11: живі вікна — див. live(); перемальовка лише при змінах
+function clanDescWin(C){const CL=C.clan;modal(`<h3>📜 ${T('clan_desc_t')}</h3><textarea id="cDescW" class="inp cdta" maxlength="200" rows="5" placeholder="${T('clan_desc_ph')}">${esc0(CL.desc||'')}</textarea><div class="cdcnt"><span class="hint">${T('clan_desc_hint')} ${T('clan_desc_lines')}</span><b id="cDescN">${(CL.desc||'').length}/200</b></div>`,T('save'),()=>{const v=$('cDescW').value.trim();
+  if(v.replace(/\n{2,}/g,'\n').split('\n').length>4){toast(T('clan_desc_lines'));return false}if(v===(CL.desc||'')){return true}
+  clanAct('clanSettings',{desc:v},()=>{toast(T(v?'clan_desc_ok':'clan_desc_rm'));haptic('medium');if(queue[0]&&queue[0].tag==='cdesc'){queue.shift();showModal()}});return false},()=>{const t=$('cDescW');t.oninput=()=>{$('cDescN').textContent=t.value.length+'/200'};setTimeout(()=>t.focus(),50)},'cdesc')} // 14.11 (критик D): вікно лишається відкритим при помилці — текст не губиться
 function clanAct(a,args,cb){return act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(cb)cb(r)})}
 // ───────── 14.11 (Влад «А»): чат клану ─────────
 // Опитування окремим запитом (chatApi — без перерахунку екрана й без зсуву звичайної синхронізації): раз на 3 с, поки в чаті жваво, інакше раз на 8 с.
 var chatU=0;const CH={clan:0,msgs:[],sys:[],pin:null,after:0,since:0,logAfter:0,typing:[],online:0,mem:[],me:0,role:'',mute:0,reply:null,busy:0,t:null,last:0,mine:0,first:1,bottom:1,reacts:['👍','🔥','😂','😮','🙏','❤️']};
 const CHQ=['chq_dng','chq_keys','chq_help','chq_hi'];
-async function chatApi(action,args){const body={action,args:args||{},fp:devFp()};const headers={'content-type':'application/json'};const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
+async function chatApi(action,args){const body={action,args:args||{},fp:devFp(),ss:{i:SS.i,v:MYV||0,t:SS.t}};const headers={'content-type':'application/json'};const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}const j=await r.json().catch(()=>({ok:false,err:'bad'}));if(!j.ok)throw new Error(j.err||'err');return j.out}
 // 14.11 (Влад: «незручно читати») — чат клану на весь екран: шапка з «назад», назвою клану й онлайном; системна «Назад» Telegram теж закриває
 function chShell(){const cn=(clanData&&clanData.clan&&clanData.clan.name)||'';return `<div id="chatRoot" class="chat full"><div class="chhead"><button class="chb chback" id="chBack" aria-label="back">←</button><div class="chht"><b>💬 ${esc(cn)}</b><span id="chOn"></span></div></div><div class="chtop"><span class="sub">${T('chat_hint')}</span></div><div id="chPin"></div><div class="chwrap"><div id="chFeed" class="chfeed"><p class="hint" style="text-align:center">${T('loading')}</p></div><button id="chDown" class="chdown" style="display:none">↓</button></div><div id="chTyping" class="chtyping"></div><div id="chReply"></div>
@@ -1276,7 +1290,9 @@ function renderClan(){
  const S={main:'',keys:'',castle:'',members:'',log:'',chat:''}; // розділи клану (04.11): кожен — окрема підвкладка
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
  if(csub!=='chat')h+=`<div class="card arenah"><div><b>${penI([C.clan.name,C.clan.pt],24)||'🏰 '}${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.clan.max||C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
- if(C.clan.desc)S.main+=`<div class="cdesc">📜 ${esc(C.clan.desc).replace(/\n/g,'<br>')}</div>`; // 14.11 (Влад): опис клану
+ if(C.clan.desc)S.main+=`<div class="cdesc${C.role==='leader'?' ed':''}">📜 ${esc(C.clan.desc).replace(/\n/g,'<br>')}${C.role==='leader'?`<button class="cdesced" id="cDescEd" aria-label="${T('clan_desc_t')}">✏️</button>`:''}</div>`; // 14.11 (Влад): опис клану
+ else if(C.role==='leader')S.main+=`<button class="cdescadd" id="cDescEd">📜 ${T('clan_desc_add')}</button>`; // 14.11 (Влад): окреме вікно опису для голови
+ S.main+=`<button class="cinvtop" id="cInvTop">🔗 ${T('cinv_t')}</button>`; // 14.11 (Влад «А»): запрошення в клан — видно одразу, веде до картки з «Поділитись»
  const bank=C.clan.bank||0;
  S.main+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
   <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div>
@@ -1313,7 +1329,6 @@ function renderClan(){
   <p class="hint">${T('clan_mode_hint_'+(clanModeSel||CL.mode))}</p>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_stage')}</span><input id="cMs" class="inp" type="number" min="0" max="80" inputmode="numeric" value="${CL.minStage||0}" style="flex:1"></div>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_power')}</span><input id="cMp" class="inp" type="number" min="0" inputmode="numeric" value="${CL.minPower||0}" style="flex:1"></div>
-  <p style="margin:10px 0 4px;font-weight:700">📜 ${T('clan_desc_t')}</p><textarea id="cDesc" class="inp cdta" maxlength="200" rows="3" placeholder="${T('clan_desc_ph')}">${esc(CL.desc||'')}</textarea><p class="hint" style="margin-top:2px">${T('clan_desc_hint')}</p>
   <div class="row"><button class="btn pri" id="cSet">${T('save')}</button></div></div>`;
  else S.members+=`<p class="hint">${T('clan_mode_'+CL.mode)}${CL.minStage?' · '+T('stage',{n:CL.minStage}):''}${CL.minPower?' · 💪 '+fmt(CL.minPower):''}</p>`;
  S.members+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
@@ -1340,9 +1355,11 @@ function renderClan(){
  el.querySelectorAll('[data-ay]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.ay,ok:true}));
  el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.an,ok:false}));
  el.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{clanModeSel=b.dataset.cm;renderClan()});
- if($('cSet'))$('cSet').onclick=()=>{const m=clanModeSel||C.clan.mode;clanModeSel=null;clanAct('clanSettings',{mode:m,minStage:+$('cMs').value||0,minPower:+$('cMp').value||0,desc:$('cDesc')?$('cDesc').value:undefined,tg:$('cTg')?$('cTg').value.trim():undefined},()=>toast(T('saved')))};
+ if($('cSet'))$('cSet').onclick=()=>{const m=clanModeSel||C.clan.mode;clanModeSel=null;clanAct('clanSettings',{mode:m,minStage:+$('cMs').value||0,minPower:+$('cMp').value||0,tg:$('cTg')?$('cTg').value.trim():undefined},()=>toast(T('saved')))};
  if($('cInvC'))$('cInvC').onclick=()=>{copyText(clanLink(C.clan.id));haptic('light')};
  if($('cInvS'))$('cInvS').onclick=()=>{const u=clanLink(C.clan.id),t=T('cinv_msg',{c:C.clan.name}),w=tg(),sh='https://t.me/share/url?url='+encodeURIComponent(u)+'&text='+encodeURIComponent(t);if(w&&w.openTelegramLink)w.openTelegramLink(sh);else window.open(sh,'_blank','noopener')};
+ if($('cDescEd'))$('cDescEd').onclick=()=>clanDescWin(C);
+ if($('cInvTop'))$('cInvTop').onclick=()=>{const c=document.querySelector('.card.cinv');if(!c)return;haptic('light');c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')};
  if($('cTgSave'))$('cTgSave').onclick=()=>{const v=$('cTg2').value.trim(),CL2=C.clan;if(!v&&!CL2.tg){toast(T('ctg_empty'));return}clanAct('clanSettings',{mode:CL2.mode,minStage:CL2.minStage||0,minPower:CL2.minPower||0,tg:v},()=>{toast(T(v?'ctg_saved':'ctg_removed'));haptic('medium')})};
  if($('cTgGo'))$('cTgGo').onclick=()=>{const u=C.clan.tg;if(!/^https:\/\/t\.me\//.test(u||''))return;const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')};
  if($('cTgRep'))$('cTgRep').onclick=()=>modal(`<div class="big">⚠️</div><p>${T('clan_tg_rep_ask')}</p>`,T('clan_tg_rep'),()=>act('clanReport',{clan:C.clan.id},()=>toast(T('clan_tg_rep_done'))),null,'crep');
@@ -1414,7 +1431,7 @@ function renderRank(){
 // дія на сервері: блокує кнопки, показує помилки
 async function act(a,args,ok){
  if(busy)return;busy=true;renderBoss();
- try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/ad_gap|ad_limit/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
+ try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/ad_gap|ad_limit|inc2_paused|inc2_rent_end|no_egg|pet_ready/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
 }
 
 // ---------- модалки ----------
@@ -1623,7 +1640,7 @@ function renderQuest(){
 let adCtl=null,adLoading=false,adQ=[];
 function adsgram(cb,quiet,fail){if(V&&V.twin){if(!quiet)toast(T('twin_ad'));return fail&&fail()} // 14.11: двійникам реклама нагород не дає
  if(window.Adsgram)return cb();if(adLoading&&!quiet&&adQ.some(x=>!x.quiet))return;adQ.push({cb,quiet,fail});if(adLoading)return;adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;const q=adQ;adQ=[];q.forEach(x=>x.cb())};sc.onerror=()=>{adLoading=false;sc.remove();const q=adQ;adQ=[];q.forEach(x=>{if(x.fail)x.fail();if(!x.quiet){adEggDrop();toast(T('ad_err'))}})};document.head.appendChild(sc)} // 12.11: черга колбеків (відео й рекламні завдання), quiet — без тосту
-let adEggAt=0,adEggT=0;const adEggOn=()=>Date.now()-adEggAt<170e3;
+let adEggAt=0,adEggT=0,adEggT2=0,adEggK='egg';const adEggOn=()=>Date.now()-adEggAt<170e3;
 // реклама на яйці (09.11): сервер віддає перегляд тому, на що поставлено намір; якщо реклама не показалась — намір скидаємо
 const adEggDrop=()=>{if(adEggOn()){adEggAt=0;api('adIntent',{k:''}).catch(()=>{})}};
 // 12.11 (Влад): рекламні завдання AdsGram (блок Task) — один елемент на весь сеанс, між перемальовуваннями лише переноситься в картку;
@@ -1651,7 +1668,7 @@ function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
   adTaskEl=e;adTaskGone=0;$('adTaskBox').appendChild(e);const n=$('adtNone');if(n)n.hidden=true;
   setTimeout(()=>{const m=$('adtNone');if(m&&adTaskEl===e&&e.getBoundingClientRect().height<20&&!$('adTaskCard').hidden&&$('adTaskCard').offsetParent)m.hidden=false},8000)},true,()=>gone(6e5,null))}
 function watchAd(){const K=V.tasks;if(!K||!K.block)return toast(T('ad_soon'));
- adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){const E=adEggOn()&&V&&V.tasks&&V.tasks.egg;if(E){E.n=(E.n||0)+1;E.next=Date.now()+(E.gap||7200e3);dirty.pet=1;flush()}adEggAt=0;toast(T('ad_wait'));setTimeout(()=>sync(true),3000);setTimeout(()=>sync(true),9000)} /* 13.11 (Влад): кнопка й таймер оновлюються одразу, а не після наступної синхронізації */else adEggDrop()}).catch(()=>{adEggDrop();toast(T('ad_none'))})}catch(e){adEggDrop();toast(T('ad_err'))}})}
+ adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){const E=adEggOn()&&V&&V.tasks&&V.tasks[adEggK];if(E){E.n=(E.n||0)+1;E.next=Date.now()+(E.gap||7200e3);dirty.pet=1;flush()}adEggAt=0;toast(T('ad_wait'));setTimeout(()=>sync(true),3000);setTimeout(()=>sync(true),9000)} /* 13.11 (Влад): кнопка й таймер оновлюються одразу, а не після наступної синхронізації */else adEggDrop()}).catch(()=>{adEggDrop();toast(T('ad_none'))})}catch(e){adEggDrop();toast(T('ad_err'))}})}
 const SUB_N={news:'@GRIMTALENEWS',chat:'@GRIMTALECHAT',pay:'@GRIMTALEPAYOUTS'};
 function tgOpen(u){const w=window.Telegram&&Telegram.WebApp;if(/^https:\/\/t\.me\//.test(u)&&w&&w.openTelegramLink)w.openTelegramLink(u);else if(w&&w.openLink)w.openLink(u);else window.open(u,'_blank')}
 function renderTasks(){
