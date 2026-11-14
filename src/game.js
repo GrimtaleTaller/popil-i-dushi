@@ -142,7 +142,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;heroPen();wdChip(v.usd);giftShow(v.gmsg);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;heroPen();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -280,6 +280,9 @@ var wdUsd=null;function wdChip(u){if(u!=null)wdUsd=Number(u)||0;const c=$('wdChi
 var giftBusy=0;function giftShow(L){if(!L||!L.length)return;for(const g of L){if(queue.some(q=>q.tag==='gift'+g.id))continue;
  modal(`<div class="gift"><div class="gift-ic">🎁</div><h3>${T('gift_t')}</h3><div class="gift-tx">${esc(g.t).replace(/\n/g,'<br>')}</div>${g.ash?`<div class="gift-rw">⚱️ <b>${String(g.ash)}</b></div>`:''}<button class="btn pri" id="giftGo${g.id}">${g.ash?T('gift_claim_a',{a:String(g.ash)}):T('gift_claim')}</button></div>`,null,null,()=>{const b=$('giftGo'+g.id);if(b)b.onclick=()=>{if(giftBusy)return;giftBusy=1;b.disabled=true;
   act('giftClaim',{id:g.id},r=>{haptic('heavy');if(r.out&&r.out.ash)toast(T('gift_got',{a:String(r.out.ash)}))}).then(()=>{giftBusy=0;if(queue[0]&&queue[0].tag==='gift'+g.id){queue.shift();showModal()}})}},'gift'+g.id)}} // невдача (мережа) — вікно закривається, подарунок прийде знову з наступним sync
+// 14.11 (Влад): «один телефон — одні нагороди» — другий акаунт з того самого телефона грає без нагород; попередження раз на день
+function twinShow(t){if(!t)return;const d=new Date().toISOString().slice(0,10);let k='';try{k=localStorage.getItem('gt_twin')||''}catch(e){}if(k===d)return;try{localStorage.setItem('gt_twin',d)}catch(e){}
+ modal(`<div class="big">📱</div><h3>${T('twin_t')}</h3><p>${T('twin_d')}</p>`,T('ok'),null,null,'twin')}
 // 14.11 (Влад бачив стару версію з кешу Telegram): перевірка нової версії гри — раз на 5 хв і при поверненні в гру; плашка «Оновити»
 var MYV=+((([...document.scripts].find(x=>/game\.js\?v=/.test(x.src))||{}).src||'').match(/v=(\d+)/)||[])[1]||0,updShown=0;
 function verCheck(){if(!MYV||updShown||document.visibilityState!=='visible')return;fetch('index.html?t='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/game\.js\?v=(\d+)/);if(m&&+m[1]>MYV)showUpd(+m[1])}).catch(()=>{})}
@@ -1419,7 +1422,7 @@ async function start(){
  if(!w&&!DEV){boot(T('only_tg'));return}
  boot(T('loading'));
  try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r);setTimeout(askPm,4000)}
- catch(e){if(e.message==='prelaunch'){boot();return}boot(errT(e),true)}
+ catch(e){if(e.message==='prelaunch'){boot();return}if(e.message==='acc_banned'){boot(T('acc_banned'));return}boot(errT(e),true)}
 }
 // ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
 // 13.11 (Влад): платну стежку купують прямо в пропуску — ⭐ одразу, GRAM/USDT — у магазині (вкладка VIP, там усі способи)
@@ -1475,7 +1478,8 @@ function renderQuest(){
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
 let adCtl=null,adLoading=false,adQ=[];
-function adsgram(cb,quiet,fail){if(window.Adsgram)return cb();if(adLoading&&!quiet&&adQ.some(x=>!x.quiet))return;adQ.push({cb,quiet,fail});if(adLoading)return;adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;const q=adQ;adQ=[];q.forEach(x=>x.cb())};sc.onerror=()=>{adLoading=false;sc.remove();const q=adQ;adQ=[];q.forEach(x=>{if(x.fail)x.fail();if(!x.quiet){adEggDrop();toast(T('ad_err'))}})};document.head.appendChild(sc)} // 12.11: черга колбеків (відео й рекламні завдання), quiet — без тосту
+function adsgram(cb,quiet,fail){if(V&&V.twin){if(!quiet)toast(T('twin_ad'));return fail&&fail()} // 14.11: двійникам реклама нагород не дає
+ if(window.Adsgram)return cb();if(adLoading&&!quiet&&adQ.some(x=>!x.quiet))return;adQ.push({cb,quiet,fail});if(adLoading)return;adLoading=true;const sc=document.createElement('script');sc.src='https://sad.adsgram.ai/js/sad.min.js';sc.onload=()=>{adLoading=false;const q=adQ;adQ=[];q.forEach(x=>x.cb())};sc.onerror=()=>{adLoading=false;sc.remove();const q=adQ;adQ=[];q.forEach(x=>{if(x.fail)x.fail();if(!x.quiet){adEggDrop();toast(T('ad_err'))}})};document.head.appendChild(sc)} // 12.11: черга колбеків (відео й рекламні завдання), quiet — без тосту
 let adEggAt=0,adEggT=0;const adEggOn=()=>Date.now()-adEggAt<170e3;
 // реклама на яйці (09.11): сервер віддає перегляд тому, на що поставлено намір; якщо реклама не показалась — намір скидаємо
 const adEggDrop=()=>{if(adEggOn()){adEggAt=0;api('adIntent',{k:''}).catch(()=>{})}};
