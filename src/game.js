@@ -1202,7 +1202,7 @@ function chPaintSide(){const on=$('chOn');if(on)on.innerHTML=`<i></i>${T('ch_onl
  const rp=$('chReply');if(rp){const R=CH.reply;rp.innerHTML=R?`<div class="chrep"><div><b>↩️ ${esc(R.name)}</b>${esc(String(R.text||'🎒').slice(0,80))}</div><button id="chRepX">✕</button></div>`:'';if(R)$('chRepX').onclick=()=>{CH.reply=null;chPaintSide()}}
  const ci=$('chIn');if(ci){const mu=CH.mute>0;ci.classList.toggle('muted',mu);$('chText').disabled=mu;document.querySelectorAll('[data-chq],#chItem,#chSend').forEach(b=>b.disabled=mu);$('chText').placeholder=mu?T('ch_muted',{t:Math.ceil(CH.mute/6e4)}):T('ch_ph')}}
 function chPaint(force){const F=$('chFeed');if(!F)return;chPaintSide();
- const day=t=>new Date(t).toDateString(),items=[...CH.msgs.map(m=>({t:Date.parse(m.at),m})),...CH.sys.filter(x=>!CH.msgs.length||Date.parse(x.at)>=Date.parse(CH.msgs[0].at)-36e5).map(x=>({t:Date.parse(x.at),x}))].sort((a,b)=>a.t-b.t);
+ const day=t=>new Date(t).toDateString(),items=[...CH.msgs.map(m=>({t:Date.parse(m.at),m}))].sort((a,b)=>a.t-b.t);
  let h='',pd='',prev=null;
  for(const it of items){const d=day(it.t);if(d!==pd){pd=d;const td=new Date().toDateString(),yd=new Date(Date.now()-864e5).toDateString();h+=`<div class="chday">${d===td?T('today'):d===yd?T('yesterday'):new Date(it.t).toLocaleDateString()}</div>`;prev=null}
   if(it.x){h+=`<div class="chsys">${esc(clogTxt(it.x))}</div>`;prev=null;continue}
@@ -1239,12 +1239,12 @@ function chMenu(id){const m=CH.msgs.find(x=>x.id===id);if(!m||m.del)return;const
 function clanInvite(){const w=tg(),sp=(w&&w.initDataUnsafe&&w.initDataUnsafe.start_param)||Q.get('startapp')||'',m=/^clan_(\d{1,9})_/.exec(sp);let id=m?+m[1]:0,fresh=!!m;
  if(fresh){try{if(sessionStorage.getItem('gt_cinv')===sp)fresh=false;else sessionStorage.setItem('gt_cinv',sp)}catch(e){}}
  if(!fresh){id=0;try{const P=JSON.parse(localStorage.getItem('gt_cinv_p')||'null');if(P&&Date.now()-P.at<7*864e5)id=P.id;else localStorage.removeItem('gt_cinv_p')}catch(e){}if(!id)return}
- if(V.twin){if(fresh)toast(ERR.twin||'');return}
+ if(V.twin){try{localStorage.removeItem('gt_cinv_p')}catch(e){}if(fresh)toast(ERR.twin||'');return}
  if(G.maxStage<(V.clanStage||5)){if(fresh){try{localStorage.setItem('gt_cinv_p',JSON.stringify({id,at:Date.now()}))}catch(e){}
   api('clan',{id}).then(r=>{const c=((r.out||{}).list||[])[0];modal(`<div class="cinvm"><div class="ic">${c?penI([c.name,c.pt],56)||'🏰':'🏰'}</div>${c?`<h3>${esc(c.name)}</h3>`:''}<p>${T('cinv_low2',{n:V.clanStage||5,s:G.maxStage})}</p></div>`,T('ok'))}).catch(()=>{})}return}
  api('clan',{id}).then(r=>{try{localStorage.removeItem('gt_cinv_p')}catch(e){}const o=r.out;if(o.clan){if(o.clan.id===id)toast(T('cinv_already'));else modal(`<div class="big">🏰</div><p>${T('cinv_other',{c:esc(o.clan.name)})}</p>`,T('ok'));return}
-  const c=(o.list||[])[0];if(!c){toast(T('clan_none'));return}const full=c.members>=(c.max||o.max),reqs=(c.min_stage?T('stage',{n:c.min_stage}):'')+(c.min_power?(c.min_stage?' · ':'')+'💪 '+fmt(c.min_power):'');
-  modal(`<div class="cinvm"><div class="ic">${penI([c.name,c.pt],56)||'🏰'}</div><h3>${esc(c.name)}</h3><p class="hint">${T('cinv_you')}</p><div class="sub">👥 ${c.members}/${c.max||o.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${c.desc?`<div class="cdesc s" style="margin:8px 0">${esc(c.desc)}</div>`:''}${reqs?`<p class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</p>`:''}${full?`<p class="dn">${T('clan_full')}</p>`:''}</div>`,
+  const c=(o.list||[])[0];if(!c){toast(ERR.clan_none||T('err',{e:'clan_none'}));return}const full=c.members>=(c.max||o.max),reqs=(c.min_stage?T('stage',{n:c.min_stage}):'')+(c.min_power?(c.min_stage?' · ':'')+'💪 '+fmt(c.min_power):'');
+  modal(`<div class="cinvm"><div class="ic">${penI([c.name,c.pt],56)||'🏰'}</div><h3>${esc(c.name)}</h3><p class="hint">${T('cinv_you')}</p><div class="sub">👥 ${c.members}/${c.max||o.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${c.desc?`<div class="cdesc s" style="margin:8px 0">${esc(c.desc)}</div>`:''}${reqs?`<p class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</p>`:''}${full?`<p class="dn">${ERR.clan_full||T('err',{e:'clan_full'})}</p>`:''}</div>`,
    c.join_mode==='closed'||full||!c.ok?null:(c.join_mode==='apply'?T('apply'):T('join')),()=>act('clanJoin',{id:c.id},x=>{if(x.out)clanData=x.out;profData=null;dirty.clan=1;toast(x.out&&x.out.applied?T('app_sent'):T('cinv_in',{c:c.name}));haptic('heavy');const b=document.querySelector(tabBtn('clan'));if(b)b.click()}))}).catch(e=>toast(errT(e)))}
 function clogTxt(x){const d=x.data||{};return T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),a:d.ash!=null?'⚱️'+fmt(d.ash):'💰'+fmt(d.gold||0),t:d.t||d.place||'',c:d.n||1,k:d.k?(d.k==='sh'?'🔩':/^m\d$/.test(d.k)?'⛏️'+MATN[+d.k[1]]:T('bld_'+d.k)):'',l:d.l||'',x:fmt(d.n||0)})}
 function renderClan(){
