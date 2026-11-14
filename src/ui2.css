@@ -472,3 +472,4 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .petinc.inc2e{align-items:center}.petinc.inc2e>div:nth-child(2){flex:1;min-width:0}.petinc.inc2e .btn,.inc2rent .btn{flex-shrink:0;white-space:nowrap;padding:8px 14px}
 .petinc>.slot2ic{flex:0 0 44px;width:44px;height:52px;border-radius:50% 50% 46% 46%/58% 58% 42% 42%;border:2px dashed #c9a24a88;display:grid;place-items:center;font-size:18px;color:#c9a24a;background:#ffffff06}.slot2ic.on{border-style:solid;border-color:#56c271aa;color:#56c271;font-size:24px;font-weight:800;box-shadow:0 0 10px #56c27133 inset}
 .inc2rent span{flex:1;min-width:0}
+.askv{font-size:20px;margin:6px 0 10px}.askv b{color:var(--gold)}.noask{display:flex;align-items:center;justify-content:center;gap:8px;margin:4px 0 2px;font-size:13px;opacity:.85}.noask input{width:18px;height:18px;accent-color:#c9a24a}

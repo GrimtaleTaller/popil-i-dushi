@@ -438,9 +438,9 @@ function renderBag(){
  if($('relJ'))$('relJ').onclick=()=>modal(`<div class="big">⚱️</div><p>${T('relic_junk_ask',{n:V.forge.relic})}</p>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
  $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
- $('sellC').onclick=()=>sell(G.inv.filter(i=>i.r===0).map(i=>i.id));
- $('disW').onclick=()=>{const n=(V.forge&&V.forge.junk)||0;if(!n){toast(ERR.no_junk);return}modal(`<div class="big">🔩</div><p>${T('dis_worse_q',{n})}</p>`,T('to_shards'),()=>act('dismantleJunk',{mode:'shards'},r=>toast(disMsg(r.out))))}; // 09.11 (Влад): розбір гірших (без легендарних) на уламки прямо в Сумці
- $('sellW').onclick=()=>sell(G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id));
+ $('sellC').onclick=()=>sellAsk(G.inv.filter(i=>i.r===0&&!(i.gm&&i.gm.length)).map(i=>i.id),'sellC');
+ $('disW').onclick=()=>{const n=(V.forge&&V.forge.junk)||0;if(!n){toast(ERR.no_junk);return}disAsk(worseIds(),'shards','disW',()=>act('dismantleJunk',{mode:'shards'},r=>toast(disMsg(r.out))))}; // 09.11 (Влад): розбір гірших (без легендарних) на уламки прямо в Сумці
+ $('sellW').onclick=()=>sellAsk(worseIds(),'sellW');
  $('autoS').onclick=()=>act('settings',{autoSell:!G.autoSell});
 }
 // ---------- ринок: за Попіл або Золото, речі й матеріали ----------
@@ -494,6 +494,15 @@ function disRar(r){const ids=disRarIds(r);if(!ids.length)return;const keep=G.inv
  modal(`<div class="big">⚒️</div><p>${T('dis_rar_q',{n:ids.length,w:T('dis_r'+r).toLowerCase()})}</p>${xp?`<p class="hint">${T('to_xp')}</p>`:`<p><b>🔩 +${fmt(sh)}</b></p>`}${keep?`<p class="hint">${T('dis_rar_keep',{n:keep})}</p>`:''}`,T('dis_go'),()=>act('dismantle',{ids,mode:G.dismode},x=>{toast(disMsg(x.out));haptic('medium')}))}
 function dismantle(ids){act('dismantle',{ids,mode:G.dismode},r=>toast(disMsg(r.out)))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
+// 14.11 (Влад): «Продати гірші» / «Розібрати гірші» — спершу вікно, скільки буде золота / уламків / досвіду; галочка «Більше не питати» (на цьому пристрої)
+const worseIds=()=>G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id);
+const disXpOf=it=>Math.round(6*0.72*Math.pow(1.07,it.il-1)*3*Math.min(14,RAR[it.r].m)),disShOf=it=>Math.round((it.r+1)*(it.r+1)*(1+it.il/10)); // як disXp / disShards на сервері
+function askOnce(key,html,btn,go){let skip=false;try{skip=localStorage.getItem('gt_noask_'+key)==='1'}catch(e){}if(skip){go();return}
+ modal(html+`<label class="noask"><input type="checkbox" id="noAsk"> ${T('no_ask')}</label>`,btn,()=>{const c=$('noAsk');if(c&&c.checked){try{localStorage.setItem('gt_noask_'+key,'1')}catch(e){}}go()})}
+function sellAsk(ids,key){if(!ids.length){toast(T('nothing_sell'));return}const its=G.inv.filter(i=>ids.includes(i.id)),g=its.reduce((a,i)=>a+sellPrice(i),0);
+ askOnce(key,`<div class="big">💰</div><p>${T('sell_q',{n:ids.length})}</p><p class="askv"><b>💰 +${fmt(g)}</b></p>`,T('sell_go'),()=>sell(ids))}
+function disAsk(ids,mode,key,go){if(!ids.length){toast(ERR.no_junk);return}const its=G.inv.filter(i=>ids.includes(i.id)),xp=mode==='xp',v=its.reduce((a,i)=>a+(xp?disXpOf(i):disShOf(i)),0);
+ askOnce(key,`<div class="big">${xp?'✨':'🔩'}</div><p>${T(xp?'dis_q_xp':'dis_q_sh',{n:ids.length})}</p><p class="askv"><b>${xp?'✨':'🔩'} +${fmt(v)}</b></p>`,T('dis_go'),go)}
 let mSlot=null,mN=3,fsub='res',gemSel=null,aSlot=null,aSel=null;
 // ── Камені: злиття (картка 2, макет A «компактна таблиця», 08.11) ──
 // Правило й ціни — із сервера (V.gem.merge): need однакових каменів рівня l → 1 рівня l+1 (до V);
@@ -633,7 +642,7 @@ function renderForge(){
  if(fsub==='gem')bindGem();
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
  if($('smelt')){$('smelt').onclick=()=>act('smelt',{n:1},r=>toast(T('smelted',{n:r.out.n})));$('smeltAll').onclick=()=>act('smelt',{n:20},r=>toast(T('smelted',{n:r.out.n})))}
- if($('disJunk'))$('disJunk').onclick=()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out)));
+ if($('disJunk'))$('disJunk').onclick=()=>disAsk(worseIds(),G.dismode,'disJ_'+(G.dismode==='xp'?'xp':'sh'),()=>act('dismantleJunk',{mode:G.dismode},r=>toast(disMsg(r.out))));
  $('p-forge').querySelectorAll('[data-disr]').forEach(b=>b.onclick=()=>disRar(+b.dataset.disr));
  const eb=$('ench');if(eb)eb.onclick=()=>{const it=enchPicked(enchLegs());if(!it)return;act('enchant',{id:it.id},r=>{enchSel=null;toast(T('ench_done',{n:r.out.ench}));haptic('heavy')})};
  if($('enchPick'))$('enchPick').onclick=enchPickModal;
