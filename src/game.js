@@ -142,7 +142,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;heroPen();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;heroPen();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -302,6 +302,7 @@ function renderTop(){
  if(B.m){$('mhp').style.width=Math.max(0,B.m.hp/B.m.max*100)+'%';$('mhpt').textContent=fmt(Math.max(0,B.m.hp))+' / '+fmt(B.m.max)}
  $('timer').style.display=B.rep?'block':'none';if(B.rep)$('timeri').style.width=Math.max(0,(BOSS_TIME-B.rep.t)/BOSS_TIME*100)+'%';
  const nw=G.inv.filter(i=>i.nw).length,nb=$('newb');nb.style.display=nw?'inline':'none';nb.textContent=nw;
+ {const cb=document.querySelector('.tabs button[data-t="clan"]');if(cb){let b=cb.querySelector('.nbd');const n=chatU||0;if(n&&!b){b=document.createElement('i');b.className='nbd';cb.appendChild(b)}if(b){b.textContent=n>99?'99+':n;b.style.display=n?'':'none'}}} // 14.11: непрочитані в чаті клану
  {const qb=$('qb'),d=subDots();if(qb)qb.style.display=d.quest||d.ach||d.tasks?'inline':'none';document.querySelectorAll('#subtabs button[data-s]').forEach(b=>b.classList.toggle('sdot',!!d[b.dataset.s]))} // 09.11 (Влад): «!» на Завданнях — і крапка на тій підвкладці, де є що забрати
  {const hc=$('hsCur');if(hc&&document.body.classList.contains('hs-open'))hc.innerHTML=`<span>💰 ${fmt(gold)}</span><span>🔥 ${fmt(G.souls||0)} · ⚱️ ${fmt(G.ash||0)}</span>`} // баланс у шторці «Герой»: верхня панель під нею не видна (04.11)
  if(tab==='train')renderTrainBtns();
@@ -335,6 +336,7 @@ const BOT='Grimtalebot';
 function myId(){const w=tg();return w&&w.initDataUnsafe&&w.initDataUnsafe.user?w.initDataUnsafe.user.id:(DEV?DEV.user.id:0)}
 function bioLink(){return 't.me/'+BOT+'?startapp=ref_'+myId()}
 function inviteLink(){return 'https://t.me/'+BOT+'?startapp=ref_'+myId()}
+function clanLink(id){return 'https://t.me/'+BOT+'?startapp=clan_'+id+'_'+myId()} // 14.11: запрошення в клан (заодно реферал того, хто поділився)
 function invite(){
  const link=inviteLink(),IV=['invite_text','invite_text2','invite_text3'];let ivn=0;try{ivn=(+localStorage.getItem('gt_iv')||0)%3;localStorage.setItem('gt_iv',ivn+1)}catch(e){ivn=Math.floor(Math.random()*3)} const text=T(IV[ivn]); // 08.11: тексти 3, 9, 10 по черзі, мовою гри гравця
  const w=tg();
@@ -979,12 +981,13 @@ function renderProfile(){
   <div><span>${T('bosses')}</span><b>${G.tot.bosses}</b></div><div><span>${T('deaths')}</span><b>${G.tot.deaths}</b></div>
   <div><span>${T('dng_runs')}</span><b>${(G.dng&&G.dng.runs)||0}</b></div><div><span>${T('power',{n:''}).trim()}</span><b>${fmt(H.power)}</b></div></div></div>`;
  if(V.isAdmin)h+=adminHtml();
- h+=`<div class="card"><h4>📢 ${T('comm')}</h4><div class="row" style="margin:0"><button class="btn" id="pCh">📣 ${T('lnch_ch')}</button><button class="btn" id="pChat">💬 ${T('chat_pl')}</button></div><button class="btn" id="pBot" style="margin-top:8px;width:100%">🤖 ${T('chat_bot')}</button></div>`;
+ h+=`<div class="card"><h4>📢 ${T('comm')}</h4><div class="row" style="margin:0"><button class="btn" id="pCh">📣 ${T('lnch_ch')}</button><button class="btn" id="pChat">💬 ${T('chat_pl')}</button></div><button class="btn" id="pBot" style="margin-top:8px;width:100%">🤖 ${T('chat_bot')}</button><button class="btn" id="pRules" style="margin-top:8px;width:100%">📜 ${T('rules_t')}</button></div>`;
  h+=`<div class="card"><h4>🔔 ${T('ntf')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${T('ntf_hint')}</span><button class="btn" id="pNtf">${G.ntf===0?T('ntf_off'):T('ntf_on')}</button></div></div>`;
  {let na=[];try{na=Object.keys(localStorage).filter(k=>k.indexOf('gt_noask_')===0)}catch(e){} // 14.11 (Влад): повернути вікна «Більше не питати»
   h+=`<div class="card"><h4>❓ ${T('ask_t')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${na.length?T('ask_off',{n:na.length}):T('ask_on')}</span><button class="btn" id="pAsk" ${na.length?'':'disabled'}>${T('ask_reset')}</button></div></div>`}
  h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button><button class="btn" id="pTut">${T('tut_restart')}</button></div>`;
  el.innerHTML=h;refsBind(el,'prof');
+ if($('pRules'))$('pRules').onclick=()=>modal(`<div class="rules"><h3>📜 ${T('rules_t')}</h3><ol>${[1,2,3,4,5,6,7].map(i=>`<li>${T('rule_'+i)}</li>`).join('')}</ol></div>`,T('ok')); // 14.11 (Влад): правила гри в грі, з пунктом про мультиакаунти
  if($('pAsk'))$('pAsk').onclick=()=>{try{Object.keys(localStorage).filter(k=>k.indexOf('gt_noask_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}haptic('light');toast(T('ask_done'));renderProfile()};
  $('pTut').onclick=tutRestart;
  $('pCh').onclick=openCh;$('pChat').onclick=openChat;$('pBot').onclick=()=>{const w=tg();if(V&&V.pm===0&&w&&typeof w.requestWriteAccess==='function'){try{w.requestWriteAccess(ok=>{if(ok)api('botHello').catch(()=>{});openBot()});return}catch(e){}}openBot()};
@@ -1152,8 +1155,94 @@ function adminHtml(){
 let clanAt=0,clogF='all';let csub='main',clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
 const roleT=r=>T('role_'+r);
 function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
-setInterval(()=>{if(document.visibilityState==='visible'&&liveFn[tab])liveFn[tab]()},5e3); // 13.11: живі вікна — див. live(); перемальовка лише при змінах
+setInterval(()=>{if(document.visibilityState==='visible'&&liveFn[tab])liveFn[tab]();if(tab==='clan'&&csub==='chat'&&$('chatRoot')&&!CH.t&&!CH.busy)chPoll(1)},5e3); // 13.11: живі вікна — див. live(); перемальовка лише при змінах
 function clanAct(a,args,cb){return act(a,args,r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(cb)cb(r)})}
+// ───────── 14.11 (Влад «А»): чат клану ─────────
+// Опитування окремим запитом (chatApi — без перерахунку екрана й без зсуву звичайної синхронізації): раз на 3 с, поки в чаті жваво, інакше раз на 8 с.
+var chatU=0;const CH={clan:0,msgs:[],sys:[],pin:null,after:0,since:0,logAfter:0,typing:[],online:0,mem:[],me:0,role:'',mute:0,reply:null,busy:0,t:null,last:0,mine:0,first:1,bottom:1,reacts:['👍','🔥','😂','😮','🙏','❤️']};
+const CHQ=['chq_dng','chq_keys','chq_help','chq_hi'];
+async function chatApi(action,args){const body={action,args:args||{}};const headers={'content-type':'application/json'};const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
+ let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}const j=await r.json().catch(()=>({ok:false,err:'bad'}));if(!j.ok)throw new Error(j.err||'err');return j.out}
+function chShell(){return `<div id="chatRoot" class="chat"><div class="chtop"><span id="chOn"></span><span class="sub">${T('chat_hint')}</span></div><div id="chPin"></div><div class="chwrap"><div id="chFeed" class="chfeed"><p class="hint" style="text-align:center">${T('loading')}</p></div><button id="chDown" class="chdown" style="display:none">↓</button></div><div id="chTyping" class="chtyping"></div><div id="chReply"></div>
+ <div class="chqp">${CHQ.map(k=>`<button data-chq="${k}">${T(k)}</button>`).join('')}</div><div class="chin" id="chIn"><button class="chb" id="chItem" title="${T('ch_item')}">🎒</button><textarea id="chText" rows="1" maxlength="300" placeholder="${T('ch_ph')}"></textarea><button class="chb chsend" id="chSend">➤</button></div></div>`}
+function chStop(){clearTimeout(CH.t);CH.t=null}
+function chMount(C){if(CH.clan!==C.clan.id){Object.assign(CH,{clan:C.clan.id,msgs:[],sys:[],pin:null,after:0,since:0,logAfter:0,first:1,reply:null,bottom:1})}
+ const F=$('chFeed'),fit=()=>{if(!document.body.contains(F))return;const r=F.getBoundingClientRect(),vh=(tg()&&tg().viewportHeight)||innerHeight;F.style.height=Math.max(180,vh-r.top-176)+'px'};fit();CH.fit=fit;
+ if(!CH.fitOn){CH.fitOn=1;addEventListener('resize',()=>CH.fit&&CH.fit());try{const w=tg();if(w&&w.onEvent)w.onEvent('viewportChanged',()=>CH.fit&&CH.fit())}catch(e){}}
+ F.onscroll=()=>{CH.bottom=F.scrollHeight-F.scrollTop-F.clientHeight<40;$('chDown').style.display=CH.bottom?'none':'';if(F.scrollTop<30&&CH.msgs.length>=60&&!CH.old)chOlder()};
+ $('chDown').onclick=()=>{F.scrollTop=F.scrollHeight};
+ const ta=$('chText');let tyAt=0;if(CH.draft)ta.value=CH.draft;ta.onfocus=()=>setTimeout(()=>{fit();if(CH.bottom)F.scrollTop=F.scrollHeight},300);ta.oninput=()=>{CH.draft=ta.value;ta.style.height='auto';ta.style.height=Math.min(110,ta.scrollHeight)+'px';if(Date.now()-tyAt>4000&&ta.value.trim()){tyAt=Date.now();chatApi('clanTyping').catch(()=>{})}};
+ ta.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!('ontouchstart' in window)){e.preventDefault();chSend()}};
+ $('chSend').onclick=()=>chSend();$('chItem').onclick=chPickItem;
+ $('chatRoot').querySelectorAll('[data-chq]').forEach(b=>b.onclick=()=>chSend(T(b.dataset.chq)));
+ // затиснути повідомлення — меню; тап по аватарці — @згадка
+ let pt=null;F.onpointerdown=e=>{const m=e.target.closest('[data-mid]');if(!m||e.target.closest('[data-rx],[data-av],[data-rq]'))return;clearTimeout(pt);pt=setTimeout(()=>{haptic('medium');CH.menuAt=Date.now();chMenu(+m.dataset.mid)},450)};
+ F.onpointerup=F.onpointerleave=F.onpointercancel=()=>clearTimeout(pt);F.addEventListener('scroll',()=>clearTimeout(pt),{passive:true});
+ F.oncontextmenu=e=>{const m=e.target.closest('[data-mid]');if(m){e.preventDefault();if(Date.now()-(CH.menuAt||0)>900)chMenu(+m.dataset.mid)}};
+ F.onclick=e=>{const rx=e.target.closest('[data-rx]');if(rx){chReact(+rx.dataset.rx,rx.dataset.e);return}const av=e.target.closest('[data-av]');if(av){chMention(av.dataset.av);return}const rq=e.target.closest('[data-rq]');if(rq)chJump(+rq.dataset.rq)};
+ chPaint();chPoll(1)}
+function chMention(n){const ta=$('chText');if(!ta)return;ta.value=(ta.value&&!/\s$/.test(ta.value)?ta.value+' ':ta.value)+'@'+n+' ';ta.focus()}
+function chJump(id){const el=document.querySelector(`[data-mid="${id}"]`);if(el){el.scrollIntoView({block:'center'});el.classList.add('chflash');setTimeout(()=>el.classList.remove('chflash'),1200)}}
+async function chPoll(now){chStop();if(tab!=='clan'||csub!=='chat'||!$('chatRoot'))return;
+ if(document.visibilityState==='visible'&&!CH.busy){CH.busy=1;try{const full=CH.first||Date.now()-(CH.memAt||0)>30e3;const o=await chatApi('clanChat',{after:CH.after,since:CH.since,logAfter:CH.logAfter,mark:CH.bottom?1:0,read:CH.bottom?CH.after:0,full:full?1:0});if(full)CH.memAt=Date.now();chMerge(o);if(CH.bottom)chatU=0}catch(e){if(e.message==='clan_none'&&Date.now()-(CH.noneAt||0)>30e3){CH.noneAt=Date.now();clanData=null;dirty.clan=1;flush();return}}finally{CH.busy=0}}
+ const lively=Date.now()-CH.last<90e3||Date.now()-CH.mine<60e3||CH.typing.length;CH.t=setTimeout(()=>chPoll(),lively?3000:8000)}
+async function chOlder(){CH.old=1;try{const o=await chatApi('clanChat',{before:CH.msgs[0].id});const F=$('chFeed'),h0=F.scrollHeight;CH.msgs=[...(o.msgs||[]),...CH.msgs];chPaint(1);F.scrollTop=F.scrollHeight-h0;if((o.msgs||[]).length>=60)CH.old=0}catch(e){CH.old=0}}
+function chMerge(o){if(!o)return;CH.me=o.me;CH.role=o.role;CH.mute=o.mute||0;CH.pin=o.pin;CH.typing=o.typing||[];CH.online=o.online||0;if(o.mem)CH.mem=o.mem;if(o.reacts)CH.reacts=o.reacts;
+ const ix=new Map(CH.msgs.map((m,i)=>[m.id,i]));let add=0;
+ for(const m of o.msgs||[]){if(ix.has(m.id))CH.msgs[ix.get(m.id)]=m;else{CH.msgs.push(m);add++;if(m.pid!==CH.me)CH.last=Date.now()}if(m.id>CH.after)CH.after=m.id}
+ for(const x of o.sys||[]){if(!CH.sys.some(y=>y.id===x.id))CH.sys.push(x);if(x.id>CH.logAfter)CH.logAfter=x.id}
+ CH.since=o.now;const wasFirst=CH.first;CH.first=0;if(add||wasFirst||o.msgs&&o.msgs.length||(o.sys||[]).length)chPaint(wasFirst);else chPaintSide()}
+const chRole=id=>{const m=CH.mem.find(x=>x.id===id);return m?m.role:''},chCol=r=>r==='leader'?'#f2a33a':r==='officer'?'#7fb2ff':'#c8c0d0';
+function chTxt(t){let h=esc(t||'').replace(/\n/g,'<br>');const ns=CH.mem.map(m=>m.name).filter(Boolean).sort((a,b)=>b.length-a.length);
+ for(const n of ns){const en=esc(n).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');h=h.replace(new RegExp('@'+en,'g'),`<b class="at">@${esc(n)}</b>`)}return h}
+function chItem(it){const st=itemScore?Math.round(powDelta(it)||0):0;return `<div class="chit" style="--rc:${RAR[it.r].c}">${gearIc(it)}<div><b style="color:${RAR[it.r].c}">${esc(itemName(it))}</b><small>${RAR[it.r].n} · ${T('lvl',{n:it.il})}${it.sr?' · '+'★'.repeat(it.sr):''}${st?` · 💪 ${st>0?'+':'−'}${fmt(Math.abs(st))}`:''}</small></div></div>`}
+function chPaintSide(){const on=$('chOn');if(on)on.innerHTML=`<i></i>${T('ch_online',{n:CH.online})}`;const ty=$('chTyping');if(ty)ty.textContent=CH.typing.length?T('ch_typing',{n:CH.typing.slice(0,2).join(', ')}):'';
+ const pb=$('chPin');if(pb){const P=CH.pin,lead=CH.role==='leader'||CH.role==='officer';pb.innerHTML=P?`<div class="chpin" data-rq="${P.id}"><span>📌</span><div><b>${T('ch_pinned')} · ${esc(P.name)}</b>${esc(String(P.text||'🎒').slice(0,140))}</div>${lead?`<button id="chUnpin">✕</button>`:''}</div>`:'';
+  if(P)pb.querySelector('.chpin').onclick=e=>{if(e.target.id==='chUnpin'){chatApi('clanPin',{id:0}).then(()=>{CH.pin=null;chPaintSide()}).catch(x=>toast(errT(x)));return}chJump(P.id)}}
+ const rp=$('chReply');if(rp){const R=CH.reply;rp.innerHTML=R?`<div class="chrep"><div><b>↩️ ${esc(R.name)}</b>${esc(String(R.text||'🎒').slice(0,80))}</div><button id="chRepX">✕</button></div>`:'';if(R)$('chRepX').onclick=()=>{CH.reply=null;chPaintSide()}}
+ const ci=$('chIn');if(ci){const mu=CH.mute>0;ci.classList.toggle('muted',mu);$('chText').disabled=mu;document.querySelectorAll('[data-chq],#chItem,#chSend').forEach(b=>b.disabled=mu);$('chText').placeholder=mu?T('ch_muted',{t:Math.ceil(CH.mute/6e4)}):T('ch_ph')}}
+function chPaint(force){const F=$('chFeed');if(!F)return;chPaintSide();
+ const day=t=>new Date(t).toDateString(),items=[...CH.msgs.map(m=>({t:Date.parse(m.at),m})),...CH.sys.filter(x=>!CH.msgs.length||Date.parse(x.at)>=Date.parse(CH.msgs[0].at)-36e5).map(x=>({t:Date.parse(x.at),x}))].sort((a,b)=>a.t-b.t);
+ let h='',pd='',prev=null;
+ for(const it of items){const d=day(it.t);if(d!==pd){pd=d;const td=new Date().toDateString(),yd=new Date(Date.now()-864e5).toDateString();h+=`<div class="chday">${d===td?T('today'):d===yd?T('yesterday'):new Date(it.t).toLocaleDateString()}</div>`;prev=null}
+  if(it.x){h+=`<div class="chsys">${esc(clogTxt(it.x))}</div>`;prev=null;continue}
+  const m=it.m,mine=m.pid===CH.me,r=chRole(m.pid),grp=prev&&prev.pid===m.pid&&it.t-prev.t<300e3,tm=(d0=>String(d0.getHours()).padStart(2,'0')+':'+String(d0.getMinutes()).padStart(2,'0'))(new Date(it.t));
+  if(m.del){h+=`<div class="chm ${mine?'me':''}"><div class="chbb del">🗑️ ${T('ch_deleted')}</div></div>`;prev={pid:m.pid,t:it.t};continue}
+  const rx=Object.entries(m.rx||{}).filter(([,a])=>a&&a.length),men=(m.ment||[]).includes(CH.me);
+  h+=`<div class="chm ${mine?'me':''} ${grp?'grp':''}" data-mid="${m.id}">${mine?'':`<div class="chav" data-av="${esc0(m.name)}" style="--rc:${chCol(r)}">${grp?'':esc(Array.from(m.name||'?')[0]||'?')}</div>`}<div class="chbb ${men?'men':''}">${!mine&&!grp?`<div class="chnm" style="color:${chCol(r)}">${esc(m.name)}${r==='leader'?' <em>👑 '+T('role_leader')+'</em>':r==='officer'?' <em>⭐ '+T('role_officer')+'</em>':''}</div>`:''}${m.reply?`<div class="chq" data-rq="${m.reply.id}"><b>${esc(m.reply.name)}</b>${m.reply.del||(CH.msgs.find(x=>x.id===m.reply.id)||{}).del?`<i>${T('ch_deleted')}</i>`:esc(m.reply.text||'')}</div>`:''}${m.item?chItem(m.item):''}${m.text?`<span class="cht">${chTxt(m.text)}</span>`:''}<span class="chtm">${tm}</span>${rx.length?`<div class="chrx">${rx.map(([e,a])=>`<span data-rx="${m.id}" data-e="${e}" class="${a.includes(CH.me)?'mine':''}">${e} ${a.length}</span>`).join('')}</div>`:''}</div></div>`;
+  prev={pid:m.pid,t:it.t}}
+ if(!items.length)h=`<div class="chempty">💬<p>${T('ch_empty')}</p></div>`;
+ const keep=!force&&!CH.bottom?F.scrollTop:null;F.innerHTML=h;if(keep===null)F.scrollTop=F.scrollHeight;else F.scrollTop=keep;$('chDown').style.display=CH.bottom?'none':''}
+async function chSend(q){const ta=$('chText');if(!ta||CH.sending)return;const text=(q!=null?q:ta.value).trim();if(!text)return;CH.sending=1;$('chSend').disabled=true;
+ try{await chatApi('clanSay',{text,reply:CH.reply&&CH.reply.id||undefined});if(q==null){ta.value='';CH.draft='';ta.style.height='auto'}CH.reply=null;CH.mine=Date.now();CH.bottom=1;haptic('light');await chPoll(1)}catch(e){toast(errT(e))}finally{CH.sending=0;const b=$('chSend');if(b)b.disabled=false}}
+function chPickItem(){const its=[...Object.values(G.eq||{}).filter(Boolean),...(G.inv||[]).filter(i=>i.r>=2)].sort((a,b)=>b.r-a.r||b.il-a.il).slice(0,40);
+ if(!its.length){toast(T('ch_noitems'));return}
+ modal(`<h3>🎒 ${T('ch_item')}</h3><p class="hint">${T('ch_item_h')}</p><div class="chpick">${its.map(i=>`<button data-chi="${i.id}" style="--rc:${RAR[i.r].c}">${gearIc(i)}<span><b style="color:${RAR[i.r].c}">${esc(itemName(i))}</b><small>${RAR[i.r].n} · ${T('lvl',{n:i.il})}${Object.values(G.eq||{}).some(x=>x&&x.id===i.id)?' · '+T('equipped'):''}</small></span></button>`).join('')}</div>`,null,null,()=>{
+  document.querySelectorAll('[data-chi]').forEach(b=>b.onclick=()=>{const id=+b.dataset.chi,ta=$('chText');queue.shift();showModal();chatApi('clanSay',{item:id,text:ta?ta.value.trim():'',reply:CH.reply&&CH.reply.id||undefined}).then(()=>{if(ta){ta.value=''}CH.reply=null;CH.mine=Date.now();CH.bottom=1;chPoll(1)}).catch(e=>toast(errT(e)))})})}
+function chReact(id,e){chatApi('clanReact',{id,e}).then(o=>{const m=CH.msgs.find(x=>x.id===id);if(m){m.rx=o.rx||{};chPaint()}haptic('light')}).catch(x=>toast(errT(x)))}
+function chMenu(id){const m=CH.msgs.find(x=>x.id===id);if(!m||m.del)return;const mine=m.pid===CH.me,lead=CH.role==='leader'||CH.role==='officer',r=chRole(m.pid),canMute=!mine&&lead&&r!=='leader'&&!(CH.role==='officer'&&r==='officer');
+ const A=[['rep','↩️ '+T('ch_reply')],...(mine?[]:[['men','@ '+T('ch_mention',{n:m.name})]]),...(m.text?[['copy','📋 '+T('ch_copy')]]:[]),...(lead?[['pin','📌 '+T('ch_pin')]]:[]),...(canMute?[['mute','🔇 '+T('ch_mute')],['unmute','🔊 '+T('ch_unmute')]]:[]),...(mine||lead?[['del','🗑️ '+T('ch_del')]]:[]),...(mine?[]:[['rep2','⚠️ '+T('ch_report')]])];
+ modal(`<div class="chmenu"><div class="chrxbar">${CH.reacts.map(e=>`<button data-mrx="${e}">${e}</button>`).join('')}</div><div class="chmq"><b>${esc(m.name)}</b>${esc(String(m.text||'🎒').slice(0,120))}</div>${A.map(([k,l])=>`<button class="chma ${k==='del'||k==='rep2'?'dn':''}" data-ma="${k}">${l}</button>`).join('')}</div>`,null,null,()=>{
+  const close=()=>{queue.shift();showModal()};
+  document.querySelectorAll('[data-mrx]').forEach(b=>b.onclick=()=>{close();chReact(id,b.dataset.mrx)});
+  document.querySelectorAll('[data-ma]').forEach(b=>b.onclick=()=>{const k=b.dataset.ma;close();
+   if(k==='rep'){CH.reply={id:m.id,name:m.name,text:m.text||'🎒'};chPaintSide();$('chText').focus()}
+   else if(k==='men')chMention(m.name);
+   else if(k==='copy')copyText(m.text);
+   else if(k==='pin')chatApi('clanPin',{id}).then(()=>{toast(T('ch_pin_ok'));chPoll(1)}).catch(e=>toast(errT(e)));
+   else if(k==='mute')modal(`<div class="big">🔇</div><p>${T('ch_mute_q',{n:esc(m.name)})}</p>`,T('ch_mute'),()=>chatApi('clanMute',{pid:m.pid}).then(()=>toast(T('ch_mute_ok'))).catch(e=>toast(errT(e))));
+   else if(k==='unmute')chatApi('clanMute',{pid:m.pid,off:true}).then(()=>toast(T('ch_unmute_ok'))).catch(e=>toast(errT(e)));
+   else if(k==='del')chatApi('clanMsgDel',{id}).then(()=>{m.del=1;chPaint()}).catch(e=>toast(errT(e)));
+   else if(k==='rep2')modal(`<div class="big">⚠️</div><p>${T('ch_report_q')}</p>`,T('ch_report'),()=>chatApi('clanChatRep',{id}).then(()=>toast(T('ch_report_ok'))).catch(e=>toast(errT(e))))})})}
+// 14.11 (Влад): гра відкрита посиланням-запрошенням клану (startapp=clan_<id>_<хто запросив>) — показуємо клан і кнопку вступу
+function clanInvite(){const w=tg(),sp=(w&&w.initDataUnsafe&&w.initDataUnsafe.start_param)||Q.get('startapp')||'',m=/^clan_(\d{1,9})_/.exec(sp);if(!m)return;const id=+m[1];
+ try{if(sessionStorage.getItem('gt_cinv')===sp)return;sessionStorage.setItem('gt_cinv',sp)}catch(e){}
+ if(G.maxStage<(V.clanStage||5)){modal(`<div class="big">🏰</div><p>${T('cinv_low',{n:V.clanStage||5})}</p>`,T('ok'));return}
+ api('clan',{id}).then(r=>{const o=r.out;if(o.clan){if(o.clan.id===id)toast(T('cinv_already'));else modal(`<div class="big">🏰</div><p>${T('cinv_other',{c:esc(o.clan.name)})}</p>`,T('ok'));return}
+  const c=(o.list||[])[0];if(!c){toast(T('clan_none'));return}const full=c.members>=(c.max||o.max),reqs=(c.min_stage?T('stage',{n:c.min_stage}):'')+(c.min_power?(c.min_stage?' · ':'')+'💪 '+fmt(c.min_power):'');
+  modal(`<div class="cinvm"><div class="ic">${penI([c.name,c.pt],56)||'🏰'}</div><h3>${esc(c.name)}</h3><p class="hint">${T('cinv_you')}</p><div class="sub">👥 ${c.members}/${c.max||o.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${c.desc?`<div class="cdesc s" style="margin:8px 0">${esc(c.desc)}</div>`:''}${reqs?`<p class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</p>`:''}${full?`<p class="dn">${T('clan_full')}</p>`:''}</div>`,
+   c.join_mode==='closed'||full||!c.ok?null:(c.join_mode==='apply'?T('apply'):T('join')),()=>act('clanJoin',{id:c.id},x=>{if(x.out)clanData=x.out;profData=null;dirty.clan=1;toast(x.out&&x.out.applied?T('app_sent'):T('cinv_in',{c:c.name}));haptic('heavy');const b=document.querySelector(tabBtn('clan'));if(b)b.click()}))}).catch(e=>toast(errT(e)))}
+function clogTxt(x){const d=x.data||{};return T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),a:d.ash!=null?'⚱️'+fmt(d.ash):'💰'+fmt(d.gold||0),t:d.t||d.place||'',c:d.n||1,k:d.k?(d.k==='sh'?'🔩':/^m\d$/.test(d.k)?'⛏️'+MATN[+d.k[1]]:T('bld_'+d.k)):'',l:d.l||'',x:fmt(d.n||0)})}
 function renderClan(){
  const el=$('p-clan');
  if(G.maxStage<(V.clanStage||5)){el.innerHTML=`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
@@ -1177,9 +1266,9 @@ function renderClan(){
   $('cMake').onclick=()=>{const n=$('cName').value.trim();if(n.length<3){toast(ERR.clan_name_bad);return}clanAct('clanCreate',{name:n})};
   el.querySelectorAll('[data-cj]').forEach(b=>b.onclick=()=>act('clanJoin',{id:+b.dataset.cj},r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(r.out&&r.out.applied)toast(T('app_sent'))}));
   return}
- const S={main:'',keys:'',castle:'',members:'',log:''}; // розділи клану (04.11): кожен — окрема підвкладка
+ const S={main:'',keys:'',castle:'',members:'',log:'',chat:''}; // розділи клану (04.11): кожен — окрема підвкладка
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
- h+=`<div class="card arenah"><div><b>${penI([C.clan.name,C.clan.pt],24)||'🏰 '}${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.clan.max||C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
+ if(csub!=='chat')h+=`<div class="card arenah"><div><b>${penI([C.clan.name,C.clan.pt],24)||'🏰 '}${esc(C.clan.name)}</b><span>${roleT(C.role)}</span></div><div><b>👥 ${C.clan.members}/${C.clan.max||C.max}</b><span>${T('members')}</span></div><div><b>${fmt(C.clan.power)}</b><span>${T('power',{n:''}).trim()}</span></div></div>`;
  if(C.clan.desc)S.main+=`<div class="cdesc">📜 ${esc(C.clan.desc).replace(/\n/g,'<br>')}</div>`; // 14.11 (Влад): опис клану
  const bank=C.clan.bank||0;
  S.main+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
@@ -1208,14 +1297,16 @@ function renderClan(){
  if(lead&&AP.length)S.members+=`<div class="card"><h4>📨 ${T('clan_apps')} (${AP.length})</h4>`+AP.map(a=>`<div class="item" style="border-left-color:#4f93f2"><div class="ic">👤</div><div class="info"><div class="nm">${esc(a.name)}</div><div class="sub">${T('lvl',{n:a.lvl})} · ${T('stage',{n:a.stage})} · ${T('power',{n:fmt(a.power)})}</div></div><div class="acts"><button class="btn pri" data-ay="${a.id}">✓</button><button class="btn" data-an="${a.id}">✖</button></div></div>`).join('')+'</div>';
  const CL=C.clan;
  // посилання на Telegram-групу клану (картка 5): лише t.me, скарга — адміну
- if(CL.tg)S.members+=`<div class="card"><h4>💬 ${T('clan_tg_t')}</h4><div class="row"><button class="btn pri" id="cTgGo">${T('clan_tg_open')}</button><button class="btn" id="cTgRep">⚠️ ${T('clan_tg_rep')}</button></div></div>`;
+ // 14.11 (Влад): запрошення в клан посиланням + помітна картка групи клану в Telegram (на «Казні»)
+ S.main+=`<div class="card cinv"><h4>🔗 ${T('cinv_t')}</h4><p class="hint">${T('cinv_h')}</p><div class="cinvl" id="cInvL">${esc(clanLink(CL.id).replace('https://',''))}</div><div class="row"><button class="btn pri" id="cInvS">📤 ${T('cinv_share')}</button><button class="btn" id="cInvC">📋 ${T('cinv_copy')}</button></div></div>`;
+ S.main+=`<div class="card ctg"><h4>💬 ${T('clan_tg_t')}</h4>`+(CL.tg?`<p class="hint">${T('ctg_on')}</p><div class="row"><button class="btn pri" id="cTgGo">✈️ ${T('clan_tg_open')}</button><button class="btn" id="cTgRep">⚠️ ${T('clan_tg_rep')}</button></div>${C.role==='leader'?`<details class="ctgx"><summary>${T('ctg_change')}</summary><div class="row" style="align-items:center"><input id="cTg2" class="inp" type="text" maxlength="64" placeholder="t.me/…" value="${esc(CL.tg||'')}" style="flex:1"><button class="btn" id="cTgSave">${T('save')}</button></div></details>`:''}`
+  :C.role==='leader'?`<ol class="ctgs"><li>${T('ctg_s1')}</li><li>${T('ctg_s2')}</li><li>${T('ctg_s3')}</li></ol><div class="row" style="align-items:center"><input id="cTg2" class="inp" type="text" maxlength="64" placeholder="t.me/+AbCdEf…" style="flex:1"><button class="btn pri" id="cTgSave">${T('ctg_attach')}</button></div><p class="hint">${T('clan_tg_hint')}</p>`
+  :`<p class="hint">${T('ctg_none')}</p>`)+`</div>`;
  if(C.role==='leader')S.members+=`<div class="card"><h4>⚙️ ${T('clan_set')}</h4><div class="chips" id="cMode">${['open','apply','closed'].map(m=>`<button data-cm="${m}" class="${(clanModeSel||CL.mode)===m?'act':''}">${T('clan_mode_'+m)}</button>`).join('')}</div>
   <p class="hint">${T('clan_mode_hint_'+(clanModeSel||CL.mode))}</p>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_stage')}</span><input id="cMs" class="inp" type="number" min="0" max="80" inputmode="numeric" value="${CL.minStage||0}" style="flex:1"></div>
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_power')}</span><input id="cMp" class="inp" type="number" min="0" inputmode="numeric" value="${CL.minPower||0}" style="flex:1"></div>
   <p style="margin:10px 0 4px;font-weight:700">📜 ${T('clan_desc_t')}</p><textarea id="cDesc" class="inp cdta" maxlength="200" rows="3" placeholder="${T('clan_desc_ph')}">${esc(CL.desc||'')}</textarea><p class="hint" style="margin-top:2px">${T('clan_desc_hint')}</p>
-  <div class="row" style="align-items:center"><span style="flex:1">${T('clan_tg_t')}</span><input id="cTg" class="inp" type="text" maxlength="64" placeholder="t.me/назва_групи" value="${esc(CL.tg||'')}" style="flex:1"></div>
-  <p class="hint">${T('clan_tg_hint')}</p>
   <div class="row"><button class="btn pri" id="cSet">${T('save')}</button></div></div>`;
  else S.members+=`<p class="hint">${T('clan_mode_'+CL.mode)}${CL.minStage?' · '+T('stage',{n:CL.minStage}):''}${CL.minPower?' · 💪 '+fmt(CL.minPower):''}</p>`;
  S.members+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
@@ -1223,13 +1314,15 @@ function renderClan(){
   return `<div class="item" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · ${T('given',{n:'💰'+fmt(m.given||0)+(m.givenAsh?' · ⚱️'+fmt(m.givenAsh):'')})}</div></div>
    <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
  // 14.11 (гравці): фільтри журналу клану за типом подій
- const LOGF={gold:['give'],ash:['giveash','rating'],keys:['craft','take','givekey','keygift'],bld:['build','proj','giveres'],ppl:['join','leave','kick','accept','apply','reject','role','create','settings','tg','desc']};
+ const LOGF={gold:['give'],ash:['giveash','rating'],keys:['craft','take','givekey','keygift'],bld:['build','proj','giveres'],ppl:['join','leave','kick','accept','apply','reject','role','create','settings','tg','desc','mute']};
  const LG=(C.log||[]).filter(x=>clogF==='all'||(LOGF[clogF]||[]).includes(x.kind));
- S.log+=`<div class="card"><h4>📜 ${T('clan_log')}</h4><div class="chips clogf">${['all','gold','ash','keys','bld','ppl'].map(k=>`<button data-clf="${k}" class="${clogF===k?'act':''}">${T('clf_'+k)}</button>`).join('')}</div>`+(LG.length?LG.map(x=>{const d=x.data||{};return `<div class="logl"><span>${logTime(x.at)}</span> ${esc(T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),a:d.ash!=null?'⚱️'+fmt(d.ash):'💰'+fmt(d.gold||0),t:d.t||d.place||'',c:d.n||1,k:d.k?(d.k==='sh'?'🔩':/^m\d$/.test(d.k)?'⛏️'+MATN[+d.k[1]]:T('bld_'+d.k)):'',l:d.l||'',x:fmt(d.n||0)}))}</div>`}).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
+ S.log+=`<div class="card"><h4>📜 ${T('clan_log')}</h4><div class="chips clogf">${['all','gold','ash','keys','bld','ppl'].map(k=>`<button data-clf="${k}" class="${clogF===k?'act':''}">${T('clf_'+k)}</button>`).join('')}</div>`+(LG.length?LG.map(x=>`<div class="logl"><span>${logTime(x.at)}</span> ${esc(clogTxt(x))}</div>`).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
  S.main+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
  if(C.role==='leader')S.main+=`<p class="hint">${T('clan_leader_hint')}</p>`;
+ if(csub==='chat'){if($('chatRoot')&&CH.clan===C.clan.id){chPaint();renderSub();if(!CH.t&&!CH.busy)chPoll(1);return}S.chat=chShell()} // 14.11: чат клану — сам оновлюється, введене не губиться
  if(!S[csub])csub='main';h+=S[csub];
  {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]})}renderSub(); // 13.11: не губимо введене при автооновленні клану
+ if(csub==='chat')chMount(C);else chStop();
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ct,q=el.querySelector(`[data-ktq="${t}"]`),n=Math.floor(+(q&&q.value)||1);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanTake',{t,n})});
  const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{if(!$('kgP').value){toast(T('key_pick_err'));return}const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
  el.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.cta,all:1}));
@@ -1241,6 +1334,9 @@ function renderClan(){
  el.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>clanAct('clanApp',{id:+b.dataset.an,ok:false}));
  el.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{clanModeSel=b.dataset.cm;renderClan()});
  if($('cSet'))$('cSet').onclick=()=>{const m=clanModeSel||C.clan.mode;clanModeSel=null;clanAct('clanSettings',{mode:m,minStage:+$('cMs').value||0,minPower:+$('cMp').value||0,desc:$('cDesc')?$('cDesc').value:undefined,tg:$('cTg')?$('cTg').value.trim():undefined},()=>toast(T('saved')))};
+ if($('cInvC'))$('cInvC').onclick=()=>{copyText(clanLink(C.clan.id));haptic('light')};
+ if($('cInvS'))$('cInvS').onclick=()=>{const u=clanLink(C.clan.id),t=T('cinv_msg',{c:C.clan.name}),w=tg(),sh='https://t.me/share/url?url='+encodeURIComponent(u)+'&text='+encodeURIComponent(t);if(w&&w.openTelegramLink)w.openTelegramLink(sh);else window.open(sh,'_blank','noopener')};
+ if($('cTgSave'))$('cTgSave').onclick=()=>{const v=$('cTg2').value.trim(),CL2=C.clan;clanAct('clanSettings',{mode:CL2.mode,minStage:CL2.minStage||0,minPower:CL2.minPower||0,tg:v},()=>{toast(T(v?'ctg_saved':'ctg_removed'));haptic('medium')})};
  if($('cTgGo'))$('cTgGo').onclick=()=>{const u=C.clan.tg;if(!/^https:\/\/t\.me\//.test(u||''))return;const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')};
  if($('cTgRep'))$('cTgRep').onclick=()=>modal(`<div class="big">⚠️</div><p>${T('clan_tg_rep_ask')}</p>`,T('clan_tg_rep'),()=>act('clanReport',{clan:C.clan.id},()=>toast(T('clan_tg_rep_done'))),null,'crep');
  if($('cGiveAll'))$('cGiveAll').onclick=()=>{$('cGive').value=Math.floor(G.gold)};
@@ -1460,7 +1556,7 @@ async function start(){
  if(w){try{w.ready();w.expand();w.setHeaderColor&&w.setHeaderColor('#19161d');w.setBackgroundColor&&w.setBackgroundColor('#0e0c10')}catch(e){}}
  if(!w&&!DEV){boot(T('only_tg'));return}
  boot(T('loading'));
- try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r);setTimeout(askPm,4000)}
+ try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r);setTimeout(askPm,4000);setTimeout(clanInvite,1200)}
  catch(e){if(e.message==='prelaunch'){boot();return}if(e.message==='acc_banned'){boot(T('acc_banned')+(banWhy&&L.t['ban_'+banWhy]?' '+T('ban_'+banWhy):''));return}boot(errT(e),true)}
 }
 // ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
@@ -1654,10 +1750,10 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','members','log'].map(k=>[k,'csub_'+k]):null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:tab;e.style.display='flex';
- const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}</button>`).join('');
+ const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]?' sdot':''}">${T(l)}${k==='chat'&&chatU&&cur!=='chat'?`<i class="sbd">${chatU>99?'99+':chatU}</i>`:''}</button>`).join('');
  e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
 }
 // 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває «Арена → Рейтинги»
