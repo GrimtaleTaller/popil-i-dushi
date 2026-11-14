@@ -453,7 +453,7 @@ function renderBag(){
  if(G.inv.some(i=>i.nw)){G.inv.forEach(i=>delete i.nw);api('seen').catch(()=>{})}
  $('p-bag').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{bagFilter=b.dataset.f;renderBag()});$('p-bag').querySelectorAll('[data-bh]').forEach(b=>b.onclick=()=>{const r=+b.dataset.bh,H=bagF.show;bagF.show=H.includes(r)?H.filter(x=>x!==r):[...H,r];bagFSave();haptic('light');renderBag()});$('p-bag').querySelectorAll('[data-bsel]').forEach(sl=>sl.onchange=()=>{bagF[sl.dataset.bsel]=sl.value;bagFSave();renderBag()});{const rb=$('bagRst');if(rb)rb.onclick=()=>{bagF={show:[],sort:'def'};bagFilter='all';bagFSave();haptic('light');renderBag()}}
  $('p-bag').querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>act('equip',{id:+b.dataset.eq},r=>{haptic('light');gemMoveAsk(r.out&&r.out.gm)}));
- $('p-bag').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell([+b.dataset.sell]));
+ $('p-bag').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sellOneAsk(+b.dataset.sell));
  $('p-bag').querySelectorAll('[data-dis]').forEach(b=>b.onclick=()=>dismantle([+b.dataset.dis]));
  $('p-bag').querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>relicAsk([+b.dataset.rel],'relic'));
  if($('relJ'))$('relJ').onclick=()=>askOnce('relicJ',`<div class="ask ask-a"><div class="ask-ic">⚱️</div><h3>${T('ask_relic_t')}</h3><p class="ask-q">${T('relic_junk_ask',{n:V.forge.relic})}</p></div>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
@@ -518,6 +518,9 @@ function disRar(r){const ids=disRarIds(r);if(!ids.length)return;const keep=G.inv
  const its=G.inv.filter(i=>ids.includes(i.id)),xp=G.dismode==='xp',sh=its.reduce((a,i)=>a+Math.round((i.r+1)*(i.r+1)*(1+i.il/10)),0);
  modal(`<div class="big">⚒️</div><p>${T('dis_rar_q',{n:ids.length,w:T('dis_r'+r).toLowerCase()})}</p>${xp?`<p class="hint">${T('to_xp')}</p>`:`<p><b>🔩 +${fmt(sh)}</b></p>`}${keep?`<p class="hint">${T('dis_rar_keep',{n:keep})}</p>`:''}`,T('dis_go'),()=>act('dismantle',{ids,mode:G.dismode},x=>{toast(disMsg(x.out));haptic('medium')}))}
 function dismantle(ids){act('dismantle',{ids,mode:G.dismode},r=>toast(disMsg(r.out)))}
+// 14.11 (прохання Хасана): легендарну й вище — лише після підтвердження
+function sellOneAsk(id){const it=G.inv.find(i=>i.id===id);if(!it)return;if(it.r<4){sell([id]);return}
+ modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)} ${starsOf(it)}</h3><p class="hint">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${it.gm&&it.gm.length?' · 💎×'+it.gm.length:''}</p><p>${T('sell_ask')}</p>`,`${T('sell_yes')} · 💰${fmt(sellPrice(it))}`,()=>sell([id]))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
 // 14.11 (Влад): «Продати гірші» / «Розібрати гірші» — спершу вікно, скільки буде золота / уламків / досвіду; галочка «Більше не питати» (на цьому пристрої)
 const worseIds=()=>G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id);
