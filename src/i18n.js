@@ -348,3 +348,7 @@ Object.assign(window.I18N.ru.t,{bag_show:'Показать только:',bag_re
 Object.assign(window.I18N.uk.t,{unequip_btn:'Зняти в сумку',unequipped:'Річ знято в сумку'});
 Object.assign(window.I18N.en.t,{unequip_btn:'Take off to bag',unequipped:'Item moved to bag'});
 Object.assign(window.I18N.ru.t,{unequip_btn:'Снять в сумку',unequipped:'Предмет снят в сумку'});
+// 14.11: підтвердження «На все, що є»
+Object.assign(window.I18N.uk.t,{ref_spend:'Витратиш',ref_left:'Залишиться',ref_go:'Підняти до {n}',ref_stop_g:'Далі не вистачить золота. Межа зараз — рівень {n}.',ref_stop_s:'Далі не вистачить уламків. Межа зараз — рівень {n}.',ref_to_cap:'Річ дійде до межі — рівень {n}.'});
+Object.assign(window.I18N.en.t,{ref_spend:'You spend',ref_left:'Left after',ref_go:'Raise to {n}',ref_stop_g:'Not enough gold to go further. Current cap — level {n}.',ref_stop_s:'Not enough shards to go further. Current cap — level {n}.',ref_to_cap:'The item reaches the cap — level {n}.'});
+Object.assign(window.I18N.ru.t,{ref_spend:'Потратишь',ref_left:'Останется',ref_go:'Поднять до {n}',ref_stop_g:'Дальше не хватит золота. Предел сейчас — уровень {n}.',ref_stop_s:'Дальше не хватит осколков. Предел сейчас — уровень {n}.',ref_to_cap:'Вещь дойдёт до предела — уровень {n}.'});

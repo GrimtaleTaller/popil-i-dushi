@@ -546,3 +546,4 @@ body.chfull{overflow:hidden}
 .mbar .bfreset{flex:0 0 auto;border-radius:999px;padding:8px 14px;font-size:13px}.mbar .bfreset:disabled{opacity:.35}
 /* 14.11 (Влад): цифри досвіду не влазили на вузьких телефонах — тепер на самій смузі, з відсотком */
 .top .bar.xpbar{position:relative;height:13px;border-radius:7px;margin-top:4px}.top .xpbar>i{height:100%}.top .xpbar #xpt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;line-height:1;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000;white-space:nowrap;letter-spacing:.2px}
+.refto{font-size:16px;margin:4px 0 6px}.refsum{margin:10px 0 4px;display:grid;gap:6px}.refsum>div{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;border-radius:12px;background:#ffffff08;border:1px solid #ffffff10}.refsum span{opacity:.75}
