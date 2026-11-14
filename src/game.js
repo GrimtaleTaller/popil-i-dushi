@@ -498,11 +498,18 @@ function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{i
 const worseIds=()=>G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id);
 const disXpOf=it=>Math.round(6*0.72*Math.pow(1.07,it.il-1)*3*Math.min(14,RAR[it.r].m)),disShOf=it=>Math.round((it.r+1)*(it.r+1)*(1+it.il/10)); // як disXp / disShards на сервері
 function askOnce(key,html,btn,go){let skip=false;try{skip=localStorage.getItem('gt_noask_'+key)==='1'}catch(e){}if(skip){go();return}
- modal(html+`<label class="noask"><input type="checkbox" id="noAsk"> ${T('no_ask')}</label>`,btn,()=>{const c=$('noAsk');if(c&&c.checked){try{localStorage.setItem('gt_noask_'+key,'1')}catch(e){}}go()})}
-function sellAsk(ids,key){if(!ids.length){toast(T('nothing_sell'));return}const its=G.inv.filter(i=>ids.includes(i.id)),g=its.reduce((a,i)=>a+sellPrice(i),0);
- askOnce(key,`<div class="big">💰</div><p>${T('sell_q',{n:ids.length})}</p><p class="askv"><b>💰 +${fmt(g)}</b></p>`,T('sell_go'),()=>sell(ids))}
-function disAsk(ids,mode,key,go){if(!ids.length){toast(ERR.no_junk);return}const its=G.inv.filter(i=>ids.includes(i.id)),xp=mode==='xp',v=its.reduce((a,i)=>a+(xp?disXpOf(i):disShOf(i)),0);
- askOnce(key,`<div class="big">${xp?'✨':'🔩'}</div><p>${T(xp?'dis_q_xp':'dis_q_sh',{n:ids.length})}</p><p class="askv"><b>${xp?'✨':'🔩'} +${fmt(v)}</b></p>`,T('dis_go'),go)}
+ modal(html+`<label class="noask"><input type="checkbox" id="noAsk"><i></i><span>${T('no_ask')}</span></label>`,btn,()=>{const c=$('noAsk');if(c&&c.checked){try{localStorage.setItem('gt_noask_'+key,'1')}catch(e){}}go()})}
+// 14.11 (Влад: «занадто просто і сухо»): вікно-підсумок — значки речей, розклад за рідкістю, велика сума й «було → стане»
+function askBox(its,val,o){const byR={};its.forEach(i=>{const x=byR[i.r]||(byR[i.r]={n:0,v:0});x.n++;x.v+=val(i)});const tot=Object.values(byR).reduce((a,x)=>a+x.v,0);
+ const show=its.slice().sort((a,b)=>b.r-a.r||b.il-a.il).slice(0,its.length>7?6:7); // один рядок: 7 значків або 6 + «+N»
+ return `<div class="ask ${o.cls}"><div class="ask-ic">${o.ic}</div><h3>${o.title}</h3><p class="ask-q">${o.q}</p>
+ <div class="ask-its">${show.map(i=>gearIc(i)).join('')}${its.length>show.length?`<span class="ask-more">+${its.length-show.length}</span>`:''}</div>
+ <div class="ask-rows">${Object.keys(byR).sort((a,b)=>b-a).map(r=>`<div><i style="background:${RAR[r].c}"></i><span style="color:${RAR[r].c}">${RAR[r].n}</span><em>×${byR[r].n}</em><b>${o.cur} ${fmt(byR[r].v)}</b></div>`).join('')}</div>
+ <div class="ask-tot"><span>${T('ask_get')}</span><b>${o.cur} +${fmt(tot)}</b>${o.have!=null?`<small>${o.cur} ${fmt(o.have)} → <b>${fmt(o.have+tot)}</b></small>`:''}</div></div>`}
+function sellAsk(ids,key){if(!ids.length){toast(T('nothing_sell'));return}const its=G.inv.filter(i=>ids.includes(i.id));
+ askOnce(key,askBox(its,sellPrice,{cls:'ask-g',ic:'💰',title:T('ask_sell_t'),q:T('sell_q',{n:its.length}),cur:'💰',have:G.gold}),`💰 ${T('sell_go')}`,()=>sell(ids))}
+function disAsk(ids,mode,key,go){if(!ids.length){toast(ERR.no_junk);return}const its=G.inv.filter(i=>ids.includes(i.id)),xp=mode==='xp';
+ askOnce(key,askBox(its,xp?disXpOf:disShOf,{cls:xp?'ask-x':'ask-s',ic:xp?'✨':'⚒️',title:T(xp?'ask_dis_xp':'ask_dis_sh'),q:T(xp?'dis_q_xp':'dis_q_sh',{n:its.length}),cur:xp?'✨':'🔩',have:xp?null:G.shards}),`${xp?'✨':'🔩'} ${T('dis_go')}`,go)}
 let mSlot=null,mN=3,fsub='res',gemSel=null,aSlot=null,aSel=null;
 // ── Камені: злиття (картка 2, макет A «компактна таблиця», 08.11) ──
 // Правило й ціни — із сервера (V.gem.merge): need однакових каменів рівня l → 1 рівня l+1 (до V);
@@ -972,8 +979,11 @@ function renderProfile(){
  if(V.isAdmin)h+=adminHtml();
  h+=`<div class="card"><h4>📢 ${T('comm')}</h4><div class="row" style="margin:0"><button class="btn" id="pCh">📣 ${T('lnch_ch')}</button><button class="btn" id="pChat">💬 ${T('chat_pl')}</button></div><button class="btn" id="pBot" style="margin-top:8px;width:100%">🤖 ${T('chat_bot')}</button></div>`;
  h+=`<div class="card"><h4>🔔 ${T('ntf')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${T('ntf_hint')}</span><button class="btn" id="pNtf">${G.ntf===0?T('ntf_off'):T('ntf_on')}</button></div></div>`;
+ {let na=[];try{na=Object.keys(localStorage).filter(k=>k.indexOf('gt_noask_')===0)}catch(e){} // 14.11 (Влад): повернути вікна «Більше не питати»
+  h+=`<div class="card"><h4>❓ ${T('ask_t')}</h4><div class="row" style="align-items:center;margin:0"><span class="hint" style="flex:2;margin:0">${na.length?T('ask_off',{n:na.length}):T('ask_on')}</span><button class="btn" id="pAsk" ${na.length?'':'disabled'}>${T('ask_reset')}</button></div></div>`}
  h+=`<div class="row"><button class="btn" id="pRef">🔄 ${T('refresh')}</button><button class="btn" id="pTut">${T('tut_restart')}</button></div>`;
  el.innerHTML=h;refsBind(el,'prof');
+ if($('pAsk'))$('pAsk').onclick=()=>{try{Object.keys(localStorage).filter(k=>k.indexOf('gt_noask_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}haptic('light');toast(T('ask_done'));renderProfile()};
  $('pTut').onclick=tutRestart;
  $('pCh').onclick=openCh;$('pChat').onclick=openChat;$('pBot').onclick=()=>{const w=tg();if(V&&V.pm===0&&w&&typeof w.requestWriteAccess==='function'){try{w.requestWriteAccess(ok=>{if(ok)api('botHello').catch(()=>{});openBot()});return}catch(e){}}openBot()};
  $('pNtf').onclick=()=>act('notify',{on:G.ntf===0},()=>{dirty.prof=1});
