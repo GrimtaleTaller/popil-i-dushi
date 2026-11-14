@@ -271,7 +271,7 @@ function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore
 function penI(p,w=24){return p&&p[0]&&window.penSvg?`<span class="pen">${window.penSvg(p[0],p[1],w)}</span>`:''}
 // 13.11 (Влад «А»): зелена плашка балансу виводу в шапці — видно на всіх екранах; тап → Герой → 💸 Вивід
 var wdUsd=null;function wdChip(u){if(u!=null)wdUsd=Number(u)||0;const c=$('wdChip');if(!c||wdUsd==null)return;c.hidden=false;const t='$'+wdUsd.toFixed(2);if($('wdChipV').textContent!==t)$('wdChipV').textContent=t;
- if(!c.onclick)c.onclick=()=>{haptic('light');lastSub.hero='wd';const b=document.querySelector('.tabs button[data-t="hero"]');if(b)b.click()}}
+ if(!c.onclick)c.onclick=()=>{haptic('light');lastSub.bag='wd';const b=document.querySelector(tabBtn('bag'));if(b)b.click()}} // 14.11: як швидка кнопка «Вивід» (раніше lastSub.hero='wd' — ✕ відкривав вивід знову, вийти не можна було)
 // 13.11 (Влад): подарунок з привітанням від адміна — вікно на головному екрані, Попіл зараховується лише після «Забрати» (giftClaim)
 var giftBusy=0;function giftShow(L){if(!L||!L.length)return;for(const g of L){if(queue.some(q=>q.tag==='gift'+g.id))continue;
  modal(`<div class="gift"><div class="gift-ic">🎁</div><h3>${T('gift_t')}</h3><div class="gift-tx">${esc(g.t).replace(/\n/g,'<br>')}</div>${g.ash?`<div class="gift-rw">⚱️ <b>${String(g.ash)}</b></div>`:''}<button class="btn pri" id="giftGo${g.id}">${g.ash?T('gift_claim_a',{a:String(g.ash)}):T('gift_claim')}</button></div>`,null,null,()=>{const b=$('giftGo'+g.id);if(b)b.onclick=()=>{if(giftBusy)return;giftBusy=1;b.disabled=true;
