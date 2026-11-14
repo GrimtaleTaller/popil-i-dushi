@@ -410,6 +410,9 @@ function keyGiveDlg(){
  if(clanData)go();else api('clan').then(r=>{clanData=r.out;go()}).catch(e=>toast(errT(e)));
 }
 let bagFilter='all';
+// 14.11 (Влад): фільтри Сумки як на Ринку — сховати рідкості, точна рідкість, сортування; запам'ятовуються на пристрої
+let bagF=(()=>{try{return JSON.parse(localStorage.getItem('gt_bag_f')||'{}')||{}}catch(e){return {}}})();
+const bagFSave=()=>{try{localStorage.setItem('gt_bag_f',JSON.stringify(bagF))}catch(e){}};
 function chestIc(g){const c=RAR[g||1].c;return `<svg class="svi" viewBox="0 0 32 32"><path d="M4 13.5C4 8 8 5 16 5s12 3 12 8.5z" fill="#8a5a2b" stroke="#2b2f36" stroke-width="1.4" stroke-linejoin="round"/><rect x="4" y="13.5" width="24" height="14" rx="1.5" fill="#6e4521" stroke="#2b2f36" stroke-width="1.4"/><path d="M4 13.5h24M9 5.9v21.6M23 5.9v21.6" stroke="${c}" stroke-width="2.4" fill="none"/><rect x="13.5" y="11.5" width="5" height="6" rx="1" fill="${c}" stroke="#2b2f36" stroke-width="1.1"/></svg>`}
 function chestGroups(){const r={1:0,2:0,3:0};for(const[k,n]of Object.entries(G.chests||{})){const g=Math.max(1,Math.min(3,Number(k.split(':')[1])||1));r[g]+=n}return r}
 function chestCount(){return Object.values(G.chests||{}).reduce((a,b)=>a+b,0)}
@@ -418,9 +421,16 @@ function renderBag(){
  let h=(ov.v||ov.d?`<div class="card ovf"><b>⚠️ ${T('bag_full_title')}</b><p class="hint">${T('ovf_txt',{v:ov.v,d:ov.d,s:fmt(ov.sh),p:Math.round((V.inv&&V.inv.rate||0.5)*100)})}</p><div class="row"><button class="btn" id="ovfOk">${T('ok')}</button></div></div>`:'')
  +(vlt?`<div class="chestbar vault">📦<span>${T('vault',{n:vlt,m:V.inv&&V.inv.vaultMax||100})}</span><button class="btn pri" id="vTake">${T('take')}</button></div>`:'')
  +keysBar()+(cc?`<div class="chestbar"><span>${(()=>{const cg=chestGroups();return [3,2,1].filter(g=>cg[g]).map(g=>`<span class="chg" style="color:${RAR[g].c}">${chestIc(g)} ${T('chest_'+g)} ×${cg[g]}</span>`).join('')})()}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
+ <div class="mhide"><span>${T('mkt_hide')}</span>${[0,1,2,3,4,5,6].filter(r=>RAR[r]).map(r=>`<button data-bh="${r}" class="${(bagF.hide||[]).includes(r)?'off':''}" style="--rc:${RAR[r].c}">${RAR[r].n}</button>`).join('')}</div>
+ <div class="mbar"><label class="msel"><select data-bsel="r">${[-1,0,1,2,3,4,5,6].filter(r=>r<0||RAR[r]).map(r=>`<option value="${r}" ${(bagF.r??-1)===r?'selected':''}>${r<0?T('mkt_all_r'):RAR[r].n}</option>`).join('')}</select></label>
+  <label class="msel"><select data-bsel="sort">${['def','pow','r','lvl'].map(k=>`<option value="${k}" ${(bagF.sort||'def')===k?'selected':''}>↕ ${T('bag_sort_'+k)}</option>`).join('')}</select></label></div>
  <div class="bagact"><button class="btn" id="sellC">💰 ${T('sell_common')}</button><button class="btn" id="sellW">💰 ${T('sell_worse')}</button><button class="btn" id="disW" ${V.forge&&V.forge.junk?'':'disabled'}>🔩 ${T('dis_worse',{n:(V.forge&&V.forge.junk)||0})}</button><button class="btn ${G.autoSell?'on':''}" id="autoS">${G.autoSell?'✅':'⬜'} ${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button>${V.forge&&V.forge.relic?`<button class="btn wide" id="relJ">⚱️ ${T('relic_junk',{n:V.forge.relic})}</button>`:''}</div><p class="hint" style="margin:-4px 0 10px">${T('bag_act_hint')}</p>
  <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · 🔥${fmt(V.inv.cost)}</button>`:''}</div>`;
- const list=G.inv.filter(i=>bagFilter==='all'||i.slot===bagFilter);
+ const bh=bagF.hide||[],br=bagF.r??-1,bs=bagF.sort||'def';
+ let list=G.inv.filter(i=>(bagFilter==='all'||i.slot===bagFilter)&&!bh.includes(i.r)&&(br<0||i.r===br));
+ if(bs==='pow'){const pd=new Map(list.map(i=>[i.id,powDelta(i)??-1e18]));list=[...list].sort((a,b)=>pd.get(b.id)-pd.get(a.id))}
+ else if(bs==='r')list=[...list].sort((a,b)=>b.r-a.r||b.il-a.il);
+ else if(bs==='lvl')list=[...list].sort((a,b)=>b.il-a.il||b.r-a.r);
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
  for(const it of list){const eq=G.eq[it.slot],better=it.il<=G.lvl&&(!eq||itemScore(it)>itemScore(eq)); // «краще» лише для того, що можна вдягти зараз
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
@@ -435,7 +445,7 @@ function renderBag(){
  if($('bagUp'))$('bagUp').onclick=()=>act('bag',{},r=>{toast(T('bag_up',{n:r.out.max}));haptic('light')});
  if(cc)$('openC').onclick=()=>act('openChests',{},r=>{toast(T('opened',{n:r.out.n})+(r.out.best>=3?' · '+RAR[r.out.best].n+'!':''));if(r.out.best>=3)haptic('heavy')});
  if(G.inv.some(i=>i.nw)){G.inv.forEach(i=>delete i.nw);api('seen').catch(()=>{})}
- $('p-bag').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{bagFilter=b.dataset.f;renderBag()});
+ $('p-bag').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{bagFilter=b.dataset.f;renderBag()});$('p-bag').querySelectorAll('[data-bh]').forEach(b=>b.onclick=()=>{const r=+b.dataset.bh,H=bagF.hide||[];bagF.hide=H.includes(r)?H.filter(x=>x!==r):[...H,r];bagFSave();haptic('light');renderBag()});$('p-bag').querySelectorAll('[data-bsel]').forEach(sl=>sl.onchange=()=>{const k=sl.dataset.bsel;bagF[k]=k==='r'?+sl.value:sl.value;bagFSave();renderBag()});
  $('p-bag').querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>act('equip',{id:+b.dataset.eq},r=>{haptic('light');gemMoveAsk(r.out&&r.out.gm)}));
  $('p-bag').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell([+b.dataset.sell]));
  $('p-bag').querySelectorAll('[data-dis]').forEach(b=>b.onclick=()=>dismantle([+b.dataset.dis]));
