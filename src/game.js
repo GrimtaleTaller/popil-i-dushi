@@ -692,7 +692,7 @@ function renderForge(){
  $('p-forge').querySelectorAll('[data-asel]').forEach(b=>b.onclick=()=>{aSel=+b.dataset.asel;renderForge()});
  if($('astGo'))$('astGo').onclick=()=>{if(!aIt)return;const go=()=>act('astral',{id:aIt.id,sac:aSac.map(i=>i.id)},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else{const b=(r.out.burned||[])[0];toast(T('ast_fail2',{c:r.out.chance,s:b&&SLOT[b.slot]?SLOT[b.slot].n:''}))}});
   if(aSacUp)modal(`<h3>${T('ast_up_t')}</h3><p>${T('ast_up_d')}</p>`,T('ast_up_ok'),()=>{go()});else go()}; // 08.11 (критик): річ із зірками чи перекиданнями в жертву — лише після підтвердження
- if($('myth'))$('myth').onclick=()=>{const ids=LGs.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
+ if($('myth'))$('myth').onclick=()=>{const ids=LGs.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else{toast(T('myth_fail',{c:o.chance})+(o.burned?' · 🔥 '+T('myth_burnt',{n:o.burned}):''));haptic('medium')}})};
 }
 const DNG=[{n:'Нора щурів',bg:'dbg1',reg:1},{n:'Вовче лігво',bg:'dbg2',reg:1},{n:'Склеп короля',bg:'dbg3',reg:2},{n:'Болотне капище',bg:'dbg4',reg:3},{n:'Вогняна кузня',bg:'dbg5',reg:4},{n:'Крижана печера',bg:'dbg6',reg:5},{n:'Затонулий храм',bg:'dbg7',reg:6},{n:'Зала дзеркал',bg:'dbg8',reg:7},{n:'Серце безодні',bg:'dbg9',reg:8},{n:'Трон попелу',bg:'dbg10',reg:8}]; // власні фони підземель (31.10)
 const MATN=['I','II','III','IV'];
