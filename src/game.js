@@ -911,7 +911,12 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  h+=`<div class="card"><h4>🥚 ${T('pet_inc')}</h4>`;
  if(P.inc){const left=Math.max(0,P.inc.at-now);h+=`<div class="petinc">${eggIc(P.inc.e)}<div><b>${T(P.inc.e==='r'?'egg_r':'egg_c')}</b><div class="sub">${left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed" ${G.ash>=I.speed?'':'disabled'}>⚡ ⚱️${I.speed}</button>`:`<button class="btn pri" id="pClaim">${T('pet_claim')}</button>`}</div>`;
   const E=V.tasks&&V.tasks.egg;if(E&&left&&V.tasks.block){const wt=Math.max(0,(E.next||0)-now),can=E.n<E.max&&!wt;clearTimeout(adEggT);if(wt&&E.n<E.max)adEggT=setTimeout(()=>{dirty.pet=1;flush()},Math.min(wt+500,6e4));h+=`<div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('pet_ad_hint',{t:dur(E.cut),n:E.n,x:E.max})}${wt&&E.n<E.max?' '+T('pet_ad_wait',{t:hms(wt)}):''}</span><button class="btn" id="pAd" ${can?'':'disabled'}>${can||E.n>=E.max?'📺 −'+dur(E.cut):'📺 ⏳ '+hms(wt)}</button></div>`}}
- h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&!P.inc?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||216e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||576e5)/36e5)})}</p></div>`;
+ // 14.11 (Влад): оренда другого місця на 12 год за $2; яйце, якому не вистачило оренди, — на паузі до вільного місця чи продовження
+ {const rl=Math.max(0,(P.rent||0)-now),P2=P.inc2;
+  if(P2){const pz=P2.left!=null,left=pz?P2.left:Math.max(0,(P2.at||0)-now);h+=`<div class="petinc inc2">${eggIc(P2.e)}<div><b>${T(P2.e==='r'?'egg_r':'egg_c')} · ${T('inc2_slot')}</b><div class="sub">${pz?T('inc2_pause',{t:hms(left)}):left?T('pet_hatch_in',{t:hms(left)}):T('pet_ready')}</div></div>${left?`<button class="btn" id="pSpeed2" ${G.ash>=(I.speed2||0)?'':'disabled'}>⚡ ⚱️${I.speed2||0}</button>`:`<button class="btn pri" id="pClaim2">${T('pet_claim')}</button>`}</div>`;if(pz)h+=`<p class="hint">${T('inc2_pause_h')}</p>`;else if(left>rl)h+=`<p class="hint">⚠️ ${T('inc2_short',{t:hms(rl)})}</p>`}
+  h+=`<div class="inc2rent"><span>🥚🥚 ${rl?T('inc2_on',{t:hms(rl)}):T('inc2_off')}</span><button class="btn ${rl?'':'pri'}" id="pRent">${rl?T('inc2_more'):T('inc2_buy')}</button></div>`;
+  var canHatch=!P.inc||(rl>0&&!P2)}
+ h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&canHatch?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||216e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||576e5)/36e5)})}</p></div>`;
  // колекція
  h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc pfc ${P.act===sp?'act':''}" data-pset="${sp}">${P.act===sp?`<em class="pact">${T('pet_active')}</em>`:''}${petFrame(sp,p.l,p.s,0)}<b>${T('pet_'+sp)}</b><small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
  if(!a&&!P.inc&&!(P.eggs.c||P.eggs.r))h=`<div class="card"><h4>🐾 ${T('sub_pet')}</h4><p class="hint">${T('pet_intro')}</p></div>`+h;
@@ -922,8 +927,8 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if($('pFeed'))$('pFeed').onclick=()=>fdAsk(1);if($('pFeedM'))$('pFeedM').onclick=()=>fdAsk(30);
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
   modal(`<div class="big">${petFrame(P.act,(P.list[P.act]||{}).l,(P.list[P.act]||{}).s,1)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
- if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));if($('pAd'))$('pAd').onclick=()=>act('adIntent',{k:'egg'},()=>{adEggAt=Date.now();watchAd()});
- if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},r=>{const o=r.out;modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')});
+ if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));if($('pSpeed2'))$('pSpeed2').onclick=()=>act('petSpeed',{slot:2},()=>haptic('light'));if($('pRent'))$('pRent').onclick=()=>{haptic('light');ssub='conv';shopData=null;document.querySelector(tabBtn('shop')).click()};if($('pAd'))$('pAd').onclick=()=>act('adIntent',{k:'egg'},()=>{adEggAt=Date.now();watchAd()});
+ const claimFx=slot=>r=>{const o=r.out;modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')};if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},claimFx(1));if($('pClaim2'))$('pClaim2').onclick=()=>act('petClaim',{slot:2},claimFx(2));
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
  if($('pgLvM'))$('pgLvM').onclick=()=>{pgLv=Math.max(1,pgLv-1);haptic('light');dirty.pet=1;flush()};if($('pgLvP'))$('pgLvP').onclick=()=>{pgLv++;haptic('light');dirty.pet=1;flush()};
  if($('pgCat'))$('pgCat').onclick=()=>{pgCat=!pgCat;haptic('light');dirty.pet=1;flush()}; // 13.11: було видно лише клас 'on' без стилю — гравці думали, що кнопка не натискається
@@ -968,7 +973,7 @@ function renderProfile(){
 }
 // ---------- магазин (08.11, варіант А): Stars і крипто в мережі TON ----------
 let shopData=null,shopBusy=false,tcUI=null,tcLoading=null,shopPoll=0;
-const SHOP_DESC={ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
+const SHOP_DESC={inc12:'shop_d_inc12',ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function vipLine(k){const n=k==='starter'?3:VIP_D[k];if(!n||!vipActive())return '';return `<p class="hint" style="color:var(--gold)">${T('shop_vip_on',{d:dt(G.vip)})} — ${T('shop_vip_ext',{n,d:dt(G.vip+n*864e5)})}</p>`} // 13.11 (Влад): VIP активний — покупка продовжить дні
@@ -994,7 +999,7 @@ function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
 let ssub='deal';
 const n3=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'\u202f'); // 1 500 — точна сума пакета без «K»
 const ASH_BON={ash100:1,ash500:1,ash1000:1,ash5000:1}; // пакети з бонусом +50% на першу покупку за добу (сервер — SHOP.bon)
-const SHOP_CAT={ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
+const SHOP_CAT={inc12:'conv',ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
 function renderShop(){
  const el=$('p-shop');if(!el)return;
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
