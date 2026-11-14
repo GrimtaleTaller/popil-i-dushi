@@ -523,3 +523,4 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .cinvm{text-align:center}.cinvm .ic{display:flex;justify-content:center;margin-bottom:6px}.cinvm h3{margin:2px 0}.cinvm .sub{font-size:13px;opacity:.85}
 .ctg .row .btn{flex:0 0 auto}
 .rules{text-align:left}.rules h3{text-align:center}.rules ol{padding-left:20px;margin:6px 0;font-size:13.5px;line-height:1.5}.rules li{margin-bottom:7px}.rules b{color:var(--gold)}
+.newsimg{width:100%;border-radius:12px;margin:0 0 10px;display:block;box-shadow:0 4px 16px #000a}

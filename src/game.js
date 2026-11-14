@@ -1235,9 +1235,13 @@ function chMenu(id){const m=CH.msgs.find(x=>x.id===id);if(!m||m.del)return;const
    else if(k==='del')chatApi('clanMsgDel',{id}).then(()=>{m.del=1;chPaint()}).catch(e=>toast(errT(e)));
    else if(k==='rep2')modal(`<div class="big">⚠️</div><p>${T('ch_report_q')}</p>`,T('ch_report'),()=>chatApi('clanChatRep',{id}).then(()=>toast(T('ch_report_ok'))).catch(e=>toast(errT(e))))})})}
 // 14.11 (Влад): гра відкрита посиланням-запрошенням клану (startapp=clan_<id>_<хто запросив>) — показуємо клан і кнопку вступу
-function clanInvite(){const w=tg(),sp=(w&&w.initDataUnsafe&&w.initDataUnsafe.start_param)||Q.get('startapp')||'',m=/^clan_(\d{1,9})_/.exec(sp);if(!m)return;const id=+m[1];
- try{if(sessionStorage.getItem('gt_cinv')===sp)return;sessionStorage.setItem('gt_cinv',sp)}catch(e){}
- if(G.maxStage<(V.clanStage||5)){modal(`<div class="big">🏰</div><p>${T('cinv_low',{n:V.clanStage||5})}</p>`,T('ok'));return}
+// Новачок до 5 етапу вступити не може (клани — з V.clanStage): запрошення запам'ятовуємо на 7 днів і показуємо, щойно відкриється клан (Влад 14.11)
+function clanInvite(){const w=tg(),sp=(w&&w.initDataUnsafe&&w.initDataUnsafe.start_param)||Q.get('startapp')||'',m=/^clan_(\d{1,9})_/.exec(sp);let id=m?+m[1]:0,fresh=!!m;
+ if(fresh){try{if(sessionStorage.getItem('gt_cinv')===sp)fresh=false;else sessionStorage.setItem('gt_cinv',sp)}catch(e){}}
+ if(!fresh){id=0;try{const P=JSON.parse(localStorage.getItem('gt_cinv_p')||'null');if(P&&Date.now()-P.at<7*864e5)id=P.id;else localStorage.removeItem('gt_cinv_p')}catch(e){}if(!id)return}
+ if(G.maxStage<(V.clanStage||5)){if(fresh){try{localStorage.setItem('gt_cinv_p',JSON.stringify({id,at:Date.now()}))}catch(e){}
+  api('clan',{id}).then(r=>{const c=((r.out||{}).list||[])[0];modal(`<div class="cinvm"><div class="ic">${c?penI([c.name,c.pt],56)||'🏰':'🏰'}</div>${c?`<h3>${esc(c.name)}</h3>`:''}<p>${T('cinv_low2',{n:V.clanStage||5,s:G.maxStage})}</p></div>`,T('ok'))}).catch(()=>{})}return}
+ try{localStorage.removeItem('gt_cinv_p')}catch(e){}
  api('clan',{id}).then(r=>{const o=r.out;if(o.clan){if(o.clan.id===id)toast(T('cinv_already'));else modal(`<div class="big">🏰</div><p>${T('cinv_other',{c:esc(o.clan.name)})}</p>`,T('ok'));return}
   const c=(o.list||[])[0];if(!c){toast(T('clan_none'));return}const full=c.members>=(c.max||o.max),reqs=(c.min_stage?T('stage',{n:c.min_stage}):'')+(c.min_power?(c.min_stage?' · ':'')+'💪 '+fmt(c.min_power):'');
   modal(`<div class="cinvm"><div class="ic">${penI([c.name,c.pt],56)||'🏰'}</div><h3>${esc(c.name)}</h3><p class="hint">${T('cinv_you')}</p><div class="sub">👥 ${c.members}/${c.max||o.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${c.desc?`<div class="cdesc s" style="margin:8px 0">${esc(c.desc)}</div>`:''}${reqs?`<p class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</p>`:''}${full?`<p class="dn">${T('clan_full')}</p>`:''}</div>`,
@@ -1420,9 +1424,9 @@ function modal(html,btn,cb,on,tag){if(tag&&queue.some(q=>q.tag===tag))return;que
 // вікно з дією (cb) завжди можна закрити без дії: червоний ✕ у куті або тап поза вікном (04.11)
 function showModal(){const q=queue[0];if(!q){$('modal').classList.remove('show');return}const cl=!!q.cb||!q.btn;$('mbox').innerHTML=(cl?`<button class="mx" id="mcl" aria-label="${T('m_close')}">✕</button>`:'')+q.html+(q.btn?`<div class="row"><button class="btn pri" id="mok">${q.btn}</button></div>`:'');$('modal').classList.add('show');if(q.btn)$('mok').onclick=()=>{if(q.cb&&q.cb()===false)return;queue.shift();showModal()}; // cb може повернути false — вікно лишається (напр., не обрано отримувача)
  const close=()=>{queue.shift();showModal()};if(cl)$('mcl').onclick=close;$('modal').onclick=e=>{if(cl&&e.target===$('modal'))close()};if(q.on)q.on()}
-let dailyShown='';
+let dailyShown='',clanInvBusy=0;
 function afterSync(r){
- const p=r.prog;
+ const p=r.prog;if(G&&G.maxStage>=(V.clanStage||5)&&!clanInvBusy){try{if(localStorage.getItem('gt_cinv_p')){clanInvBusy=1;setTimeout(()=>{clanInvBusy=0;clanInvite()},1500)}}catch(e){}}
  if(G&&(G.buyN||0)>(G.buySeen||0)){modal(`<div class="big">🎁</div><h3>${T('shop_ok_t')}</h3><p>${T('shop_ok')}</p>`,'OK',null,null,'buy');api('buySeen').catch(()=>{});shopData=null}
  if(r.news)showNews(r.news);
  if(r.reward)modal(`<div class="big">🏆</div><h3>${T('reward_t')}</h3><p>${T('reward_txt',{a:fmt(r.reward)})}</p>`,T('claim'));
@@ -1531,7 +1535,8 @@ function tutCheck(){
 }
 function tutRestart(){tutLocal.clear();introI=0;api('tut',{reset:true}).then(()=>{toast(T('tut_restarted'));tab='hero';document.querySelector(tabBtn('hero')).click()}).catch(e=>toast(errT(e)))}
 // новина з бота: показуємо один раз
-function newsHtml(s){return esc(s).replace(/&lt;(\/?)(b|i)&gt;/g,'<$1$2>').replace(/\n/g,'<br>')}
+function newsHtml(s){s=String(s||'');let img='';const m=/^\s*<a href="(https:\/\/grimtaletaller\.github\.io\/popil-i-dushi\/assets\/news\/[\w.-]+)">[^<]*<\/a>\s*/.exec(s);if(m){img=`<img class="newsimg" src="${m[1]}" alt="">`;s=s.slice(m[0].length)} // 14.11: картинка новини
+ return img+esc(s).replace(/&lt;(\/?)(b|i)&gt;/g,'<$1$2>').replace(/\n/g,'<br>')}
 function showNews(n){
  if(!n||n.id===newsShown)return;newsShown=n.id;
  modal(`<h3>${T('news_t')}</h3><div class="newsb">${newsHtml(n[LANG]||n.en)}</div>`,T('tut_ok'),()=>api('newsSeen',{id:n.id}).catch(()=>{}));
