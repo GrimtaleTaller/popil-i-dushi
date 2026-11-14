@@ -973,7 +973,7 @@ function renderProfile(){
 }
 // ---------- магазин (08.11, варіант А): Stars і крипто в мережі TON ----------
 let shopData=null,shopBusy=false,tcUI=null,tcLoading=null,shopPoll=0;
-const SHOP_DESC={inc12:'shop_d_inc12',ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
+const SHOP_DESC={inc12:'shop_d_inc12',inc24:'shop_d_inc24',ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function vipLine(k){const n=k==='starter'?3:VIP_D[k];if(!n||!vipActive())return '';return `<p class="hint" style="color:var(--gold)">${T('shop_vip_on',{d:dt(G.vip)})} — ${T('shop_vip_ext',{n,d:dt(G.vip+n*864e5)})}</p>`} // 13.11 (Влад): VIP активний — покупка продовжить дні
@@ -999,7 +999,7 @@ function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
 let ssub='deal';
 const n3=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'\u202f'); // 1 500 — точна сума пакета без «K»
 const ASH_BON={ash100:1,ash500:1,ash1000:1,ash5000:1}; // пакети з бонусом +50% на першу покупку за добу (сервер — SHOP.bon)
-const SHOP_CAT={inc12:'conv',ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
+const SHOP_CAT={inc12:'conv',inc24:'conv',ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
 function renderShop(){
  const el=$('p-shop');if(!el)return;
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
