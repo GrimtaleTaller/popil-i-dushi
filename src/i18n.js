@@ -344,3 +344,7 @@ Object.assign(window.I18N.ru.t,{bag_sort_def:'Как выпали',bag_sort_pow:
 Object.assign(window.I18N.uk.t,{bag_show:'Показати лише:',bag_reset:'Скинути'});
 Object.assign(window.I18N.en.t,{bag_show:'Show only:',bag_reset:'Reset'});
 Object.assign(window.I18N.ru.t,{bag_show:'Показать только:',bag_reset:'Сбросить'});
+// 14.11: зняти річ
+Object.assign(window.I18N.uk.t,{unequip_btn:'Зняти в сумку',unequipped:'Річ знято в сумку'});
+Object.assign(window.I18N.en.t,{unequip_btn:'Take off to bag',unequipped:'Item moved to bag'});
+Object.assign(window.I18N.ru.t,{unequip_btn:'Снять в сумку',unequipped:'Предмет снят в сумку'});
