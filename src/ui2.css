@@ -465,3 +465,4 @@ body:has(#modal.show) .lnch,body:has(.dngv) .lnch{display:none} /* окремо:
 .pe-r .c{display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:7px 6px;font-size:12px;font-weight:700}.pe-r .c .ic .svi{width:18px;height:18px}
 .pe-r .c.pd{background:linear-gradient(90deg,#f2c14e14,#f2c14e05);border-left:1px solid #f2c14e33}.pe-r .c i{margin-left:auto;font-style:normal}.pe-r .ck{color:#56c271;font-weight:900}.pe-r .lk{font-size:11px;opacity:.8}
 .pe-r.ok .lv{color:#2a1a05;background:linear-gradient(135deg,#ffe08a,#c8962e)}.pe-r.nx{background:#2c2010;box-shadow:inset 3px 0 0 #f2c14e}.pe-r.nx .lv{color:#ffe08a}
+.gmm-req.nr{margin:6px 0 8px}.nr-lack{margin:0 2px 8px;font-size:12.5px;font-weight:700;color:#ff8a7a}
