@@ -1035,6 +1035,7 @@ function renderShop(){
  if(ssub!=='deal')h=''; // шапка з пулом — лише на «Вигідне»
  if(ssub==='deal')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_deal_h')}</p>`;
  if(ssub==='ash')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_ash_h',{a:fmt(G.ash||0)})}</p><p class="hint" style="margin:0 4px 10px">🔥 ${T('shop_d_ash')}</p>`;
+ if(ssub!=='mine'&&list.length)h+=`<div class="crnote"><span>💱</span><p>${T('shop_cr_rate')}</p></div>`; // 14.11 (Влад): ціна в крипті — за курсом
  for(const it of list){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||''),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
   h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${fmtN(save)}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}${it.bon>0?`<div class="shtag">🔥 ${T('shop_bon_tag')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'&&it.pool?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4>${desc?`<p class="hint">${desc}</p>`:''}${it.ash?`<p class="shash">${it.bon>0?`<s>⚱️ ${n3(it.ash)}</s> <b>⚱️ ${n3(it.ash+it.bon)}</b> <em>+${n3(it.bon)}</em>`:`<b>⚱️ ${n3(it.ash)}</b>`}</p>${it.bon===0&&ASH_BON[it.k]?`<p class="hint">${T('shop_bon_used')}</p>`:''}`:''}${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
