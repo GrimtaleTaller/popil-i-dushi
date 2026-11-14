@@ -1307,7 +1307,8 @@ function renderClan(){
  if(lead){const opts=C.craft.filter(x=>x.can);if(!opts.some(x=>x.t===craftT)&&opts.length)craftT=opts[opts.length-1].t;
   const cur=C.craft.find(x=>x.t===craftT);
   S.keys+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${C.craft.map(x=>x.can?`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`:`<button disabled title="${esc(T('craft_lock',{n:x.t-1}))}">🔒 ${T('tier',{n:x.t})}</button>`).join('')}</div>${C.craft.some(x=>!x.can)?`<p class="hint">${T('craft_lock',{n:C.craft.find(x=>!x.can).t-1})}</p>`:''}
-   <div class="row"><button class="btn pri" data-cn="1" ${(C.clan.ash||0)>=cur.ash?'':'disabled'}>×1 · ⚱️${fmt(cur.ash)}</button><button class="btn" data-cn="5" ${(C.clan.ash||0)>=cur.ash5?'':'disabled'}>×5 · ⚱️${fmt(cur.ash5)}</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
+   <div class="row"><button class="btn pri" data-cn="1" ${(C.clan.ash||0)>=cur.ash?'':'disabled'}>×1 · ⚱️${fmt(cur.ash)}</button><button class="btn" data-cn="5" ${(C.clan.ash||0)>=cur.ash5?'':'disabled'}>×5 · ⚱️${fmt(cur.ash5)}</button></div>
+   <div class="row ckn" style="align-items:center;gap:8px;margin-top:8px"><input id="cKN" class="inp" type="number" min="1" max="500" step="1" inputmode="numeric" placeholder="${T('ckn_ph')}" style="flex:1;min-width:0"><button class="btn" id="cKMax">${T('ckn_max')}</button><button class="btn pri" id="cKGo" data-k1="${cur.ash}" disabled>⚒️ ×N</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
  S.keys+=stor; // 09.11 (Влад): крафт — над складом, щоб кнопки не з'їжджали вниз, коли на складі з'являються ключі
  const BL=C.builds||[],RS=C.clan.res||{m:[0,0,0,0],sh:0};
  const bldOk=c=>(C.clan.bank||0)>=c.gold&&(RS.m[c.mat]||0)>=c.matN&&(RS.sh||0)>=c.sh;
@@ -1372,6 +1373,11 @@ function renderClan(){
  if($('cAshGo'))$('cAshGo').onclick=()=>{const a=Math.floor(+$('cAsh').value||0);if(a<1)return;if(a>(G.ash||0)){toast(ERR.no_ash+': ⚱️'+fmtX(G.ash));return}clanAct('clanGiveAsh',{amt:a})};
  if($('cGiveGo'))$('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
+ // 14.11 (Влад): крафт N ключів за раз — поле, «Макс» (скільки дозволяє Попіл казни), ціна наживо
+ if($('cKN')){const inp=$('cKN'),go=$('cKGo'),k1=+go.dataset.k1||1,cAsh=(C.clan&&C.clan.ash)||0,mx=Math.max(0,Math.min(500,Math.floor(cAsh/k1)));
+  const upd=()=>{const n=Math.floor(+inp.value||0);go.disabled=!(n>=1&&n<=500&&n*k1<=cAsh);go.textContent=n>=1?`⚒️ ×${fmt(n)} · ⚱️${fmt(n*k1)}`:'⚒️ ×N'};inp.oninput=upd;upd();
+  $('cKMax').onclick=()=>{inp.value=mx||'';upd();if(!mx)toast(ERR.clan_no_ash||T('err',{e:'clan_no_ash'}))};
+  go.onclick=()=>{const n=Math.floor(+inp.value||0),t=craftT;if(go.disabled||n<1)return;go.disabled=true;go.textContent='⏳';haptic('light');clanAct('clanCraft',{t,n},()=>toast(T('craft_ok',{n,t,k:((clanData&&clanData.clan&&clanData.clan.keys)||{})[t]||n})))?.finally?.(()=>{dirty.clan=1;flush()})}}
  el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const n=+b.dataset.cn,t=craftT,bs=el.querySelectorAll('[data-cn]');bs.forEach(x=>x.disabled=true);b.textContent='⏳';haptic('light');clanAct('clanCraft',{t,n},()=>toast(T('craft_ok',{n,t,k:((clanData&&clanData.clan&&clanData.clan.keys)||{})[t]||n})))?.finally?.(()=>{dirty.clan=1;flush()})}); // 09.11 (відео Влада): відповідь ~1–2 с без жодного відгуку — тепер ⏳, кнопки блокуються, підтвердження
  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>clanAct('clanKick',{pid:+b.dataset.ck}));
  el.querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>clanAct('clanRole',{pid:+b.dataset.cr,role:b.dataset.r}));
