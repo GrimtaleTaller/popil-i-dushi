@@ -1494,7 +1494,7 @@ function pvpResult(o){
 }
 const usdF=x=>'$'+(LANG==='en'?Number(x).toFixed(2):Number(x).toFixed(2).replace('.',',')); // 16.11: сума призу з пулу
 function renderRank(){
- const el=$('p-top'),d=topData[topKind],val=r=>topKind==='power'||topKind==='clan'?fmt(r.v):r.v;
+ const el=$('p-top'),d=topData[topKind],aw=topKind==='rating'&&d&&d.week,val=r=>topKind==='power'||topKind==='clan'?fmt(r.v):aw?(r.v>0?'+':'')+r.v+`<small style="opacity:.6"> · ${r.r}</small>`:r.v; // 16.11: арена — приріст за тиждень · рейтинг
  let h=`<div class="chips">${['stage','power','rating','clan','lvl'].map(k=>`<button data-tk="${k}" class="${k===topKind?'act':''}">${T('top_'+k)}</button>`).join('')}</div>`;
  if(!d){h+=`<div class="empty">${T('loading')}</div>`;
   if(!topBusy){topBusy=true;api('top',{kind:topKind}).then(r=>{topData[r.out.kind]=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{topBusy=false;dirty.top=1})}}
@@ -1504,7 +1504,7 @@ function renderRank(){
   const prizeOf=pl=>{const x=P.find(q=>pl>=q.from&&pl<=q.to);return x?x.ash:0};
   if(d.prizes){const ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
    h+=`<div class="card"><h4>🏆 ${T('prize_t')}</h4><p class="hint">${T('prize_hint')}</p>${hasPrize?`<div class="chips">${P.map(q=>`<span class="chip">${q.from===q.to?q.from:q.from+'–'+q.to}: ⚱️${q.ash}</span>`).join('')}</div>`:`<p class="hint">${T('prize_none')}</p>`}
-   ${d.pot>0?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
+   ${aw?`<p class="hint">${T('top_rating_w')}</p>`:''}${d.pot>0?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
   const row=r=>`<div class="${r.me?'me':''}"><b>${r.place<=3?['🥇','🥈','🥉'][r.place-1]:r.place}</b><span>${penI(r.pn)}${esc(r.name)}${hasPrize&&prizeOf(r.place)?` <small style="color:var(--gold)">⚱️${prizeOf(r.place)}</small>`:''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`;
   h+='<div class="rank">'+d.rows.map(row).join('')+'</div>';
   if(d.me&&!d.rows.some(r=>r.me))h+='<div class="rank" style="margin-top:8px">'+row(d.me)+'</div>';
