@@ -615,8 +615,9 @@ h4.cih .cic[src*="/chat."],h4.cih .cic[src*="/members."],h4.cih .cic[src*="/log.
 .sbart{position:relative;margin:-6px -6px 10px;border-radius:14px;overflow:hidden;aspect-ratio:720/700;box-shadow:0 0 24px #c2303f55}
 .sbart img{width:100%;height:100%;object-fit:cover;display:block;animation:sbbreath 5s ease-in-out infinite;transform-origin:50% 40%}
 @keyframes sbbreath{50%{transform:scale(1.025);filter:brightness(1.12) saturate(1.15)}}
-.sbeye{position:absolute;top:35.2%;width:3.2%;height:2.2%;border-radius:50%;background:radial-gradient(circle,#fff 0,#ff3a3a 35%,#ff000000 70%);box-shadow:0 0 14px 6px #ff2030aa;animation:sbeye 2.6s ease-in-out infinite}
-.sbeye.l{left:44.6%}.sbeye.r{left:52.2%}
+/* 15.11 (Влад): очі точно на намальованих (центри 47,3% і 53,6% по ширині, 34,3% по висоті), мигдалеві й нахилені всередину */
+.sbeye{position:absolute;top:33.2%;width:4.4%;height:2.2%;border-radius:50%;background:radial-gradient(ellipse,#fff 0,#ffb08a 25%,#ff3a3a 50%,#ff000000 72%);box-shadow:0 0 12px 5px #ff2030aa;animation:sbeye 2.6s ease-in-out infinite;mix-blend-mode:screen}
+.sbeye.l{left:45.1%;rotate:14deg}.sbeye.r{left:51.4%;rotate:-14deg}
 @keyframes sbeye{0%,100%{opacity:.55;transform:scale(.8)}45%{opacity:1;transform:scale(1.25)}52%{opacity:.15;transform:scale(1,.15)}58%{opacity:1;transform:scale(1.15)}}
 .sbcrk{position:absolute;inset:8% 25% 22%;background:radial-gradient(ellipse at 50% 40%,#ff203055,transparent 60%);mix-blend-mode:screen;animation:sbcrk 3.1s ease-in-out infinite}
 @keyframes sbcrk{50%{opacity:.25}}
