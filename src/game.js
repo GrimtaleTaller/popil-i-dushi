@@ -979,7 +979,7 @@ function petFighter(){const e=$('petf');if(!e)return;const P=G&&G.pet;if(P&&P.ac
 const pstMax=()=>(((V.pet||{}).cfg||{}).storeMax)||15;
 function pstCard(P){const st=P.st||[],m=pstMax();if(!st.length)return '';const g={};for(const x of st)g[x.sp]=(g[x.sp]||0)+1;
  return `<div class="card"><h4>🐾 ${T('pst_t',{n:st.length,m})}</h4><p class="hint">${T('pst_hint')}</p>${st.length>=m?`<p class="hint" style="color:var(--gold)">⚠️ ${T('pst_full')}</p>`:''}`+
-  Object.keys(g).map(sp=>`<div class="item"><div class="ic">${petIc(sp,0,1)}</div><div class="info"><div class="nm">${T('pet_'+sp)}${g[sp]>1?' ×'+g[sp]:''}</div><div class="sub">${stars(5)}</div></div></div>`).join('')+'</div>'}
+  Object.keys(g).map(sp=>`<div class="item"><div class="ic">${petIc(sp,0,1)}</div><div class="info"><div class="nm">${T('pet_'+sp)}${g[sp]>1?' ×'+g[sp]:''}</div><div class="sub">${T('pst_sub')}</div></div></div>`).join('')+'</div>'}
 function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn:0},D=V.pet||{},I=D.info||{},C=D.cfg||{},now=Date.now();
  let h='';const a=P.act&&P.list[P.act];
  if(a){const sp=P.act,b=(D.defs||{})[sp]||{},bv=(I.bonus||{})[sp]||0,nx=I.next,f=petEvoN(a.l);
@@ -1017,7 +1017,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&canHatch?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||216e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||576e5)/36e5)})}</p></div>`;
  h+=pstCard(P);
  // колекція
- h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc pfc ${P.act===sp?'act':''}" data-pset="${sp}">${P.act===sp?`<em class="pact">${T('pet_active')}</em>`:''}${petFrame(sp,p.l,p.s,0)}<b>${T('pet_'+sp)}</b><small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
+ h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc pfc ${P.act===sp?'act':''}" data-pset="${sp}">${P.act===sp?`<em class="pact">${T('pet_active')}</em>`:''}${petFrame(sp,p.l,p.s,0)}<b>${T('pet_'+sp)}</b><small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint',{m:pstMax()})}</p></div>`;
  if(!a&&!P.inc&&!(P.eggs.c||P.eggs.r))h=`<div class="card"><h4>🐾 ${T('sub_pet')}</h4><p class="hint">${T('pet_intro')}</p></div>`+h;
  $('p-pet').innerHTML=h;const E=$('p-pet');
  const fd=n=>act('petFeed',{n},r=>{toast(T('pet_fed',{l:r.out.l}));haptic('light')});
