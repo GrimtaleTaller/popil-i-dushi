@@ -253,10 +253,11 @@ const gemP=k=>({t:k[0],l:+k[1]}),gemCfg=()=>V.gem||{sockets:[0,0,0,1,2,3,3],out:
 function gemStat(k,il){const g=gemP(k),C=gemCfg(),v=Math.pow(1.16,il-1)*C.m[g.l-1],o={};if(g.t==='a')o.atk=3*v;else if(g.t==='h')o.hp=14*v;else if(g.t==='d')o.def=2*v;else o.crit=C.crit[g.l-1];return o}
 function fullSt(it){const g=gemSum(it),o={},st=stSr(it);for(const k of ['atk','hp','def','crit'])if((st[k]||0)+g[k])o[k]=(st[k]||0)+g[k];return o}
 function stSr(it){if(!it.sr)return it.st;const m=1+((V&&V.afx&&V.afx.star.step)||0.08)*it.sr,o={...it.st};for(const k of ['atk','hp','def'])if(o[k])o[k]=Math.round(o[k]*m);return o} // характеристики з урахуванням зірок (05.11)
-function gemSum(it){const o={atk:0,hp:0,def:0,crit:0};for(const k of it.gm||[]){const s=gemStat(k,it.il);for(const x in s)o[x]+=s[x]}return o}
+const gemCamp=k=>{const g=gemP(k),c=gemCfg().camp;return g.t==='c'&&c?c[g.l-1]||0:0}; // 15.11: смарагд посилює власний крит речі (як на сервері)
+function gemSum(it){const o={atk:0,hp:0,def:0,crit:0};for(const k of it.gm||[]){const s=gemStat(k,it.il);for(const x in s)o[x]+=s[x];o.crit+=(it.st.crit||0)*gemCamp(k)}return o}
 const gemIc=(k,big)=>{const g=gemP(k);return `<span class="gem gimg${big?' big':''}" style="--gc:${GEMC[g.t]};background-image:url(assets/gems/${g.t}${g.l}.webp?v=1)"><i>${ROM[g.l-1]}</i></span>`}; // 08.11: намальовані камені (Higgsfield), фоном — щоб працювало й у toast
 const gemName=k=>{const g=gemP(k);return T('gem_'+g.t)+' '+ROM[g.l-1]};
-const gemTxt=(k,il)=>{const s=gemStat(k,il),x=Object.keys(s)[0];return '+'+(x==='crit'?s[x].toFixed(1)+'%':fmt(s[x]))+' '+STATN[x]};
+const gemTxt=(k,il,it)=>{const s=gemStat(k,il),x=Object.keys(s)[0],cp=gemCamp(k);return '+'+(x==='crit'?s[x].toFixed(1)+'%':fmt(s[x]))+' '+STATN[x]+(cp?' · '+T('gem_camp',{p:Math.round(cp*100)})+(it&&it.st&&it.st.crit?' (+'+(it.st.crit*cp).toFixed(1)+'%)':''):'')};
 const sockN=it=>gemCfg().sockets[it.r]||0;
 function sockView(it){const n=sockN(it);if(!n)return '';const gm=it.gm||[];let h='';for(let i=0;i<n;i++)h+=gm[i]?gemIc(gm[i]):'<span class="gem empty">◇</span>';return `<span class="socks">${h}</span>`}
 // оцінка речі = Сила героя, якщо надіти її (як itemScore на сервері; V.sc — сирі суми й множники героя)
@@ -457,7 +458,7 @@ function renderBag(){
  for(const it of list){const eq=G.eq[it.slot],better=it.il<=G.lvl&&(!eq||itemScore(it)>itemScore(eq)); // «краще» лише для того, що можна вдягти зараз
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
-   <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
+   <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il,it)).join(' · ')}</div>`:''}</div>
    <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  setH($('p-bag'),h);
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
@@ -612,11 +613,11 @@ function gemPane(){const C=gemCfg();
  if(!all.length)h+=`<p class="hint">${T('gem_no_items')}</p>`;
  for(const it of all){const eqd=SLOTS.some(s=>G.eq[s]&&G.eq[s].id===it.id),n=sockN(it),gm=it.gm||[];
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info"><div class="nm" style="color:${RAR[it.r].c}">${itemName(it)}</div><div class="sub">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${eqd?' · '+T('equipped'):''}</div><div class="socrow">`+
-   Array.from({length:n},(_,i)=>gm[i]?`<button class="sock full" data-gr="${it.id}:${i}">${gemIc(gm[i],1)}<small>${gemTxt(gm[i],it.il)}</small><small class="out">✕ ⚱️${C.out[gemP(gm[i]).l-1]}</small></button>`:`<button class="sock" data-gi="${it.id}">◇<small>${T('gem_put')}</small></button>`).join('')+'</div></div></div>'}
+   Array.from({length:n},(_,i)=>gm[i]?`<button class="sock full" data-gr="${it.id}:${i}">${gemIc(gm[i],1)}<small>${gemTxt(gm[i],it.il,it)}</small><small class="out">✕ ⚱️${C.out[gemP(gm[i]).l-1]}</small></button>`:`<button class="sock" data-gi="${it.id}">◇<small>${T('gem_put')}</small></button>`).join('')+'</div></div></div>'}
  return h+'</div>'}
 function gemPick(id){const it=[...SLOTS.map(s=>G.eq[s]),...G.inv].find(i=>i&&i.id===id);if(!it)return;const GM=G.gems||{};
  const ks=Object.keys(GM).filter(k=>GM[k]>0).sort((a,b)=>b[1]-a[1]||GEMS.indexOf(a[0])-GEMS.indexOf(b[0]));
- modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),null,()=>{},()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),'gempick')} // 05.11: замість «Скасувати» внизу довгого списку — ✕ і тап поза вікном
+ modal(`<div class="big">◆</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3>`+(ks.length?`<div class="gpick">${ks.map(k=>`<button class="btn" data-pk="${k}">${gemIc(k,1)} ${gemName(k)} ×${GM[k]}<small>${gemTxt(k,it.il,it)}</small></button>`).join('')}</div>`:`<p>${T('gem_none')}</p>`),null,()=>{},()=>document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{queue.shift();showModal();act('gemInsert',{id,k:b.dataset.pk},()=>{toast(T('gem_in',{g:gemName(b.dataset.pk)}));haptic('light')})}),'gempick')} // 05.11: замість «Скасувати» внизу довгого списку — ✕ і тап поза вікном
 function bindGem(){const P=$('p-forge');
  // злиття в клітинці — усі доступні; якщо бракує матеріалу свого рівня й підуть вищі — спершу питаємо (matAsk, як у тренуванні)
  P.querySelectorAll('[data-gmc]').forEach(b=>b.onclick=()=>gemMergeModal(b.dataset.gmc));
