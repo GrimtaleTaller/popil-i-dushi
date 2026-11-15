@@ -1877,7 +1877,7 @@ if($('sBos'))$('sBos').onclick=sbOpen;
 setInterval(sbPaint,1e3);
 // 15.11 (Влад): «Пакет новачка» — лише перші 24 год від реєстрації; плашка з таймером над ареною і вікно при кожному заході в гру
 var NB=null,nbShown=0;
-function nbSet(o){NB=o&&o.until>Date.now()?o:null;nbPaint();if(NB&&!nbShown&&!V.isAdmin){nbShown=1;nbAuto(0)}}
+function nbSet(o){NB=o&&o.until>Date.now()?o:null;nbPaint();if(NB&&!nbShown){nbShown=1;nbAuto(0)}}
 function nbAuto(n){setTimeout(()=>{if(!NB)return;if(tutCur&&n<60){nbAuto(n+1);return}nbOpen()},n?5000:1500)} // під час навчання не заважаємо — чекаємо до 5 хв
 function nbPaint(){const b=$('nbOf');if(!b)return;const l=NB?NB.until-Date.now():0;if(l<=0){b.style.display='none';if(NB){NB=null;shopData=null;dirty.shop=1}return}
  b.style.display='';$('nbOfT').textContent='−'+nbOff()+'%';b.title=T('nb_t');$('nbOfC').textContent=sbHms(l);const c=$('nbCd');if(c)c.textContent=sbHms(l)}
