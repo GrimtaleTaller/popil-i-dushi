@@ -282,6 +282,8 @@ function setPowWith(slot,r){const S=(V.forge&&V.forge.setCfg)||{anc:{pow:0},eter
 function setK(it){if(it.r==null)return 1;const cur=setPowWith(null,-1);return(1+setPowWith(it.slot,it.r)/100)/(1+cur/100)}
 // внесок речі в Силу (скільки Сили додає річ порівняно з порожнім слотом) — для показу в Кузні
 // внесок самої речі без впливу на сет (02.11: інакше легендарки на ковадлі показували мінус — «розбили б» сет прадавніх)
+// 15.11 (баг від Влада): оцінка сили після кування — та сама річ з атакою/здоров'ям/захистом, помноженими на різницю рідкостей (крит не множиться, як на сервері); раніше множили всю Силу речі разом із критом — вічна 42 показувалась сильнішою за надіту вічну 49
+function rarEst(it,r){const k=RAR[r].m/RAR[it.r].m,st={...it.st};for(const x of ['atk','hp','def'])if(st[x])st[x]=Math.round(st[x]*k);return Math.round(itemVal({...it,r,st}))}
 function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore(it,1)-itemScore({slot:it.slot,st:{},il:it.il,gm:[]},1)}
 // 13.11 (Влад): вимпел клану біля ніку (src/pen.js малює з назви; p = [назва клану, ступінь рамки])
 function penI(p,w=24){return p&&p[0]&&window.penSvg?`<span class="pen">${window.penSvg(p[0],p[1],w)}</span>`:''}
@@ -661,7 +663,7 @@ function renderForge(){
  const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`;
  const resC=(have,need,ic)=>`<span style="color:${have>=need?'inherit':'var(--red)'}">${ic}${fmt(have)}/${fmt(need)}</span>`;
  const maxExtra=Math.max(0,Math.ceil((F.myth.cap-F.myth.base-F.myth.fail*fails)/F.myth.extra));
- const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?Math.round(itemVal(onA[0])*1.8):0;
+ const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?rarEst(onA[0],5):0;
  if(fsub==='myth')h+=`<div class="card">${setBan('anc',RAR[5].c,'◆')}
   ${slotG(s=>legs(s).length,mSlot,'data-ms',need)}
   <div class="anrow"><span>${T('anvil',{a:Math.min(mN,LG.length),b:need})}${extra?' <b style="color:var(--gold)">+'+extra+'</b>':''}</span><button class="btn" id="mMinB">${T('btn_min')}</button><button class="btn" id="mMaxB" ${maxN>need?'':'disabled'}>${T('btn_max')}</button></div>
@@ -684,7 +686,7 @@ function renderForge(){
   ${AM.length?`${AM.length>1?`<p class="hint">${T('ast_one')}</p>`:''}<div class="anvil ast">${AM.map(it=>`<div class="atile ${aIt&&it.id===aIt.id?'sel':''}" data-asel="${it.id}" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b>${eqA&&eqA.id===it.id?`<em class="aon">${T('ast_on')}</em>`:''}${it.gm&&it.gm.length?`<em class="agm">◆${it.gm.length}</em>`:''}</div>`).join('')}</div>`:`<p class="hint">${T('ast_none')}</p>`}
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${fmtN(F.astChance)}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
-   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(Math.round(itemVal(aIt)*RAR[6].m/RAR[5].m))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
+   <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(rarEst(aIt,6))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
    ${needRows([[RIS('souls'),T('souls').replace(/^\S+\s+/,''),aSo,G.souls||0],[RIS('scroll'),T('r_scroll'),1,aScr],...(aEs?[[RIS('ess'),T('ess').replace(/^\S+\s+/,''),aEs,G.ess||0]]:[]),[`<img class="hic s" src="assets/items/weapon0_5.webp" alt="">`,T('ast_sac',{n:aNeed}),aNeed,aSac.length]])}${aSac.length>=aNeed?`<div class="chrow"><span class="sub">${T('ast_sac',{n:aNeed})}</span><span>${aSac.map((i,k)=>`<span class="gic r5" style="width:30px;height:30px;position:relative" title="${k?'':T('ast_burn1')}">${gearArt(i.slot,i.r,i.nm)}${k?'':'<i style="position:absolute;right:-4px;bottom:-4px;font-style:normal;font-size:12px">🔥</i>'}</span>`).join(' ')}</span></div>`:''}${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
   <p class="hint">${T('ast_keep')}</p><p class="hint">📜 ${T('ast_scroll_src',{n:aScr})}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
