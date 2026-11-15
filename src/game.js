@@ -373,7 +373,7 @@ function renderHero(){
   <div><span>${T('ench')}</span><b>+${Math.round((G.ench||0)*V.forge.enchStep*100)}%</b></div><div><span>${T('souls_h')}</span><b>${fmt(V.forge.soulsPerHour)}</b></div>
   <div><span>${T('act_days')}</span><b>${V.payout?V.payout.myDays:'—'}</b></div></div>
   <p class="hint">${T('crit_hint',{v:(V.crit&&V.crit.over)||0})}</p><p class="hint">${T('hero_hint')}</p></details>`;
- $('p-hero').innerHTML=h;$('hStats').ontoggle=e=>{statsOpen=e.target.open}; /* характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями */$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>{toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best'));gemMoveAsk(r.out.gm)});
+ setH($('p-hero'),h);$('hStats').ontoggle=e=>{statsOpen=e.target.open}; /* характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями */$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>{toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best'));gemMoveAsk(r.out.gm)});
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
  $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
  $('p-hero').querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{const k=b.dataset.hq,keep=lastSub.bag;lastSub.bag=k;document.querySelector(tabBtn('bag')).click();if(k==='pet'||k==='train')lastSub.bag=keep});
@@ -456,7 +456,7 @@ function renderBag(){
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
    <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
- $('p-bag').innerHTML=h;
+ setH($('p-bag'),h);
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
  $('p-bag').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
@@ -483,7 +483,8 @@ let mktData=null,mktBusy=false,mktMat=0,mktCur='ash';const mktF={slot:'',r:0,sor
 let mktShow=(()=>{try{return JSON.parse(localStorage.getItem('gt_mkt_show')||'[]').filter(x=>x>=2&&x<=6)}catch(e){return[]}})();
 const mktShowSet=a=>{mktShow=a;mktF.hide=a.length?[2,3,4,5,6].filter(r=>!a.includes(r)):[];try{localStorage.setItem('gt_mkt_show',JSON.stringify(a))}catch(e){}};mktShowSet(mktShow);
 const curIc=c=>c==='gold'?'💰':'⚱️',curHave=c=>c==='gold'?G.gold:(G.ash||0);
-function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',{...mktF},r=>{mktData=r.out;const g=r.out.got;if(g&&g.n){const x=[g.ash?'⚱️'+fmt(g.ash):'',g.gold?'💰'+fmt(g.gold):''].filter(Boolean).join(' + ');modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,x,p:Math.round(r.out.fee*100)})}</p>`,T('ok'))}dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData)setTimeout(()=>{dirty.market=1;flush()},800)})}
+let mktErrN=0;
+function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',{...mktF},r=>{mktData=r.out;const g=r.out.got;if(g&&g.n){const x=[g.ash?'⚱️'+fmt(g.ash):'',g.gold?'💰'+fmt(g.gold):''].filter(Boolean).join(' + ');modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,x,p:Math.round(r.out.fee*100)})}</p>`,T('ok'))}dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData){mktErrN=Math.min(6,mktErrN+1);setTimeout(()=>{dirty.market=1;flush()},800*Math.pow(2,mktErrN))}else mktErrN=0})} // 15.11 (критик): після помилки — наростаюча пауза 1,6…51 с, не шторм запитів
 function mktAct(a,args,cb){act(a,{...mktF,...args},r=>{if(r.out)mktData=r.out;dirty.market=1;cb&&cb(r)})}
 function curChips(id,sel,lockAsh){return `<div class="chips" id="${id}">${['ash','gold'].map(c=>`<button data-cur="${c}" class="${sel===c?'act':''}" ${lockAsh&&c==='gold'?'disabled':''}>${T('cur_'+c)}</button>`).join('')}</div>`}
 function bindCur(id,set){const w=$(id);if(!w)return;w.querySelectorAll('[data-cur]').forEach(b=>b.onclick=()=>{if(b.disabled)return;set(b.dataset.cur);w.querySelectorAll('[data-cur]').forEach(x=>x.classList.toggle('act',x===b))})}
@@ -690,7 +691,7 @@ function renderForge(){
   <p class="hint">${T('ast_keep')}</p><p class="hint">📜 ${T('ast_scroll_src',{n:aScr})}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
  if(fsub==='gem')h+=gemPane();
- $('p-forge').innerHTML=h;
+ setH($('p-forge'),h);
  if(fsub==='gem')bindGem();
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
  if($('smelt')){$('smelt').onclick=()=>act('smelt',{n:1},r=>toast(T('smelted',{n:r.out.n})));$('smeltAll').onclick=()=>act('smelt',{n:20},r=>toast(T('smelted',{n:r.out.n})))}
@@ -770,7 +771,7 @@ function renderDng(){
    ${T.open?`<div class="sub">${tr('dng_res')} <span class="est" style="color:${ec}">${tr(e?'res_win':'res_lose')}</span></div>
    <button class="btn pri" data-dng="${T.t}" data-d="${cd.d}" data-e="${e}" ${busy||(!left&&!T.keys&&(G.ash||0)<T.pay)?'disabled':''}>${left?tr('enter_free'):T.keys?tr('enter_key',{n:T.keys}):tr('enter',{p:fmt(T.pay)})}</button>${(left+T.keys)>1?`<button class="btn" data-dngn="${T.t}" data-d="${cd.d}" data-e="${e}" ${busy?'disabled':''}>⚡ ${tr('batch',{n:Math.min(10,left+T.keys)})}</button>`:''}`:`<div class="sub">${G.maxStage<D.unlockStage?tr('stage',{n:D.unlockStage}):tr('need_tier',{n:T.t-1})}</div>`}
   </div></div>`}
- $('p-dng').innerHTML=h;
+ setH($('p-dng'),h);
  const loseAsk=(b,go)=>b.dataset.e==='0'?modal(`<div class="big">💪</div><p>${T('lose_warn')}</p>`,T('lose_go'),go):go(); // 09.11: Сили менше за поріг — попередити
  $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>loseAsk(b,()=>act('dungeon',{t:+b.dataset.dng,d:+b.dataset.d},r=>dngPlay(r.out))));
  $('p-dng').querySelectorAll('[data-swf]').forEach(b=>b.onclick=()=>{swF=+b.dataset.swf;renderDng()});
@@ -879,6 +880,9 @@ const LOGT={
  myth:a=>a[0]?`<span style="color:${RAR[5].c}">${T('log_myth_ok',{s:SLOT[a[1]].n})}</span>`:T('log_myth_fail',{c:a[2]})
 };
 function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.log.map(e=>{const d=new Date(e.t);return `<div><b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> ${(LOGT[e.k]||(()=>e.k))(e.a||[])}</div>`}).join(''):`<div class="empty">${T('log_empty')}</div>`)+'</div>'}
+// 15.11 (Влад «гра фрізить»): після кожної відповіді сервера вкладка будувалась наново; якщо розмітка та сама — DOM не чіпаємо (лише обробники кнопок перепризначаються)
+const slp=ms=>new Promise(r=>setTimeout(r,ms)); // пауза перед повтором після помилки (15.11)
+function setH(el,h){if(!el)return;const a=SS.a+SS.t;if(el.__h===h&&el.__a===a&&el.childElementCount)return;el.__h=h;el.__a=a;el.innerHTML=h} // якщо гравець щось натискав — перемальовуємо завжди (кнопки з ⏳ мають відновитись)
 function flush(){if(G&&dirty[tab]){dirty[tab]=0;({tasks:renderTasks,quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,wd:renderWd,shop:renderShop,clan:renderClan,market:renderMarket})[tab]()}}
 
 // ---------- профіль ----------
@@ -888,7 +892,7 @@ function copyText(t){try{navigator.clipboard.writeText(t);toast(T('copied'))}cat
 // ---------- вивід коштів (Влад 12.11) ----------
 // баланс $ наповнюватиметься з пулу (схема Г), поки 0; заявку виплачує адмін вручну з Tonkeeper
 let wdData=null,wdBusy=false,wdAdm=null,wdCur='gram',wdAt=0;
-const wdLoad=()=>{if(wdBusy)return;wdBusy=true;api('wdInfo').then(r=>{wdData=r.out;wdAt=Date.now();wdChip(r.out&&r.out.bal)}).catch(e=>toast(errT(e))).finally(()=>{wdBusy=false;dirty.wd=1})};
+const wdLoad=()=>{if(wdBusy)return;wdBusy=true;api('wdInfo').then(r=>{wdData=r.out;wdAt=Date.now();wdChip(r.out&&r.out.bal)}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wdBusy=false;dirty.wd=1})};
 const WD_ST={new:'⏳',paid:'✅',rejected:'❌'};
 // 13.11 (Влад «А»): «Мої реферали» — рівні 1·2·3, рівень і етап, прихід, останній вхід, скільки $ отримано з кожного; у Профілі й у Виводі
 let refData=null,refAt=0,refBusy=false,refLv=0,refAll=false;
@@ -1020,7 +1024,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
 function renderProfile(){
  const el=$('p-prof');
  if(!profData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
-  if(!profBusy){profBusy=true;api('profile').then(r=>{profData=r.out}).catch(e=>toast(errT(e))).finally(()=>{profBusy=false;dirty.prof=1})}return}
+  if(!profBusy){profBusy=true;api('profile').then(r=>{profData=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{profBusy=false;dirty.prof=1})}return}
  const P=profData,R=P.refs,link=inviteLink();
  live('prof',()=>api('profile').then(r=>r.out),o=>{if(same(o,profData))return false;profData=o;return true},3e4);
  let h=`<div class="card"><h4>👤 ${T('profile')}</h4><div class="resg">
@@ -1084,7 +1088,7 @@ const SHOP_CAT={inc12:'conv',inc24:'conv',ash100:'ash',ash250:'ash',ash500:'ash'
 function renderShop(){
  const el=$('p-shop');if(!el)return;
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
-  if(!shopBusy){shopBusy=true;api('shopInfo').then(r=>{shopData=r.out}).catch(e=>toast(errT(e))).finally(()=>{shopBusy=false;dirty.shop=1;flush()})}return}
+  if(!shopBusy){shopBusy=true;api('shopInfo').then(r=>{shopData=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{shopBusy=false;dirty.shop=1;flush()})}return}
  const S=shopData,soon=V.launch&&!V.isAdmin,w=tcUI&&tcUI.account;
  live('shop',()=>api('shopInfo').then(r=>r.out),o=>{if(same(o,shopData))return false;shopData=o;return true},3e4);
  let h=`<div class="card"><h4>🛒 ${T('shop_t')}</h4><p class="hint">${T('shop_hint')}</p><div class="resg"><div><span>💰 ${T('shop_pool')}</span><b>$${S.pool.toFixed(2)}</b></div>${vipActive()?`<div><span>👑 VIP</span><b>${dt(G.vip)}</b></div>`:''}</div>
@@ -1312,7 +1316,7 @@ function renderClan(){
  const el=$('p-clan');
  if(G.maxStage<(V.clanStage||5)){el.innerHTML=`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
  if(!clanData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
-  if(!clanBusy){clanBusy=true;api('clan').then(r=>{clanData=r.out;clanAt=Date.now()}).catch(e=>toast(errT(e))).finally(()=>{clanBusy=false;dirty.clan=1})}return}
+  if(!clanBusy){clanBusy=true;api('clan').then(r=>{clanData=r.out;clanAt=Date.now()}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{clanBusy=false;dirty.clan=1})}return}
  const C=clanData;let h='';
  // 13.11 (Влад): клан оновлювався лише при вході в гру — тепер тихо підтягуємо раз на 20 с, поки вкладка відкрита; перемальовуємо лише якщо щось змінилось
  if(C.clan)live('clan',()=>api('clan').then(r=>r.out),o=>{if(!clanData||!clanData.clan||!o||same(o,clanData))return false;clanData=o;return true});
@@ -1325,7 +1329,7 @@ function renderClan(){
    const btn=mine?`<button class="btn" data-cu="${c.id}">${T('app_cancel')}</button>`:c.join_mode==='closed'?`<button class="btn" disabled>🔒 ${T('clan_mode_closed')}</button>`:`<button class="btn pri" data-cj="${c.id}" ${!full&&c.ok?'':'disabled'}>${c.join_mode==='apply'?T('apply'):T('join')}</button>`;
    return `<div class="item" style="border-left-color:#7a5a26"><div class="ic">${penI([c.name,c.pt],30)||'🛡️'}</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${c.max||C.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${c.desc?`<div class="cdesc s">${esc(c.desc)}</div>`:''}${reqs?`<div class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</div>`:''}${mine?`<div class="st up">${T('app_sent')}</div>`:''}</div><div class="acts">${btn}</div></div>`}).join(''):`<p class="hint">${T(C.q?'clan_nothing':'clan_none_yet')}</p>`)+'</div>';
   {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]})}renderSub(); // не губимо введене при оновленні
-  const srch=()=>{clanBusy=true;api('clan',{q:$('cQ').value.trim()}).then(r=>{clanData=r.out}).catch(e=>toast(errT(e))).finally(()=>{clanBusy=false;dirty.clan=1})};
+  const srch=()=>{clanBusy=true;api('clan',{q:$('cQ').value.trim()}).then(r=>{clanData=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{clanBusy=false;dirty.clan=1})};
   $('cQgo').onclick=srch;$('cQ').onkeydown=e=>{if(e.key==='Enter')srch()};
   el.querySelectorAll('[data-cu]').forEach(b=>b.onclick=()=>clanAct('clanUnapply',{id:+b.dataset.cu}));
   $('cMake').onclick=()=>{const n=$('cName').value.trim();if(n.length<3){toast(ERR.clan_name_bad);return}clanAct('clanCreate',{name:n})};
@@ -1461,7 +1465,7 @@ function renderRank(){
  const el=$('p-top'),d=topData[topKind],val=r=>topKind==='power'||topKind==='clan'?fmt(r.v):r.v;
  let h=`<div class="chips">${['stage','power','rating','clan','lvl'].map(k=>`<button data-tk="${k}" class="${k===topKind?'act':''}">${T('top_'+k)}</button>`).join('')}</div>`;
  if(!d){h+=`<div class="empty">${T('loading')}</div>`;
-  if(!topBusy){topBusy=true;api('top',{kind:topKind}).then(r=>{topData[r.out.kind]=r.out}).catch(e=>toast(errT(e))).finally(()=>{topBusy=false;dirty.top=1})}}
+  if(!topBusy){topBusy=true;api('top',{kind:topKind}).then(r=>{topData[r.out.kind]=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{topBusy=false;dirty.top=1})}}
  else{
   live('top:'+topKind,()=>api('top',{kind:topKind}).then(r=>r.out),o=>{if(same(o,topData[o.kind]))return false;topData[o.kind]=o;return o.kind===topKind});
   const kinds=(d.kinds||[]).concat('clan'),hasPrize=kinds.includes(topKind),P=topKind==='clan'?(d.clanPrizes||[]):(d.prizes||[]);
@@ -1771,7 +1775,7 @@ function renderWb(){
  if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return} // 09.11 (Влад): світового боса прибрано з гри
  const W=V.wb,el=$('p-wboss');
  if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('wb_unlock',{n:W?W.stage:15})}</div>`;return}
- if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out}).catch(e=>toast(errT(e))).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
  const D=wbData,B0=D.boss,free=W.left>0;
  if(D.ready===false){el.innerHTML=`<div class="empty">👹 ${T('wb_soon')}</div>`;return}
  let h=`<div class="card wbc"><img class="wbimg" src="${IMG('boss8')}" alt=""><h4>${T('wb_name')} · ${T('lvl',{n:B0.lvl})}</h4><div class="bar" style="height:12px"><i style="width:${B0.hp/B0.hp_max*100}%;background:linear-gradient(90deg,#9b2c2c,#e0484e)"></i></div>
