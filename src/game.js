@@ -883,7 +883,6 @@ const LOGT={
  star:a=>'★ '+(SLOT[a[0]]?SLOT[a[0]].n:a[0])+' → '+'★'.repeat(a[2]||0),
  pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adTask:a=>T('log_ad_task',{a:a[0],g:fmt(a[1]||0)}),adTaskDup:()=>T('adt_dup'),card:a=>T('log_card',{t:[a[0]?'⚱️'+a[0]:'',a[1]?(a[1]==='r'?T('card_egg_r'):T('card_egg_c')):''].filter(Boolean).join(', ')}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
- pmerge:a=>T('log_pet_merge',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[1]}), // 15.11: злиття зі складу
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
  pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
  dis:a=>T('log_dis',{n:a[0],v:fmt(a[1])+' '+(a[2]==='xp'?'✨':'🔩')}),
@@ -973,37 +972,28 @@ const petEvoN=l=>l>=20?2:l>=10?1:0,stars=(s,m=5)=>'<span class="stars">'+'★'.r
 const dur=ms=>{const m=Math.round(ms/60000);return m%60?hms(ms):T('t_hh',{h:m/60})}; // тривалість без «0 хв»
 const hms=ms=>{const m=Math.ceil(ms/60000),h=Math.floor(m/60);return h?T('t_hm',{h,m:m%60}):T('t_m',{m})};
 function petFighter(){const e=$('petf');if(!e)return;const P=G&&G.pet;if(P&&P.act){const p=P.list[P.act];e.innerHTML=`<img src="${petImg(P.act,p.l)}" alt="">`;e.className='petf evo'+petEvoN(p.l);e.style.display=''}else e.style.display='none'}
-// 15.11 (Влад): склад вихованців — повтори з яєць і куплені на ринку. Повтор зливається у свого вихованця (2 → +1★, до ★5) або йде на ринок за Попіл;
-// куплений (b) на зірки не зливається — лише продати. Склад повний — нові повтори зливаються самі (сервер: PET.storeMax, petMerge, marketSell kind:'pet')
-const pstC=()=>((V.pet||{}).cfg||{}),pstMax=()=>pstC().storeMax||10,pstDup=()=>pstC().dupStar||2,pstTop=()=>pstC().maxStar||5;
-const pstWhy=(P,x)=>x.b?'b':!P.list[x.sp]?'none':P.list[x.sp].s>=pstTop()?'max':''; // чому не зливається ('' — можна)
-const pstNext=(P,sp)=>{const p=P.list[sp],d=p.d+1;return d>=pstDup()?T('pst_star_next',{s:p.s+1}):T('pst_d_next',{d,n:pstDup(),s:p.s+1})};
-const pstNote=(P,x)=>{const w=pstWhy(P,x);return w?T('pst_why_'+w):pstNext(P,x.sp)};
-function pstAllN(P){const q={};let n=0;for(const x of P.st||[]){const p=P.list[x.sp];if(x.b||!p)continue;const c=q[x.sp]=q[x.sp]||{s:p.s,d:p.d};if(c.s>=pstTop())continue;c.d++;if(c.d>=pstDup()){c.d-=pstDup();c.s++}n++}return n}
-const pstMin=()=>pstC().mktMin||150,pstCanSell=()=>!V.twin; // двійникам ринок закритий (сервер: twin)
+// 15.11 (Влад): Лігво вихованців (15 місць) — повтори виду, який уже на ★5, і куплені на ринку, коли вид уже є (b — куплений).
+// До ★5 повтор зливається в зірки сам, як раніше. З Лігва — лише на ринок за Попіл, від 150 (сервер: PET.storeMax, PET.mktMin, marketSell kind:'pet')
+const pstC=()=>((V.pet||{}).cfg||{}),pstMax=()=>pstC().storeMax||15,pstMin=()=>pstC().mktMin||150,pstCanSell=()=>!V.twin; // двійникам ринок закритий (сервер: twin)
+const pstNote=(P,x)=>x.b?T('pst_why_b'):T('pst_why_max',{p:T('pet_'+x.sp)});
 const pstFront=f=>{const n=queue.length;f();if(queue.length>n){queue.unshift(queue.pop());showModal()}}; // нове вікно — одразу, а не в кінці черги
 const pstSellT=()=>RIS('ash')+' '+T('pst_sell'),pstTag=b=>b?` <small class="pstb">${T('pst_bought')}</small>`:'';
-function pstMergeFx(r){const o=r.out,k=Object.keys(o.stars||{});haptic(k.length?'heavy':'medium');toast(k.length?k.map(sp=>T('pst_star_got',{p:T('pet_'+sp),s:o.stars[sp]})).join(' · '):T('pst_merged',{n:o.n}))}
 function pstSellDlg(id){const x=((G.pet||{}).st||[]).find(y=>y.id===id);if(!x)return;
  const mn=pstMin();modal(`<div class="big">${petFrame(x.sp,1,1,1)}</div><h3>${T('pet_'+x.sp)}${pstTag(x.b)}</h3><p class="hint">${T('pst_sell_hint',{p:Math.round(((mktData&&mktData.fee)||0.1)*100),m:mn})}</p><input id="mPrice" class="inp" type="number" min="${mn}" max="1000000" inputmode="numeric" placeholder="${T('pst_price_ph',{n:mn})}" style="width:100%">`,RIS('ash')+' '+T('mkt_put'),
   ()=>{const p=Math.floor(+$('mPrice').value||0);if(p<mn||p>1e6){toast(T('pst_price_bad',{a:mn,b:fmt(1e6)}));return false}mktAct('marketSell',{kind:'pet',id,price:p},()=>{toast(T('mkt_listed'));haptic('light')})},()=>{const i=$('mPrice');if(i)i.focus()},'pstsell')}
-// вікно дій для одного вихованця зі складу; got — щойно вилупився (тоді є «Лишити на складі»)
-function pstAsk(id,got){const P=G.pet||{},x=(P.st||[]).find(y=>y.id===id);if(!x)return;const w=pstWhy(P,x);
- const can=pstCanSell(),sell=()=>{queue.shift();pstFront(()=>pstSellDlg(id));showModal()},keep=()=>{queue.shift();showModal()};
- modal(`<div class="big">${petFrame(x.sp,1,1,1)}</div><h3>${got?T('pet_dup',{p:T('pet_'+x.sp)}):T('pet_'+x.sp)}${pstTag(x.b)}</h3>${got?`<p>${T('pst_got',{n:(P.st||[]).length,m:pstMax()})}</p>`:''}<p class="hint">${pstNote(P,x)}</p>`+
-  `<div class="row pstq">${w||!can?'':`<button class="btn" id="pstSellQ">${pstSellT()}</button>`}${got?`<button class="btn" id="pstKeep">${T('pst_keep')}</button>`:''}</div>`,
-  w?(can?pstSellT():''):T('pst_merge'),w?(can?()=>{queue.shift();pstFront(()=>pstSellDlg(id));showModal();return false}:null):()=>{act('petMerge',{sid:id},pstMergeFx)},
-  ()=>{if($('pstSellQ'))$('pstSellQ').onclick=sell;if($('pstKeep'))$('pstKeep').onclick=keep},'pst'+id)}
-function pstMergeAll(){const n=pstAllN(G.pet||{});if(!n)return;modal(`<div class="big" style="color:var(--gold)">★</div><h3>${T('pst_merge_all',{n})}</h3><p class="hint">${T('pst_merge_all_q')}</p>`,T('pst_merge'),()=>act('petMerge',{all:true},pstMergeFx))}
+// щойно вилупився повтор виду на ★5 — він у Лігві: продати чи лишити
+function pstAsk(id){const P=G.pet||{},x=(P.st||[]).find(y=>y.id===id);if(!x)return;const can=pstCanSell();
+ modal(`<div class="big">${petFrame(x.sp,1,1,1)}</div><h3>${T('pet_dup',{p:T('pet_'+x.sp)})}</h3><p>${T('pst_got',{p:T('pet_'+x.sp),n:(P.st||[]).length,m:pstMax()})}</p><p class="hint">${T(can?'pst_got_h':'pst_got_twin')}</p><div class="row pstq"><button class="btn" id="pstKeep">${T('pst_keep')}</button></div>`,
+  can?pstSellT():'',can?()=>{queue.shift();pstFront(()=>pstSellDlg(id));showModal();return false}:null,()=>{if($('pstKeep'))$('pstKeep').onclick=()=>{queue.shift();showModal()}},'pst'+id)}
 function pstRows(P){const g={};for(const x of P.st||[]){const k=x.sp+(x.b?'b':'');(g[k]=g[k]||{sp:x.sp,b:x.b,ids:[]}).ids.push(x.id)}
- return Object.values(g).map(o=>{const x={sp:o.sp,b:o.b},w=pstWhy(P,x);return `<div class="item pst"><div class="ic">${petIc(o.sp,0,1)}</div><div class="info"><div class="nm">${T('pet_'+o.sp)}${o.ids.length>1?' ×'+o.ids.length:''}${pstTag(o.b)}</div><div class="sub">${pstNote(P,x)}</div></div><div class="acts">${w?'':`<button class="btn" data-pstm="${o.ids[0]}">${T('pst_merge')}</button>`}${pstCanSell()?`<button class="btn" data-psts="${o.ids[0]}">${pstSellT()}</button>`:''}</div></div>`}).join('')}
-function pstBind(E){E.querySelectorAll('[data-pstm]').forEach(b=>b.onclick=()=>act('petMerge',{sid:+b.dataset.pstm},pstMergeFx));E.querySelectorAll('[data-psts]').forEach(b=>b.onclick=()=>pstSellDlg(+b.dataset.psts));const a=E.querySelector('#pstAll');if(a)a.onclick=pstMergeAll}
-function pstCard(P){const st=P.st||[],m=pstMax();if(!st.length)return '';const n=pstAllN(P); // 15.11: варіант «А» (Влад) — список, згрупований за видом
- return `<div class="card"><h4>📦 ${T('pst_t',{n:st.length,m})}</h4><p class="hint">${T('pst_hint')}</p>${st.length>=m?`<p class="hint" style="color:var(--gold)">⚠️ ${T('pst_full')}</p>`:''}${pstRows(P)}${n?`<div class="row"><button class="btn pri" id="pstAll">${T('pst_merge_all',{n})}</button></div>`:''}</div>`}
+ return Object.values(g).map(o=>`<div class="item pst"><div class="ic">${petIc(o.sp,0,1)}</div><div class="info"><div class="nm">${T('pet_'+o.sp)}${o.ids.length>1?' ×'+o.ids.length:''}${pstTag(o.b)}</div><div class="sub">${pstNote(P,o)}</div></div><div class="acts">${pstCanSell()?`<button class="btn" data-psts="${o.ids[0]}">${pstSellT()}</button>`:''}</div></div>`).join('')}
+function pstBind(E){E.querySelectorAll('[data-psts]').forEach(b=>b.onclick=()=>pstSellDlg(+b.dataset.psts))}
+function pstCard(P){const st=P.st||[],m=pstMax();if(!st.length)return ''; // 15.11: вигляд «А» (Влад) — список, згрупований за видом
+ return `<div class="card"><h4>🐾 ${T('pst_t',{n:st.length,m})}</h4><p class="hint">${T('pst_hint')}</p>${st.length>=m?`<p class="hint" style="color:var(--gold)">⚠️ ${T('pst_full')}</p>`:''}${pstRows(P)}</div>`}
 function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn:0},D=V.pet||{},I=D.info||{},C=D.cfg||{},now=Date.now();
  let h='';const a=P.act&&P.list[P.act];
  if(a){const sp=P.act,b=(D.defs||{})[sp]||{},bv=(I.bonus||{})[sp]||0,nx=I.next,f=petEvoN(a.l);
-  h+=`<div class="card petcard"><div class="petmain">${petFrame(sp,a.l,a.s,1)}<div><h4>${T('pet_'+sp)} · ${T('pet_form',{f:ROM[f]})}</h4><div>${stars(a.s)} · ${T('lvl',{n:a.l})}/${C.maxLvl||30}</div><div class="up">${T('petb_'+b.b,{v:bv})}</div><div class="sub">${a.s<5?T('pet_dups',{d:a.d,n:C.dupStar||2})+((k=>k?' · '+T('pst_in_st',{n:k}):'')((P.st||[]).filter(x=>x.sp===sp&&!x.b).length)):T('pet_maxstar')}</div></div></div>`;
+  h+=`<div class="card petcard"><div class="petmain">${petFrame(sp,a.l,a.s,1)}<div><h4>${T('pet_'+sp)} · ${T('pet_form',{f:ROM[f]})}</h4><div>${stars(a.s)} · ${T('lvl',{n:a.l})}/${C.maxLvl||30}</div><div class="up">${T('petb_'+b.b,{v:bv})}</div><div class="sub">${a.s<5?T('pet_dups',{d:a.d,n:C.dupStar||2}):T('pet_maxstar')}</div></div></div>`;
   if(nx){const ok=((G.mats||[])[nx.mat]||0)>=nx.matN&&G.shards>=nx.shards&&G.cat>=nx.cat;
    h+=`<p class="hint">${nx.cat?T('pet_evo_hint',{f:ROM[f+1]}):T('pet_feed_hint')}</p>${needRows([['⛏️',T('gem_mm_mat',{m:MATN[nx.mat]}),nx.matN,(G.mats||[])[nx.mat]||0],['🔩',T('gem_mm_sh'),nx.shards,G.shards||0],...(nx.cat?[['💎',T('need_cat'),nx.cat,G.cat||0]]:[])])}<div class="row"><button class="btn pri" id="pFeed" data-m="${nx.mat}" data-n="${nx.matN}" ${ok?'':'disabled'}>${nx.cat?T('pet_evo_btn'):T('pet_feed')}</button>${nx.cat?'':`<button class="btn" id="pFeedM" ${ok?'':'disabled'}>${T('pet_feed_max')}</button>`}</div>`}
   else h+=`<p class="hint">${T('max_reached')}</p>`;
@@ -1053,8 +1043,8 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
   modal(`<div class="big">${petFrame(P.act,(P.list[P.act]||{}).l,(P.list[P.act]||{}).s,1)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
  if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));if($('pSpeed2'))$('pSpeed2').onclick=()=>act('petSpeed',{slot:2},()=>haptic('light'));if($('pRent'))$('pRent').onclick=()=>{haptic('light');ssub='conv';shopData=null;document.querySelector(tabBtn('shop')).click()};if($('pAd'))$('pAd').onclick=()=>act('adIntent',{k:'egg'},()=>{adEggAt=Date.now();adEggK='egg';watchAd()});if($('pAd2'))$('pAd2').onclick=()=>act('adIntent',{k:'egg2'},()=>{adEggAt=Date.now();adEggK='egg2';watchAd()});
- const claimFx=slot=>r=>{const o=r.out;haptic('heavy');if(o.sid){pstAsk(o.sid,1);return} // 15.11: повтор пішов на склад — гравець обирає: злити, на ринок чи лишити
-  modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}${o.auto?`<p class="hint">${o.auto===2?T('pst_auto_lost',{p:T('pet_'+o.sp)}):T('pst_auto')}</p>`:''}`,T('ok'))};if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},claimFx(1));if($('pClaim2'))$('pClaim2').onclick=()=>act('petClaim',{slot:2},claimFx(2));
+ const claimFx=slot=>r=>{const o=r.out;haptic('heavy');if(o.sid){pstAsk(o.sid);return} // 15.11: повтор виду на ★5 пішов у Лігво — продати чи лишити
+  modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}${o.auto===2?`<p class="hint">${T('pst_auto_lost',{p:T('pet_'+o.sp)})}</p>`:''}`,T('ok'))};if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},claimFx(1));if($('pClaim2'))$('pClaim2').onclick=()=>act('petClaim',{slot:2},claimFx(2));
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
  pstBind(E);
  if($('pgLvM'))$('pgLvM').onclick=()=>{pgLv=Math.max(1,pgLv-1);haptic('light');dirty.pet=1;flush()};if($('pgLvP'))$('pgLvP').onclick=()=>{pgLv++;haptic('light');dirty.pet=1;flush()};
