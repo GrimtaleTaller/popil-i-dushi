@@ -1816,7 +1816,7 @@ function renderWb(){
  if(D.ready===false){el.innerHTML=`<div class="empty">${T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
  let h=`<div class="sbx"><video class="sbx-v" src="assets/boss/upyr_idle.mp4?v=1" poster="assets/boss/upyr_poster.jpg?v=1" autoplay muted loop playsinline></video>
-  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>
+  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>
   <div class="sbx-hp"><i style="width:${Math.max(2,B0.hp/B0.hp_max*100)}%"></i><span>❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)}</span></div></div></div>
   ${D.champ?`<div class="sbx-champ">${T('sbx_champ',{n:esc(D.champ.name)})}</div>`:''}
   <div class="dstat sbst"><div><span>🎟️</span><b>${W.left}/${W.free}</b><small>${T('sbx_free')}</small></div>${W.packLeft?`<div><span>📦</span><b>${W.packLeft}</b><small>${T('sbx_pack')}</small></div>`:`<div><span>${RIC('ash')}</span><b>${W.paidLeft?fmt(W.price):'—'}</b><small>${T('sbx_next')}</small></div>`}<div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div></div>
@@ -1827,7 +1827,7 @@ function renderWb(){
  else if(wbTab==='cash'){const ml=D.myLeague||W.league,G0=(D.leagues||{})[ml]||{top:[],me:null,n:0};
   h+=`<div class="card"><h4>💰 ${T('sbx_lg_'+ml)} · 👥 ${G0.n}</h4>${D.noCash?`<p class="hint" style="color:#f2c14e">${T('sbx_nocash')}</p>`:''}${D.me?`<p class="hint" style="margin:0 0 6px">${T('sbx_me_cash',{d:fmt(D.me.free||0),h:D.me.hitsFree||0})}</p>`:''}<div class="rank">`+(G0.top.length?G0.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join('')+(G0.me&&G0.me.place>10?`<div class="me"><b>${G0.me.place}</b><span>${esc(G0.me.name)}</span><i>${fmt(G0.me.dmg)}</i></div>`:''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_cash_hint')}</p></div>`}
  else{h+=`<div class="card"><div class="rank">`+(D.clans.length?D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>'}
- h+=`<details class="dinfo"><summary>ℹ️ ${T('dng_how')}</summary><p>${T('sbx_hits',{n:W.hits,f:W.free,p:W.paidMax})}</p><p>${T('sbx_chest')}</p><p>${T('sbx_prizes')}</p><p>${T('sbx_cash_hint')}</p></details>`;
+ h+=`<details class="dinfo"><summary>ℹ️ ${T('dng_how')}</summary><p>${T('sbx_hits',{n:W.hits,f:W.free,p:W.paidMax})}</p><p>${T('sbx_phase')}</p><p>${T('sbx_chest')}</p><p>${T('sbx_prizes')}</p><p>${T('sbx_cash_hint')}</p></details>`;
  el.innerHTML=h;iconize(el);
  el.querySelectorAll('[data-wbt]').forEach(b=>b.onclick=()=>{wbTab=b.dataset.wbt;renderWb()});
  const go=()=>act('wbAttack',{pay:kind==='ash'},r=>{const o=r.out;wbResult(o);setTimeout(()=>{wbData=null;dirty.wboss=1;flush()},1800)});
