@@ -592,3 +592,13 @@ h4.cih .cic[src*="/chat."],h4.cih .cic[src*="/members."],h4.cih .cic[src*="/log.
 .chero-nm{font-size:21px;text-align:center}
 .chero-st{flex-direction:row;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:2px;font-size:13px}
 .chero-st div{gap:5px;padding:3px 10px;border-radius:999px;background:#00000055;border:1px solid #ffffff14}
+/* 15.11 (Влад): усі значки клану яскравіші й виділяються — світла обводка й тепле сяйво */
+.cic,h4.cih .cic,.subtabs button.csb .cic,.item .ic.bic .cic,.chero-st .cic,.chero-crest .cic,
+.subtabs button.csb .cic[src*="/chat."],.subtabs button.csb .cic[src*="/members."],.subtabs button.csb .cic[src*="/log."],
+h4.cih .cic[src*="/chat."],h4.cih .cic[src*="/members."],h4.cih .cic[src*="/log."]{
+ filter:brightness(1.55) saturate(1.35) contrast(1.08) drop-shadow(0 0 1px #fff8) drop-shadow(0 0 4px #ffcf7a77) drop-shadow(0 2px 3px #000c)}
+.cic[src*="/chat."],.cic[src*="/members."],.cic[src*="/log."],.cic[src*="/citadel."],.cic[src*="/castle."],.cic[src*="/main."]{
+ filter:brightness(1.85) saturate(1.4) contrast(1.1) drop-shadow(0 0 1px #fff9) drop-shadow(0 0 4px #ffcf7a88) drop-shadow(0 2px 3px #000c)!important}
+.subtabs button.csb .cic{opacity:1}
+.subtabs button.csb:not(.act) .cic{transform:scale(.95)}
+.subtabs button.csb.act .cic{transform:translateY(-1px) scale(1.15);filter:brightness(1.9) saturate(1.45) drop-shadow(0 0 1px #fffb) drop-shadow(0 0 8px #ffb04acc) drop-shadow(0 2px 3px #000)!important}
