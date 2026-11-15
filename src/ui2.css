@@ -732,3 +732,13 @@ body[data-scene=dng] .arena{display:none}body[data-scene=dng] .scene{display:fle
 .resg2 .ric{width:44px;height:44px}.resg2 b{font-size:15px;color:#f3d79a}.resg2 span{font-size:10.5px;color:#b8a888;text-align:center;line-height:1.15}
 .resg2.m4 .ric{width:38px;height:38px}
 .chestbar.keys .ric{width:30px;height:30px}
+/* 15.11 (Влад): намальовані скрині й значки в Кузні */
+img.svi.chimg{object-fit:contain;transform:scale(1.3);filter:drop-shadow(0 2px 2px #000a)}
+.hic.ico{width:18px;height:18px;vertical-align:-4px;margin:0 2px}
+h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
+.btn .hic.s,.chips .hic.s,button .hic.ico{width:18px;height:18px;vertical-align:-4px;margin-right:3px}
+.subtabs button.csb img.cic[src*="/forge/"]{filter:brightness(1.25) drop-shadow(0 2px 3px #000a)}
+/* 15.11 (Влад): ціна кування — таблиця «потрібно / є»; значок легендарки */
+.gmm-req.nr .gmm-r span{white-space:normal;line-height:1.2}.gmmi .hic,.gmmi .hic.s{width:24px;height:24px;vertical-align:middle;margin:0}
+.nr-lack .hic{width:16px;height:16px;vertical-align:-3px}
+.hic.leg{filter:drop-shadow(0 0 4px #f2a03a88) drop-shadow(0 1px 2px #000c)}
