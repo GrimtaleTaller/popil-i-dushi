@@ -781,3 +781,25 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .nbbuy .nbmain{width:100%;font-size:17px;padding:11px;background:linear-gradient(180deg,#ffd36a,#e29a2a);color:#2a1700;font-weight:900;border:0;box-shadow:0 4px 16px #ffb43a66;animation:nbglow 2s ease-in-out infinite}
 .nbpay{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}.nbpay .btn{padding:7px 4px;font-size:12.5px}
 .nbonce{font-size:10.5px;opacity:.6;margin:6px 0 0}
+/* 15.11 (реліз боса): вікно Боса сервера */
+.sbx{position:relative;margin:0 -10px 10px;height:300px;overflow:hidden;border-bottom:1px solid #c0303055;background:#120808}
+.sbx-v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%}
+.sbx::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#0000 45%,#120808ee 100%),radial-gradient(ellipse at 50% 30%,#0000 40%,#0008 100%);pointer-events:none}
+.sbx-o{position:absolute;left:0;right:0;bottom:10px;z-index:1;text-align:center;padding:0 16px}
+.sbx-nm{font-size:24px;font-weight:900;color:#ffd0c0;letter-spacing:.5px;text-shadow:0 2px 8px #000,0 0 18px #e0303088}
+.sbx-lv{font-size:12px;color:#e8c8c0;margin:2px 0 8px;text-shadow:0 1px 3px #000}
+.sbx-hp{position:relative;height:16px;border-radius:999px;background:#000a;border:1px solid #c0303077;overflow:hidden}
+.sbx-hp i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#6a0f14,#e0303a);box-shadow:0 0 12px #e0303a88}
+.sbx-hp span{position:relative;font-size:10.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px #000;line-height:16px}
+.sbx-champ{text-align:center;font-size:12.5px;font-weight:700;color:#f2c14e;margin:0 0 10px}
+.sbst div:first-child{border-color:#56c27155}
+.btn.sbx-go{width:100%;padding:13px;font-size:15px;background:linear-gradient(180deg,#b0262c,#6a0f14);box-shadow:0 0 18px #e0303a55,inset 0 1px 0 #ffffff33}
+.sbx-chest{display:flex;align-items:center;gap:8px;margin:10px 2px 12px;font-size:11.5px;color:#c8b8a0}.sbx-chest .svi{width:30px;height:30px;flex:none}
+.sbx-tabs{margin:0 0 8px}
+.sbr{position:relative;height:200px;margin:-6px -6px 8px;border-radius:12px;overflow:hidden}
+.sbr-b{width:100%;height:100%;object-fit:cover;object-position:center 20%;filter:brightness(.7)}
+.sbr-h{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.sbr-n{font-style:normal;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 6px #000,0 0 10px #e0303a;opacity:0;transform:scale(.6);animation:sbrIn .35s ease-out forwards}
+.sbr-n.cr{color:#ffd24a;font-size:26px}.sbr-n.bt{color:#9be07a;font-size:18px}
+@keyframes sbrIn{to{opacity:1;transform:scale(1)}}
+.sbr-c{display:flex;align-items:center;justify-content:center;gap:6px}.sbr-c .svi{width:28px;height:28px}

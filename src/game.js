@@ -1805,28 +1805,38 @@ function renderColl(){
  el.innerHTML=h;
 }
 let wbData=null,wbBusy=false;
+// 15.11 (реліз боса, Влад «усе А» попередньо): вікно Боса сервера — Граф Упир (відео-петля), спроби, 4 удари, рейтинги: тиждень / грошова ліга / клани
+let wbTab='week';
 function renderWb(){
- if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return} // 09.11 (Влад): світового боса прибрано з гри
+ if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return}
  const W=V.wb,el=$('p-wboss');
- if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('wb_unlock',{n:W?W.stage:15})}</div>`;return}
+ if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
  if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
- const D=wbData,B0=D.boss,free=W.left>0;
- if(D.ready===false){el.innerHTML=`<div class="empty">👹 ${T('wb_soon')}</div>`;return}
- let h=`<div class="card wbc"><img class="wbimg" src="${IMG('boss8')}" alt=""><h4>${T('wb_name')} · ${T('lvl',{n:B0.lvl})}</h4><div class="bar" style="height:12px"><i style="width:${B0.hp/B0.hp_max*100}%;background:linear-gradient(90deg,#9b2c2c,#e0484e)"></i></div>
- <div class="sub" style="text-align:center;margin-top:3px">❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)} · ${T('wb_killed',{n:B0.lvl-1})} · ${T('pass_end',{t:tLeft(D.end-Date.now())})}</div>
- <div class="row" style="margin-top:8px"><button class="btn pri" id="wbHit" ${busy||(!free&&G.ash<W.price)?'disabled':''}>⚔️ ${free?T('wb_hit',{n:W.left,m:W.free}):T('wb_hit_pay',{p:W.price})}</button><button class="btn" id="wbRef">🔄</button></div></div>`;
- h+=`<div class="card"><h4>🏆 ${T('wb_top')}</h4>${D.me?`<p class="hint" style="margin:0 0 6px">${T('wb_me',{p:D.me.place,d:fmt(D.me.dmg),h:D.me.hits})}</p>`:''}<div class="rank">`+(D.top.length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('wb_empty')}</span></div>`)+'</div>';
- if(D.clans.length)h+=`<h4 style="margin-top:10px">🏰 ${T('wb_clans')}</h4><div class="rank">`+D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join('')+'</div>';
- h+=`</div><p class="hint">${T('wb_hint',{p:D.prizes.map(x=>(x.from===x.to?x.from:x.from+'–'+x.to)+': '+x.ash).join(', '),b:D.part.base,l:D.part.perLvl,c:D.clanPrizes.join('/')})}</p>`;
- el.innerHTML=h;
- $('wbRef').onclick=()=>{wbData=null;dirty.wboss=1;flush()};
- $('wbHit').onclick=()=>act('wbAttack',{pay:!free},r=>{const o=r.out;wbResult(o);if(o.boss){wbData.boss={lvl:o.boss.lvl,hp:o.boss.hp,hp_max:o.boss.hp_max,kills:0}}setTimeout(()=>{wbData=null;dirty.wboss=1;flush()},2500)});
+ const D=wbData,B0=D.boss,kind=W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price;
+ if(D.ready===false){el.innerHTML=`<div class="empty">${T('wb_soon')}</div>`;return}
+ const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
+ let h=`<div class="sbx"><video class="sbx-v" src="assets/boss/upyr_idle.mp4?v=1" poster="assets/boss/upyr_poster.jpg?v=1" autoplay muted loop playsinline></video>
+  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>
+  <div class="sbx-hp"><i style="width:${Math.max(2,B0.hp/B0.hp_max*100)}%"></i><span>❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)}</span></div></div></div>
+  ${D.champ?`<div class="sbx-champ">${T('sbx_champ',{n:esc(D.champ.name)})}</div>`:''}
+  <div class="dstat sbst"><div><span>🎟️</span><b>${W.left}/${W.free}</b><small>${T('sbx_free')}</small></div>${W.packLeft?`<div><span>📦</span><b>${W.packLeft}</b><small>${T('sbx_pack')}</small></div>`:`<div><span>${RIC('ash')}</span><b>${W.paidLeft?fmt(W.price):'—'}</b><small>${T('sbx_next')}</small></div>`}<div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div></div>
+  <button class="btn pri dgo sbx-go" id="wbHit" ${busy||!kind||!canAsh?'disabled':''}>${kind==='free'?T('sbx_go_free',{n:W.left,m:W.free}):kind==='pack'?T('sbx_go_pack',{n:W.packLeft}):kind==='ash'?T('sbx_go_ash',{p:fmt(W.price)}):T('sbx_out')}</button>
+  <div class="sbx-chest">${chestIc(nextG)}<span>${T('sbx_chest')}</span></div>
+  <div class="chips sbx-tabs">${['week','cash','clan'].map(k=>`<button data-wbt="${k}" class="${wbTab===k?'act':''}">${T('sbx_tab_'+k)}</button>`).join('')}</div>`;
+ if(wbTab==='week'){h+=`<div class="card">${D.me?`<p class="hint" style="margin:0 0 6px">${T('sbx_me',{p:D.me.place,d:fmt(D.me.dmg)})}</p>`:''}<div class="rank">`+(D.top.length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_prizes')}</p></div>`}
+ else if(wbTab==='cash'){const ml=D.myLeague||W.league,G0=(D.leagues||{})[ml]||{top:[],me:null,n:0};
+  h+=`<div class="card"><h4>💰 ${T('sbx_lg_'+ml)} · 👥 ${G0.n}</h4>${D.noCash?`<p class="hint" style="color:#f2c14e">${T('sbx_nocash')}</p>`:''}${D.me?`<p class="hint" style="margin:0 0 6px">${T('sbx_me_cash',{d:fmt(D.me.free||0),h:D.me.hitsFree||0})}</p>`:''}<div class="rank">`+(G0.top.length?G0.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join('')+(G0.me&&G0.me.place>10?`<div class="me"><b>${G0.me.place}</b><span>${esc(G0.me.name)}</span><i>${fmt(G0.me.dmg)}</i></div>`:''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_cash_hint')}</p></div>`}
+ else{h+=`<div class="card"><div class="rank">`+(D.clans.length?D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>'}
+ h+=`<details class="dinfo"><summary>ℹ️ ${T('dng_how')}</summary><p>${T('sbx_hits',{n:W.hits,f:W.free,p:W.paidMax})}</p><p>${T('sbx_chest')}</p><p>${T('sbx_prizes')}</p><p>${T('sbx_cash_hint')}</p></details>`;
+ el.innerHTML=h;iconize(el);
+ el.querySelectorAll('[data-wbt]').forEach(b=>b.onclick=()=>{wbTab=b.dataset.wbt;renderWb()});
+ const go=()=>act('wbAttack',{pay:kind==='ash'},r=>{const o=r.out;wbResult(o);setTimeout(()=>{wbData=null;dirty.wboss=1;flush()},1800)});
+ $('wbHit').onclick=()=>kind==='ash'?modal(`<div class="big">${RIC('ash')}</div><p>${T('sbx_ash_ask',{p:fmt(W.price),n:W.paidLeft})}</p>`,T('sbx_go_ash',{p:fmt(W.price)}),go):go();
 }
 function wbResult(o){
- modal(`<div class="big">👹</div><h3>${T('wb_res',{d:fmt(o.dmg)})}</h3><div class="pvp"><div><span>${penI(V&&V.pen,18)}${esc(T('hero_name'))}</span><div class="hpb"><i id="wA" style="width:100%;background:linear-gradient(90deg,#2f9a52,#5fd07c)"></i></div></div></div>
- <p>${o.died?T('wb_died',{t:Math.round(o.t)}):T('wb_alive')}${o.boss&&o.boss.killed?' · <b style="color:var(--gold)">'+T('wb_down',{n:o.boss.killed})+'</b>':''}</p>${o.paid?`<p class="hint">⚱️ −${o.paid}</p>`:''}`,T('ok'));
- let hp=o.heroHp;const step=Math.min(90,2400/Math.max(1,o.ev.length));
- o.ev.forEach((e,i)=>setTimeout(()=>{if(e[1]===1){hp-=e[2]}else if(e[1]===5){hp=e[2]}const a=$('wA');if(a)a.style.width=Math.max(0,hp/o.heroHp*100)+'%'},250+i*step));
+ const hits=o.ev.filter(e=>e[1]===0||e[1]===2);
+ modal(`<div class="sbr"><img class="sbr-b" src="assets/boss/upyr_poster.jpg?v=1" alt=""><div class="sbr-h">${hits.map((e,i)=>`<i class="sbr-n ${e[3]?'cr':''} ${e[1]===2?'bt':''}" style="animation-delay:${0.15+i*0.35}s">${e[1]===2?T('sbx_bite')+' ':''}${e[3]?T('sbx_crit')+' ':''}${fmt(e[2])}</i>`).join('')}</div></div>
+  <h3>${T('sbx_res',{d:fmt(o.dmg)})}</h3><p class="sbr-c">${chestIc(o.chest&&o.chest.g)} ${T('chest_'+((o.chest&&o.chest.g)||2))} · ${T('lvl',{n:o.chest?o.chest.il:G.lvl})}</p>${o.paid?`<p class="hint">${RIS('ash')}−${o.paid}</p>`:''}`,T('ok'));
  haptic('heavy');
 }
 // головні вкладки й підвкладки
@@ -1884,9 +1894,11 @@ setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
 const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
-function sbPaint(){const b=$('sBos');if(!b)return;if(SBOSS.on||!G){b.style.display='none';return}b.style.display='';const l=sbLeft();
+function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
+ if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
+ const l=sbLeft();
  $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
-function sbOpen(){haptic('medium');const l=sbLeft();
+function sbOpen(){haptic('medium');if(V&&V.wb&&!V.wb.off){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
  modal(`<div class="sbw"><div class="sbart"><img src="assets/boss_teaser.webp?v=1" alt=""><i class="sbeye l"></i><i class="sbeye r"></i><i class="sbcrk"></i><i class="sbfog a"></i><i class="sbfog b"></i><i class="sbbat b1"></i><i class="sbbat b2"></i><i class="sbbat b3"></i></div>
   <div class="sbtag">${T('sb_tag')}</div><h3 class="sbh">${T('sb_t')}</h3><p class="sbq">${T('sb_q')}</p>
   <div class="sbcdw"><span>${T(l?'sb_in':'sb_soon_t')}</span><b id="sbCd">${l?sbHms(l):T('sb_soon')}</b></div>
