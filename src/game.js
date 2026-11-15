@@ -1883,17 +1883,18 @@ function nbPaint(){const b=$('nbOf');if(!b)return;const l=NB?NB.until-Date.now()
  b.style.display='';$('nbOfT').textContent='−'+nbOff()+'%';b.title=T('nb_t');$('nbOfC').textContent=sbHms(l);const c=$('nbCd');if(c)c.textContent=sbHms(l)}
 const nbOff=()=>NB?Math.round((1-NB.usd/NB.old)*100):0;
 function nbOpen(){if(!NB)return;haptic('medium');const o=NB,l=o.until-Date.now();
- const row=(ic,t,s)=>`<div class="nbr"><span class="nbi">${ic}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></div>`;
- modal(`<div class="nbw"><div class="nbart"><img src="assets/offer/newb.webp?v=1" alt=""><i class="nbglow"></i><div class="nbbadge">−${nbOff()}%</div></div>
-  <div class="nbtag">${T('nb_tag')}</div><h3 class="nbh">${T('nb_t')}</h3>
-  <div class="nbprice"><s>$${o.old}</s><b>$${o.usd.toFixed(2)}</b></div>
-  <div class="nbnow"><div class="nbsec">${T('nb_now')}</div>${row(RIC('ash'),'+'+n3(o.ash)+' '+T('nb_ash'),'')}${row(eggIc('c'),T('nb_eggs',{n:o.eggs}),'')}</div>
-  <div class="nbnow"><div class="nbsec">${T('nb_30',{d:o.days})}</div>${row('💤','+'+(o.off/3600)+' '+T('nb_off'),T('nb_off_s'))}${row(RIC('ash'),'+'+o.ashDay+' '+T('nb_day'),T('nb_day_s',{n:n3(o.ashDay*o.days)}))}${row(RIC('gold'),'+'+o.gold+'% '+T('nb_gold'),T('nb_gold_s'))}</div>
-  <div class="nbcdw"><span>${T('nb_ends')}</span><b id="nbCd">${sbHms(l)}</b></div>
-  <div class="nbbuy" id="nbBuy"><button class="btn pri nbmain" data-nbm="stars">⭐ ${o.stars} ${T('nb_buy')}</button>
-   <div class="row shopb"><button class="btn" data-nbm="usdt">💵 ${o.usd.toFixed(2)} USDT</button><button class="btn" data-nbm="gram">💎 GRAM</button></div>
-   <button class="btn shoth" data-nbm="other">${T('shop_other_link')} ›</button></div>
-  <p class="hint nbonce">${T('nb_once')}</p></div>`,null,null,()=>{
+ // 15.11 (Влад): компактне вікно на один екран телефона — без прокрутки; «на 30 днів» видно одразу
+ const tile=(ic,v,t)=>`<div class="nbt"><span class="nbti">${ic}</span><b>${v}</b><small>${t}</small></div>`;
+ modal(`<div class="nbw"><div class="nbart"><img src="assets/offer/newb.webp?v=1" alt=""><i class="nbglow"></i><div class="nbbadge">−${nbOff()}%</div>
+   <div class="nbcap"><span class="nbtag">${T('nb_tag')}</span><h3 class="nbh">${T('nb_t')}</h3><span class="nbdays">📅 ${T('nb_for',{d:o.days})}</span></div></div>
+  <div class="nbpr"><div class="nbprice"><s>$${o.old}</s><b>$${o.usd.toFixed(2)}</b></div><div class="nbcd"><small>${T('nb_ends')}</small><b id="nbCd">${sbHms(l)}</b></div></div>
+  <div class="nbsec">⚡ ${T('nb_now')}</div>
+  <div class="nbg g2">${tile(RIC('ash'),'+'+n3(o.ash),T('nb_ash'))}${tile(eggIc('c'),'+'+o.eggs,T('nb_eggs_s'))}</div>
+  <div class="nbsec">📅 ${T('nb_30',{d:o.days})}</div>
+  <div class="nbg g3">${tile('💤','+'+(o.off/3600)+' '+T('nb_h'),T('nb_off_t'))}${tile(RIC('ash'),'+'+o.ashDay,T('nb_day_t'))}${tile(RIC('gold'),'+'+o.gold+'%',T('nb_gold_t'))}</div>
+  <div class="nbbuy"><button class="btn pri nbmain" data-nbm="stars">⭐ ${o.stars} · ${T('nb_buy')}</button>
+   <div class="nbpay"><button class="btn" data-nbm="usdt">💵 USDT</button><button class="btn" data-nbm="gram">💎 GRAM</button><button class="btn" data-nbm="other">🪙 ${T('nb_other')}</button></div></div>
+  <p class="nbonce">${T('nb_once')}</p></div>`,null,null,()=>{
   document.querySelectorAll('#mbox [data-nbm]').forEach(b=>b.onclick=async()=>{const m=b.dataset.nbm;
    if(m==='stars'){queue.shift();showModal();shopBuy('newb','stars');return}
    if(!shopData){try{shopData=(await api('shopInfo')).out}catch(e){toast(errT(e));return}}
