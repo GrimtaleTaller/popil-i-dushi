@@ -882,6 +882,7 @@ const LOGT={
  bagfull:()=>T('log_bagfull'),
  offline:a=>T('log_offline',{h:Math.floor(a[0]/3600),m:Math.floor(a[0]%3600/60),g:fmt(a[1]),i:a[2]})+(a[3]?', +'+a[3]+' 🔥':'')+(a[4]?', +'+fmt(a[4])+' 🔩':''),
  boss:a=>T('log_boss',{s:a[0],g:fmt(a[1])}),
+ wb:a=>T('log_wb',{d:fmt(a[0]),f:a[1]?T('log_wb_f'):''}), // 15.11: бос сервера
  bossDeath:a=>T('log_bossDeath',{s:a[0]}),
  bossTimeout:a=>T('log_bossTimeout',{s:a[0]}),
  daily:a=>T('log_daily',{n:a[0]}),
@@ -1804,14 +1805,15 @@ function renderColl(){
   h+=`<div class="crow ${full?'done':''}" style="--rc:${RAR[r].c}"><div class="crh"><b style="color:${RAR[r].c}">${RAR[r].n}</b><span class="crp">${got}/${C.slots.length}</span><span class="crb">${full?'✓ ':''}+${fmtN(C.b[r])}%</span></div><div class="crbar"><i style="width:${got/C.slots.length*100}%"></i></div><div class="crs">${C.slots.map(s=>`<div class="ccell ${has(s,r)?'got':'miss'}" title="${SLOT[s].n}">${gearIc({slot:s,r,nm:0})}${has(s,r)?'':'<i class="clock">🔒</i>'}<small>${SLOT[s].n}</small></div>`).join('')}</div></div>`}
  el.innerHTML=h;
 }
-let wbData=null,wbBusy=false;
+let wbData=null,wbBusy=false,wbAt=0;
 // 15.11 (реліз боса, Влад «усе А» попередньо): вікно Боса сервера — Граф Упир (відео-петля), спроби, 4 удари, рейтинги: тиждень / грошова ліга / клани
 let wbTab='week';
 function renderWb(){
  if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return}
  const W=V.wb,el=$('p-wboss');
  if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
- if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(wbData&&Date.now()-wbAt>6e4)wbData=null;
+ if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
  const D=wbData,B0=D.boss,kind=W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price;
  if(D.ready===false){el.innerHTML=`<div class="empty">${T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
@@ -1821,16 +1823,19 @@ function renderWb(){
   ${D.champ?`<div class="sbx-champ">${T('sbx_champ',{n:esc(D.champ.name)})}</div>`:''}
   <div class="dstat sbst"><div><span>🎟️</span><b>${W.left}/${W.free}</b><small>${T('sbx_free')}</small></div>${W.packLeft?`<div><span>📦</span><b>${W.packLeft}</b><small>${T('sbx_pack')}</small></div>`:`<div><span>${RIC('ash')}</span><b>${W.paidLeft?fmt(W.price):'—'}</b><small>${T('sbx_next')}</small></div>`}<div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div></div>
   <button class="btn pri dgo sbx-go" id="wbHit" ${busy||!kind||!canAsh?'disabled':''}>${kind==='free'?T('sbx_go_free',{n:W.left,m:W.free}):kind==='pack'?T('sbx_go_pack',{n:W.packLeft}):kind==='ash'?T('sbx_go_ash',{p:fmt(W.price)}):T('sbx_out')}</button>
-  <div class="sbx-chest">${chestIc(nextG)}<span>${T('sbx_chest')}</span></div>
+  ${kind==='ash'&&!canAsh?`<p class="hint" style="text-align:center;color:#ff8a7a;margin:6px 0 0">${T('sbx_noash')}</p>`:''}
+  <div class="sbx-chest">${chestIc(nextG)}<span>${T('sbx_chest')}</span><button class="btn" id="wbRef" style="margin-left:auto;flex:none">🔄</button></div>
   <div class="chips sbx-tabs">${['week','cash','clan'].map(k=>`<button data-wbt="${k}" class="${wbTab===k?'act':''}">${T('sbx_tab_'+k)}</button>`).join('')}</div>`;
  if(wbTab==='week'){h+=`<div class="card">${D.me?`<p class="hint" style="margin:0 0 6px">${T('sbx_me',{p:D.me.place,d:fmt(D.me.dmg)})}</p>`:''}<div class="rank">`+(D.top.length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_prizes')}</p></div>`}
  else if(wbTab==='cash'){const ml=D.myLeague||W.league,G0=(D.leagues||{})[ml]||{top:[],me:null,n:0};
   h+=`<div class="card"><h4>💰 ${T('sbx_lg_'+ml)} · 👥 ${G0.n}</h4>${D.noCash?`<p class="hint" style="color:#f2c14e">${T('sbx_nocash')}</p>`:''}${D.me?`<p class="hint" style="margin:0 0 6px">${T('sbx_me_cash',{d:fmt(D.me.free||0),h:D.me.hitsFree||0})}</p>`:''}<div class="rank">`+(G0.top.length?G0.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join('')+(G0.me&&G0.me.place>10?`<div class="me"><b>${G0.me.place}</b><span>${esc(G0.me.name)}</span><i>${fmt(G0.me.dmg)}</i></div>`:''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_cash_hint')}</p></div>`}
  else{h+=`<div class="card"><div class="rank">`+(D.clans.length?D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>'}
  h+=`<details class="dinfo"><summary>ℹ️ ${T('dng_how')}</summary><p>${T('sbx_hits',{n:W.hits,f:W.free,p:W.paidMax})}</p><p>${T('sbx_phase')}</p><p>${T('sbx_chest')}</p><p>${T('sbx_prizes')}</p><p>${T('sbx_cash_hint')}</p></details>`;
- el.innerHTML=h;iconize(el);
+ setH(el,h);iconize(el); // без зайвої перемальовки (відео не перезапускається); iconize — повторно безпечно
  el.querySelectorAll('[data-wbt]').forEach(b=>b.onclick=()=>{wbTab=b.dataset.wbt;renderWb()});
- const go=()=>act('wbAttack',{pay:kind==='ash'},r=>{const o=r.out;wbResult(o);setTimeout(()=>{wbData=null;dirty.wboss=1;flush()},1800)});
+ $('wbRef').onclick=()=>{wbData=null;dirty.wboss=1;flush()};
+ live('wboss',()=>api('wbInfo').then(r=>r.out),o=>{if(!o||same(o,wbData))return false;wbData=o;return true},6e4); // 15.11 (критик): рейтинг і здоров'я оновлюються раз на хвилину, поки вкладка відкрита
+ const go=()=>act('wbAttack',{pay:kind==='ash',...(kind==='ash'?{p:W.price}:{})},r=>{const o=r.out;wbResult(o);setTimeout(()=>{wbData=null;dirty.wboss=1;flush()},1800)});
  $('wbHit').onclick=()=>kind==='ash'?modal(`<div class="big">${RIC('ash')}</div><p>${T('sbx_ash_ask',{p:fmt(W.price),n:W.paidLeft})}</p>`,T('sbx_go_ash',{p:fmt(W.price)}),go):go();
 }
 function wbResult(o){
