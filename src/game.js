@@ -1815,7 +1815,7 @@ function renderWb(){
  if(wbData&&Date.now()-wbAt>6e4)wbData=null;
  if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
  const D=wbData,B0=D.boss,kind=W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price;
- if(D.ready===false){el.innerHTML=`<div class="empty">${T('wb_soon')}</div>`;return}
+ if(D.ready===false){el.innerHTML=`<div class="empty">${(ERR&&ERR.wb_soon)||T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
  let h=`<div class="sbx"><video class="sbx-v" src="assets/boss/upyr_idle.mp4?v=1" poster="assets/boss/upyr_poster.jpg?v=1" autoplay muted loop playsinline></video>
   <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>
