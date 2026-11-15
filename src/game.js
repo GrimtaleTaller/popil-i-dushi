@@ -1492,6 +1492,7 @@ function pvpResult(o){
  o.ev.forEach((e,i)=>setTimeout(()=>{if(e[1]===0)hd-=e[2];else ha-=e[2];const a=$('pA'),d=$('pD');if(a)a.style.width=Math.max(0,ha/o.hpA*100)+'%';if(d)d.style.width=Math.max(0,hd/o.hpD*100)+'%'},250+i*step));
  haptic(o.win?'heavy':'medium');
 }
+const usdF=x=>'$'+(LANG==='en'?Number(x).toFixed(2):Number(x).toFixed(2).replace('.',',')); // 16.11: сума призу з пулу
 function renderRank(){
  const el=$('p-top'),d=topData[topKind],val=r=>topKind==='power'||topKind==='clan'?fmt(r.v):r.v;
  let h=`<div class="chips">${['stage','power','rating','clan','lvl'].map(k=>`<button data-tk="${k}" class="${k===topKind?'act':''}">${T('top_'+k)}</button>`).join('')}</div>`;
@@ -1503,8 +1504,8 @@ function renderRank(){
   const prizeOf=pl=>{const x=P.find(q=>pl>=q.from&&pl<=q.to);return x?x.ash:0};
   if(d.prizes){const ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
    h+=`<div class="card"><h4>🏆 ${T('prize_t')}</h4><p class="hint">${T('prize_hint')}</p>${hasPrize?`<div class="chips">${P.map(q=>`<span class="chip">${q.from===q.to?q.from:q.from+'–'+q.to}: ⚱️${q.ash}</span>`).join('')}</div>`:`<p class="hint">${T('prize_none')}</p>`}
-   <p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
-  const row=r=>`<div class="${r.me?'me':''}"><b>${r.place<=3?['🥇','🥈','🥉'][r.place-1]:r.place}</b><span>${penI(r.pn)}${esc(r.name)}${hasPrize&&prizeOf(r.place)?` <small style="color:var(--gold)">⚱️${prizeOf(r.place)}</small>`:''}</span><i>${val(r)}</i></div>`;
+   ${d.pot>0?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
+  const row=r=>`<div class="${r.me?'me':''}"><b>${r.place<=3?['🥇','🥈','🥉'][r.place-1]:r.place}</b><span>${penI(r.pn)}${esc(r.name)}${hasPrize&&prizeOf(r.place)?` <small style="color:var(--gold)">⚱️${prizeOf(r.place)}</small>`:''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`;
   h+='<div class="rank">'+d.rows.map(row).join('')+'</div>';
   if(d.me&&!d.rows.some(r=>r.me))h+='<div class="rank" style="margin-top:8px">'+row(d.me)+'</div>';
   h+=`<p class="hint">${T('top_total',{n:d.total})}</p><div class="row"><button class="btn" id="tRef">🔄 ${T('refresh')}</button></div>`}
@@ -1828,7 +1829,7 @@ function renderWb(){
   <div class="chips sbx-tabs">${['week','cash','clan'].map(k=>`<button data-wbt="${k}" class="${wbTab===k?'act':''}">${T('sbx_tab_'+k)}</button>`).join('')}</div>`;
  if(wbTab==='week'){h+=`<div class="card">${D.me?`<p class="hint" style="margin:0 0 6px">${T('sbx_me',{p:D.me.place,d:fmt(D.me.dmg)})}</p>`:''}<div class="rank">`+(D.top.length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_prizes')}</p></div>`}
  else if(wbTab==='cash'){const C=D.cash||[],cm=D.cashMin||10;
-  h+=`<div class="card"><h4>💰 ${T('sbx_cash_t')} · 👥 ${D.cashN||0}</h4>${D.noCash?`<p class="hint" style="color:#f2c14e">${T('sbx_nocash')}</p>`:''}${D.me?`<p class="hint" style="margin:0 0 6px">${T('sbx_me_att',{h:D.me.hits||0,n:cm})}</p>`:''}<div class="rank">`+(C.length?C.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)} · ${LANG==='en'?x.pct:String(x.pct).replace('.',',')}%</i></div>`).join('')+(D.cashMe&&D.cashMe.place>C.length?`<div class="me"><b>${D.cashMe.place}</b><span>${T('sbx_out20')}</span><i>${fmt(D.cashMe.dmg)}</i></div>`:''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_cash_hint',{n:cm})}</p></div>`}
+  h+=`<div class="card"><h4>💰 ${T('sbx_cash_t')}${D.pot>0?' · '+usdF(D.pot):''} · 👥 ${D.cashN||0}</h4>${D.noCash?`<p class="hint" style="color:#f2c14e">${T('sbx_nocash')}</p>`:''}${D.me&&!D.noCash?`<p class="hint" style="margin:0 0 6px">${T('sbx_me_att',{h:D.me.hits||0,n:cm})}</p>`:''}<div class="rank">`+(C.length?C.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${fmt(x.dmg)}${D.pot>0?` · <span style="color:#7ee08a">${usdF(x.usd||0)}</span>`:` · ${LANG==='en'?x.pct:String(x.pct).replace('.',',')}%`}</i></div>`).join('')+(D.cashMe&&D.cashMe.place>C.length?`<div class="me"><b>${D.cashMe.place}</b><span>${T('sbx_out20')}</span><i>${fmt(D.cashMe.dmg)}</i></div>`:''):`<div><span class="hint">${T('sbx_cash_empty',{n:cm})}</span></div>`)+`</div><p class="hint">${T('sbx_cash_hint',{n:cm})}</p></div>`}
  else{h+=`<div class="card"><div class="rank">`+(D.clans.length?D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>'}
  h+=`<details class="dinfo"><summary>ℹ️ ${T('dng_how')}</summary><p>${T('sbx_hits',{n:W.hits,f:W.free,p:W.paidMax})}</p><p>${T('sbx_phase')}</p><p>${T('sbx_chest')}</p><p>${T('sbx_prizes')}</p><p>${T('sbx_cash_hint',{n:(D&&D.cashMin)||10})}</p></details>`;
  setH(el,h);iconize(el); // без зайвої перемальовки (відео не перезапускається); iconize — повторно безпечно
