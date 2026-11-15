@@ -320,7 +320,7 @@ function renderTop(){
  const nw=G.inv.filter(i=>i.nw).length,nb=$('newb');nb.style.display=nw?'inline':'none';nb.textContent=nw;
  {const cb=document.querySelector('.tabs button[data-t="clan"]');if(cb){let b=cb.querySelector('.cbadge');const n=chatU||0;if(n&&!b){b=document.createElement('span');b.className='badge cbadge';cb.appendChild(b)}if(b){b.textContent=n>99?'99+':n;b.style.display=n?'':'none'}}} // 14.11: непрочитані в чаті клану
  {const qb=$('qb'),d=subDots();if(qb)qb.style.display=d.quest||d.ach||d.tasks?'inline':'none';document.querySelectorAll('#subtabs button[data-s]').forEach(b=>b.classList.toggle('sdot',!!d[b.dataset.s]||(b.dataset.s==='chat'&&chatU>0&&csub!=='chat')))} // 09.11 (Влад): «!» на Завданнях — і крапка на тій підвкладці, де є що забрати
- {const hc=$('hsCur');if(hc&&document.body.classList.contains('hs-open'))hc.innerHTML=`<span>💰 ${fmt(gold)}</span><span>🔥 ${fmt(G.souls||0)} · ⚱️ ${fmt(G.ash||0)}</span>`} // баланс у шторці «Герой»: верхня панель під нею не видна (04.11)
+ {const hc=$('hsCur');if(hc&&document.body.classList.contains('hs-open'))hc.innerHTML=`<span><img class="hic" src="assets/res/gold.webp?v=1" alt="">${fmt(gold)}</span><span>${RIS('souls')}${fmt(G.souls||0)} · ${RIS('ash')}${fmt(G.ash||0)}</span>`} // баланс у шторці «Герой»: верхня панель під нею не видна (04.11)
  if(tab==='train')renderTrainBtns();
 }
 // поки сервер не підтвердив 10 перемог, показуємо не більше 9
@@ -408,7 +408,7 @@ function refineDlg(id){const it=findItem(id);if(!it)return;const R0=V.refine||{}
 
 // Особисті ключі в сумці + передача соклановцю (04.11)
 function keysBar(){const K=G.keys||{},ts=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);if(!ts.length)return '';
- return `<div class="chestbar keys">🗝️<span>${ts.map(t=>`<span class="chg">${T('tier',{n:t})} ×${K[t]}</span>`).join('')}</span><button class="btn" id="keyGv">🤝 ${T('key_give')}</button></div>`}
+ return `<div class="chestbar keys">${RIC('key')}<span>${ts.map(t=>`<span class="chg">${T('tier',{n:t})} ×${K[t]}</span>`).join('')}</span><button class="btn" id="keyGv">🤝 ${T('key_give')}</button></div>`}
 function keyGiveDlg(){
  const go=()=>{const C=clanData;if(!C||!C.clan){toast(T('key_no_clan'));return}
   const K=G.keys||{},ts=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b),ms=(C.members||[]).filter(m=>!m.me);
@@ -443,8 +443,8 @@ function renderBag(){
  +keysBar()+(cc?`<div class="chestbar"><span>${(()=>{const cg=chestGroups();return [3,2,1].filter(g=>cg[g]).map(g=>`<span class="chg" style="color:${RAR[g].c}">${chestIc(g)} ${T('chest_'+g)} ×${cg[g]}</span>`).join('')})()}</span><button class="btn pri" id="openC">${T('open')}</button></div>`:'')+`<div class="filter">${['all',...SLOTS].map(f=>`<button data-f="${f}" class="${bagFilter===f?'act':''}">${f==='all'?T('all'):SLOT[f].ic+' '+SLOT[f].n}</button>`).join('')}</div>
  <div class="mhide bshow"><span>${T('bag_show')}</span>${[0,1,2,3,4,5,6].filter(r=>RAR[r]).map(r=>`<button data-bh="${r}" class="${bagF.show.includes(r)?'on':bagF.show.length?'off':''}" style="--rc:${RAR[r].c}">${RAR[r].n}</button>`).join('')}</div>
  <div class="mbar"><label class="msel"><select data-bsel="sort">${['def','pow','r','lvl'].map(k=>`<option value="${k}" ${bagF.sort===k?'selected':''}>↕ ${T('bag_sort_'+k)}</option>`).join('')}</select></label><button class="btn bfreset" id="bagRst" ${bagF.show.length||bagF.sort!=='def'||bagFilter!=='all'?'':'disabled'}>✕ ${T('bag_reset')}</button></div>
- <div class="bagact"><button class="btn" id="sellC">💰 ${T('sell_common')}</button><button class="btn" id="sellW">💰 ${T('sell_worse')}</button><button class="btn" id="disW" ${V.forge&&V.forge.junk?'':'disabled'}>🔩 ${T('dis_worse',{n:(V.forge&&V.forge.junk)||0})}</button><button class="btn ${G.autoSell?'on':''}" id="autoS">${G.autoSell?'✅':'⬜'} ${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button>${V.forge&&V.forge.relic?`<button class="btn wide" id="relJ">⚱️ ${T('relic_junk',{n:V.forge.relic})}</button>`:''}</div><p class="hint" style="margin:-4px 0 10px">${T('bag_act_hint')}</p>
- <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · 🔥${fmt(V.inv.cost)}</button>`:''}</div>`;
+ <div class="bagact"><button class="btn" id="sellC">${RIS('gold')}${T('sell_common')}</button><button class="btn" id="sellW">${RIS('gold')}${T('sell_worse')}</button><button class="btn" id="disW" ${V.forge&&V.forge.junk?'':'disabled'}>🔩 ${T('dis_worse',{n:(V.forge&&V.forge.junk)||0})}</button><button class="btn ${G.autoSell?'on':''}" id="autoS">${G.autoSell?'✅':'⬜'} ${T('autosell',{s:T(G.autoSell?'yes':'no')})}</button>${V.forge&&V.forge.relic?`<button class="btn wide" id="relJ">⚱️ ${T('relic_junk',{n:V.forge.relic})}</button>`:''}</div><p class="hint" style="margin:-4px 0 10px">${T('bag_act_hint')}</p>
+ <div class="row" style="margin:0 0 6px;align-items:center"><span class="hint" style="flex:2;margin:0">${T('items_n',{n:G.inv.length,m:V.inv?V.inv.max:INV_MAX})}</span>${V.inv&&V.inv.cost!=null?`<button class="btn" id="bagUp" ${G.souls>=V.inv.cost?'':'disabled'}>🎒 +${V.inv.step} · ${RIS('souls')}${fmt(V.inv.cost)}</button>`:''}</div>`;
  const bsh=bagF.show,bs=bagF.sort;
  let list=G.inv.filter(i=>(bagFilter==='all'||i.slot===bagFilter)&&(!bsh.length||bsh.includes(i.r)));
  if(bs==='pow'){const pd=new Map(list.map(i=>[i.id,powDelta(i)??-1e18]));list=[...list].sort((a,b)=>pd.get(b.id)-pd.get(a.id))}
@@ -455,7 +455,7 @@ function renderBag(){
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il)).join(' · ')}</div>`:''}</div>
-   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">💰${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
+   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  setH($('p-bag'),h);
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
@@ -641,10 +641,7 @@ function renderForge(){
  const extra=Math.max(0,mN-need),fails=G.mythFails||0,chance=Math.min(F.myth.cap,F.myth.base+F.myth.extra*extra+F.myth.fail*fails);
  const il=LG.length?Math.max(...LG.slice(0,mN).map(i=>i.il)):0,souls=Math.round(150+il*5);
  const ec=F.ench,eLegs=enchLegs(),legAll=eLegs.length,eMax=G.ench>=F.enchMax,eIt=enchPicked(eLegs);
- let h='';if(fsub==='res')h+=`<div class="card"><h4>${T('res')}</h4><div class="resg">
-  <div><span>${T('souls')}</span><b>${fmt(G.souls)}</b></div><div><span>${T('ash')}</span><b>${fmt(G.ash)}</b></div>
-  <div><span>${T('shards')}</span><b>${fmt(G.shards)}</b></div><div><span>${T('cats')}</span><b>${G.cat}</b></div>
-  <div><span>${T('ess')}</span><b>${G.ess||0}</b></div></div><h4 style="margin:10px 0 6px">${T('mats')}</h4><div class="mats">${MATN.map((x,i)=>`<div><i>⛏️</i><b>${fmt((G.mats||[])[i]||0)}</b><span>${T('mat_n',{n:x})}</span></div>`).join('')}</div><p class="hint">${T('mats_hint')}</p>
+ let h='';if(fsub==='res')h+=`<div class="card"><h4>${T('res')}</h4><div class="resg2">${[['souls','souls',fmt(G.souls)],['ash','ash',fmt(G.ash)],['shards','shards',fmt(G.shards)],['cat','cats',fmt(G.cat||0)],['ess','ess',fmt(G.ess||0)],['key','res_keys',fmt(Object.values(G.keys||{}).reduce((s,x)=>s+(+x||0),0))]].map(([k,l,v])=>`<div>${RIC(k)}<b>${v}</b><span>${T(l).replace(/^\S+\s+/,'')}</span></div>`).join('')}</div><h4 style="margin:12px 0 6px">${T('mats')}</h4><div class="resg2 m4">${MATN.map((x,i)=>`<div>${RIC('m'+(i+1))}<b>${fmt((G.mats||[])[i]||0)}</b><span>${T('mat_n',{n:x})}</span></div>`).join('')}</div><p class="hint">${T('mats_hint')}</p>
   <p class="hint">${T('forge_hint',{r:fmt(F.soulsPerHour)})}</p></div>`;
  if(fsub==='res')h+=`<div class="card"><h4>${T('dis_title')}</h4>
   <div class="chips"><button data-dm="shards" class="${G.dismode!=='xp'?'act':''}">${T('to_shards')}</button><button data-dm="xp" class="${G.dismode==='xp'?'act':''}">${T('to_xp')}</button></div>
@@ -729,7 +726,7 @@ let swF=0; // вибраний поверх (0 — найвищий доступ
 // 15.11 (Влад, варіант А «Банери»): Підземелля й Болото — своя сцена, підвкладки зі значками (як у Клані), тири — картини-банери, нагороди плитками, смуга Сили.
 const dngD={}; // вибрана складність для кожного тиру
 let dsub='dng';
-const RIC=k=>`<img class="ric" src="assets/res/${k}.webp?v=1" alt="" decoding="async">`; // 15.11: намальовані значки ресурсів (Higgsfield, стиль значків клану)
+const RIS=k=>`<img class="hic s" src="assets/res/${k}.webp?v=1" alt="">`;const RIC=k=>`<img class="ric" src="assets/res/${k}.webp?v=1" alt="" decoding="async">`; // 15.11: намальовані значки ресурсів (Higgsfield, стиль значків клану)
 const DIC=k=>`<img class="cic" src="assets/dng/${k}.webp?v=1" alt="" loading="lazy" decoding="async">`;
 function dPow(need){const my=V.hero.power,ok=my>=need,p=Math.max(4,Math.min(100,my/need*100));
  return `<div class="dpow ${ok?'ok':'bad'}"><div class="dpow-t"><span>💪 ${T('need_power',{n:fmt(need),m:fmt(my)})}</span><b>${ok?'✓':T('need_short',{n:fmt(need-my)})}</b></div><div class="dpow-b"><i style="width:${p}%"></i></div></div>`}
