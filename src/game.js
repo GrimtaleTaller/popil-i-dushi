@@ -1213,7 +1213,9 @@ function adminHtml(){
 // ---------- клан ----------
 let clanAt=0,clogF='all';let csub='main',clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
 const roleT=r=>T('role_'+r);
-function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return m<5?T('online'):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
+// 15.11 (Влад): хто з клану зараз у грі — останній запит до сервера не пізніше 3 хв тому (гра шле синхронізацію щохвилини)
+const isOn=s=>!!s&&Date.now()-new Date(s)<180e3;
+function seenTxt(s){if(!s)return '—';const m=Math.round((Date.now()-new Date(s))/60000);return isOn(s)?'🟢 '+T('m_on'):m<5?T('ago_m',{n:Math.max(1,m)}):m<60?T('ago_m',{n:m}):m<1440?T('ago_h',{n:Math.round(m/60)}):T('ago_d',{n:Math.round(m/1440)})}
 setInterval(()=>{if(document.visibilityState==='visible'&&liveFn[tab])liveFn[tab]();if(tab==='clan'&&csub==='chat'&&$('chatRoot')&&!CH.t&&!CH.busy)chPoll(1)},5e3); // 13.11: живі вікна — див. live(); перемальовка лише при змінах
 function clanDescWin(C){const CL=C.clan;modal(`<h3>📜 ${T('clan_desc_t')}</h3><textarea id="cDescW" class="inp cdta" maxlength="200" rows="5" placeholder="${T('clan_desc_ph')}">${esc0(CL.desc||'')}</textarea><div class="cdcnt"><span class="hint">${T('clan_desc_hint')} ${T('clan_desc_lines')}</span><b id="cDescN">${(CL.desc||'').length}/200</b></div>`,T('save'),()=>{const v=$('cDescW').value.trim();
   if(v.replace(/\n{2,}/g,'\n').split('\n').length>4){toast(T('clan_desc_lines'));return false}if(v===(CL.desc||'')){return true}
@@ -1337,7 +1339,7 @@ function renderClan(){
   return}
  const S={main:'',keys:'',castle:'',members:'',log:'',chat:''}; // розділи клану (04.11): кожен — окрема підвкладка
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
- if(csub!=='chat')h+=`<div class="chero"><div class="chero-crest">${penI([C.clan.name,C.clan.pt],46)||cIc('banner')}</div><div class="chero-main"><div class="chero-nm">${esc(C.clan.name)}</div><div class="chero-role">${roleT(C.role)}</div></div><div class="chero-st"><div>${cIc('members')}<b>${C.clan.members}/${C.clan.max||C.max}</b></div><div>⚔️<b>${fmt(C.clan.power)}</b></div></div></div>`; // 15.11 (Влад): шапка клану — герб, назва, роль, склад і сила на тлі замку
+ if(csub!=='chat')h+=`<div class="chero"><div class="chero-crest">${penI([C.clan.name,C.clan.pt],46)||cIc('banner')}</div><div class="chero-main"><div class="chero-nm">${esc(C.clan.name)}</div><div class="chero-role">${roleT(C.role)}</div></div><div class="chero-st"><div>${cIc('members')}<b>${C.clan.members}/${C.clan.max||C.max}</b></div><div class="chon">🟢<b>${T('m_onn',{n:(C.members||[]).filter(m=>isOn(m.seen)).length})}</b></div><div>⚔️<b>${fmt(C.clan.power)}</b></div></div></div>`; // 15.11 (Влад): шапка клану — герб, назва, роль, склад і сила на тлі замку
  if(C.clan.desc)S.main+=`<div class="cdesc${C.role==='leader'?' ed':''}">📜 ${esc(C.clan.desc).replace(/\n/g,'<br>')}${C.role==='leader'?`<button class="cdesced" id="cDescEd" aria-label="${T('clan_desc_t')}">✏️</button>`:''}</div>`; // 14.11 (Влад): опис клану
  else if(C.role==='leader')S.main+=`<button class="cdescadd" id="cDescEd">📜 ${T('clan_desc_add')}</button>`; // 14.11 (Влад): окреме вікно опису для голови
  S.main+=`<button class="cinvtop" id="cInvTop">🔗 ${T('cinv_t')}</button>`; // 14.11 (Влад «А»): запрошення в клан — видно одразу, веде до картки з «Поділитись»
@@ -1380,9 +1382,10 @@ function renderClan(){
   <div class="row" style="align-items:center"><span style="flex:1">${T('clan_min_power')}</span><input id="cMp" class="inp" type="number" min="0" inputmode="numeric" value="${CL.minPower||0}" style="flex:1"></div>
   <div class="row"><button class="btn pri" id="cSet">${T('save')}</button></div></div>`;
  else S.members+=`<p class="hint">${T('clan_mode_'+CL.mode)}${CL.minStage?' · '+T('stage',{n:CL.minStage}):''}${CL.minPower?' · 💪 '+fmt(CL.minPower):''}</p>`;
- S.members+=`<div class="card"><h4>👥 ${T('members')}</h4>`+C.members.map(m=>{
+ const MS=[...C.members].sort((a,b)=>(isOn(b.seen)-isOn(a.seen))),onN=MS.filter(m=>isOn(m.seen)).length; // 15.11: хто в грі — нагорі
+ S.members+=`<div class="card"><h4>👥 ${T('members')}<span class="conl">🟢 ${T('m_onn',{n:onN})}</span></h4>`+MS.map(m=>{
   const canKick=!m.me&&(C.role==='leader'&&m.role!=='leader'||C.role==='officer'&&m.role==='member'),canRole=!m.me&&C.role==='leader';
-  return `<div class="item" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · ${T('given',{n:'💰'+fmt(m.given||0)+(m.givenAsh?' · ⚱️'+fmt(m.givenAsh):'')})}</div></div>
+  return `<div class="item${isOn(m.seen)?' mon':''}" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic cav">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}${isOn(m.seen)?'<i class="ondot"></i>':''}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · ${T('given',{n:'💰'+fmt(m.given||0)+(m.givenAsh?' · ⚱️'+fmt(m.givenAsh):'')})}</div></div>
    <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
  // 14.11 (гравці): фільтри журналу клану за типом подій
  const LOGF={gold:['give'],ash:['giveash','rating'],keys:['craft','take','givekey','keygift'],bld:['build','proj','giveres'],ppl:['join','leave','kick','accept','apply','reject','role','create','settings','tg','desc','mute']};
