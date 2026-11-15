@@ -781,3 +781,7 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .nbbuy .nbmain{width:100%;font-size:17px;padding:11px;background:linear-gradient(180deg,#ffd36a,#e29a2a);color:#2a1700;font-weight:900;border:0;box-shadow:0 4px 16px #ffb43a66;animation:nbglow 2s ease-in-out infinite}
 .nbpay{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}.nbpay .btn{padding:7px 4px;font-size:12.5px}
 .nbonce{font-size:10.5px;opacity:.6;margin:6px 0 0}
+/* 15.11 (Влад): склад вихованців — позначка «куплений», тихі кнопки у вікні вибору після вилуплення */
+.pstb{display:inline-block;font-size:10px;line-height:15px;padding:0 6px;margin-left:4px;border-radius:999px;background:#3a2f5a;color:#cdb8ff;font-weight:700;vertical-align:middle}
+.pstq{justify-content:center;gap:6px;margin-top:4px}.pstq:empty{display:none}
+.item.pst .ic img.pet-ic{width:36px;height:36px}

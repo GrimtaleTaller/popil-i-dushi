@@ -492,7 +492,9 @@ function bindCur(id,set){const w=$(id);if(!w)return;w.querySelectorAll('[data-cu
 function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const lock=it.r>=((mktData&&mktData.ashOnlyR)||4);let cur='ash';
  modal(`<div class="big">⚱️</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="hint">${T('mkt_sell_hint',{p:10})}</p>${it.gm&&it.gm.length?`<p class="hint">${sockView(it)} ${T('gem_mkt_warn')}</p>`:''}${curChips('mCur','ash',lock)}${lock?`<p class="hint">${T('mkt_ash_only')}</p>`:''}<input id="mPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}" style="width:100%"><div class="row"><button class="btn" id="mNo">${T('cancel')}</button></div>`,T('mkt_put'),()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{id,price:p,cur},()=>toast(T('mkt_listed')))});
  setTimeout(()=>{bindCur('mCur',c=>cur=c);const n=$('mNo');if(n)n.onclick=()=>{queue.shift();showModal()};const i=$('mPrice');if(i)i.focus()},0)}
-function lotView(l){const it=l.item||{};
+function lotView(l,mine){const it=l.item||{};
+ if(it.kind==='pet'){const P=G.pet||{list:{}},have=!!(P.list||{})[it.sp],full=have&&(P.st||[]).length>=pstMax(),rare=it.sp==='ghost'||it.sp==='phoenix'; // 15.11: вихованець зі складу продавця
+  return {c:RAR[rare?2:0].c,ic:petIc(it.sp,0,1),nm:T('pet_'+it.sp)+(mine?pstTag(it.b):''),sub:T('mkt_pet')+(rare?' · '+T('pst_rare'):'')+(mine?'':' · '+(full?'⚠️ '+T('mkt_pet_full'):have?T('mkt_pet_have'):T('mkt_pet_new'))),st:'',full,pet:1}}
  if(it.kind==='mat')return {c:'#8a7a5a',ic:'⛏️',nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
  return {c:RAR[it.r].c,ic:gearIc(it),nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il})+powTag(it),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
@@ -503,17 +505,18 @@ function renderMarket(){
  const M=mktData;
  live('mkt',()=>api('market',{...mktF}).then(r=>r.out),o=>{if(same(o,mktData))return false;mktData=o;return true},3e4);
  let h=`<div class="chestbar" style="background:var(--panel);border-color:var(--line)">⚱️<span>${fmt(G.ash||0)} · 💰${fmt(G.gold)}</span><button class="btn" id="mRef">🔄</button></div><p class="hint">${T('mkt_hint',{p:Math.round(M.fee*100),r:RAR[M.minR].n})}</p>`;
- if(M.mine.length)h+=`<div class="card"><h4>📦 ${T('mkt_mine',{n:M.mine.length,m:M.maxLots})}</h4>`+M.mine.map(l=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${curIc(l.cur)} ${fmt(l.price)}</div></div><div class="acts"><button class="btn" data-mc="${l.id}">${T('mkt_cancel')}</button></div></div>`}).join('')+'</div>';
+ if(M.mine.length)h+=`<div class="card"><h4>📦 ${T('mkt_mine',{n:M.mine.length,m:M.maxLots})}</h4>`+M.mine.map(l=>{const v=lotView(l,1);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${curIc(l.cur)} ${fmt(l.price)}</div></div><div class="acts"><button class="btn" data-mc="${l.id}" ${v.pet&&((G.pet||{}).st||[]).length>=pstMax()?'disabled':''}>${T('mkt_cancel')}</button></div></div>`}).join('')+'</div>';
  const have=(G.mats||[])[mktMat]||0;
  h+=`<details class="card mmat" ${mktMatOpen?'open':''}><summary><h4>⛏️ ${T('mkt_sell_mats')}</h4></summary><div class="chips">${[0,1,2,3].map(m=>`<button data-mm="${m}" class="${mktMat===m?'act':''}">${MATN[m]} · ${fmt((G.mats||[])[m]||0)}</button>`).join('')}</div>${curChips('mmCur',mktCur,false)}
   <div class="row" style="align-items:center"><input id="mmQty" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_qty')} (${fmt(have)})"><input id="mmPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}"><button class="btn pri" id="mmGo" ${have?'':'disabled'}>${T('mkt_put')}</button></div></details>`;
- if(mktF.slot!=='mat')h+=`<div class="mhide bshow"><span>${T('bag_show')}</span>${[2,3,4,5,6].map(r=>`<button data-mh="${r}" class="${mktShow.includes(r)?'on':mktShow.length?'off':''}" style="--rc:${RAR[r].c}">${RAR[r].n}</button>`).join('')}</div>`; // 14.11 (гравці): сховати кілька рідкостей
- h+=`<div class="mbar"><label class="msel"><select data-msel="slot">${['',...SLOTS,'mat'].map(f=>`<option value="${f}" ${mktF.slot===f?'selected':''}>${f==='mat'?T('mkt_mats'):f?SLOT[f].n:T('mkt_all_slots')}</option>`).join('')}</select></label>
+ if(mktF.slot==='pet')h+=`<p class="hint">🐾 ${T('mkt_pet_hint')}</p>`;
+ if(mktF.slot!=='mat'&&mktF.slot!=='pet')h+=`<div class="mhide bshow"><span>${T('bag_show')}</span>${[2,3,4,5,6].map(r=>`<button data-mh="${r}" class="${mktShow.includes(r)?'on':mktShow.length?'off':''}" style="--rc:${RAR[r].c}">${RAR[r].n}</button>`).join('')}</div>`; // 14.11 (гравці): сховати кілька рідкостей
+ h+=`<div class="mbar"><label class="msel"><select data-msel="slot">${['',...SLOTS,'mat','pet'].map(f=>`<option value="${f}" ${mktF.slot===f?'selected':''}>${f==='mat'?T('mkt_mats'):f==='pet'?T('mkt_pets'):f?SLOT[f].n:T('mkt_all_slots')}</option>`).join('')}</select></label>
   <label class="msel"><select data-msel="cur">${['','ash','gold'].map(c=>`<option value="${c}" ${mktF.cur===c?'selected':''}>${c?T('cur_'+c):T('mkt_all_cur')}</option>`).join('')}</select></label>
   <label class="msel"><select data-msel="sort">${['price','lvl','new'].map(k=>`<option value="${k}" ${mktF.sort===k?'selected':''}>↕ ${T('mkt_sort_'+k)}</option>`).join('')}</select></label><button class="btn bfreset" id="mRst" ${mktShow.length||mktF.slot||mktF.cur||mktF.sort!=='price'?'':'disabled'}>✕ ${T('bag_reset')}</button></div>`;
  let n=0;
  for(const l of M.lots){const v=lotView(l);if(!v)continue;n++;
-  h+=`<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${esc(l.seller||'')}</div>${v.st?`<div class="st">${v.st}</div>`:''}</div><div class="acts"><button class="btn pri" data-mb="${l.id}" ${curHave(l.cur)>=l.price?'':'disabled'}>${curIc(l.cur)} ${fmt(l.price)}</button></div></div>`}
+  h+=`<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${esc(l.seller||'')}</div>${v.st?`<div class="st">${v.st}</div>`:''}</div><div class="acts"><button class="btn pri" data-mb="${l.id}" ${curHave(l.cur)>=l.price&&!v.full?'':'disabled'}>${curIc(l.cur)} ${fmt(l.price)}</button></div></div>`}
  if(!n)h+=`<div class="empty">${T('mkt_empty')}</div>`;
  el.innerHTML=h;
  $('mRef').onclick=()=>{mktData=null;renderMarket()};
@@ -523,8 +526,8 @@ function renderMarket(){
  el.querySelectorAll('[data-mm]').forEach(b=>b.onclick=()=>{mktMat=+b.dataset.mm;renderMarket()});
  bindCur('mmCur',c=>mktCur=c);
  $('mmGo').onclick=()=>{const q=Math.floor(+$('mmQty').value||0),p=Math.floor(+$('mmPrice').value||0);if(q<1||q>((G.mats||[])[mktMat]||0)){toast(ERR.no_mats);return}if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{kind:'mat',m:mktMat,n:q,price:p,cur:mktCur},()=>toast(T('mkt_listed')))};
- el.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>mktAct('marketBuy',{lot:+b.dataset.mb},r=>{toast(T('mkt_bought'));haptic('medium')}));
- el.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>mktAct('marketCancel',{lot:+b.dataset.mc},()=>toast(T('mkt_cancelled'))));
+ el.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>mktAct('marketBuy',{lot:+b.dataset.mb},r=>{const x=r.out&&r.out.bought;toast(x&&x.kind==='pet'?T(x.to==='st'?'mkt_bought_pst':'mkt_bought_pl'):T('mkt_bought'));haptic('medium')}));
+ el.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>{const l=M.mine.find(x=>x.id===+b.dataset.mc),pet=l&&l.item&&l.item.kind==='pet';mktAct('marketCancel',{lot:+b.dataset.mc},()=>toast(T(pet?'mkt_cancel_pet':'mkt_cancelled')))});
 }
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
 // 13.11 (Влад): розібрати всі речі однієї рідкості (зелені / сині / фіолетові) — з сумки, без каменів і вкладених зірок; кращі за надіте (і на майбутнє — вищого рівня) лишаємо
@@ -877,6 +880,7 @@ const LOGT={
  star:a=>'★ '+(SLOT[a[0]]?SLOT[a[0]].n:a[0])+' → '+'★'.repeat(a[2]||0),
  pass:a=>T('log_pass',{n:a[0]}),passAuto:a=>T('log_pass_auto',{n:a[0]}),dqAll:a=>T('log_dq_all',{a:a[0]}),bio:a=>T('log_bio',{a:a[0]}),ad:a=>T('log_ad',{n:a[0]}),adTask:a=>T('log_ad_task',{a:a[0],g:fmt(a[1]||0)}),adTaskDup:()=>T('adt_dup'),card:a=>T('log_card',{t:[a[0]?'⚱️'+a[0]:'',a[1]?(a[1]==='r'?T('card_egg_r'):T('card_egg_c')):''].filter(Boolean).join(', ')}),adEgg:a=>T('log_ad_egg',{t:dur(a[0]*60e3)}),sub:a=>T('log_sub',{c:SUB_N[a[0]]||a[0],a:a[1]}),subLost:a=>T('log_sub_lost',{c:SUB_N[a[0]]||a[0],a:a[1]}),ptn:a=>T('log_ptn',{c:a[0]}),ach:a=>T('log_ach',{n:a[0],a:a[1]}),
  pet:a=>T(a[1]?'log_pet_new':'log_pet_dup',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[2]?' ★'+a[2]:''}),
+ pmerge:a=>T('log_pet_merge',{p:petIc(a[0])+' '+T('pet_'+a[0]),s:a[1]}), // 15.11: злиття зі складу
  petEvo:a=>T('log_pet_evo',{p:petIc(a[0])+' '+T('pet_'+a[0]),f:ROM[a[1]]}),
  pcraft:a=>T('log_pcraft',{r:RAR[a[0]].n,s:T('pslot_'+a[1]),l:a[2]}),
  dis:a=>T('log_dis',{n:a[0],v:fmt(a[1])+' '+(a[2]==='xp'?'✨':'🔩')}),
@@ -966,6 +970,31 @@ const petEvoN=l=>l>=20?2:l>=10?1:0,stars=(s,m=5)=>'<span class="stars">'+'★'.r
 const dur=ms=>{const m=Math.round(ms/60000);return m%60?hms(ms):T('t_hh',{h:m/60})}; // тривалість без «0 хв»
 const hms=ms=>{const m=Math.ceil(ms/60000),h=Math.floor(m/60);return h?T('t_hm',{h,m:m%60}):T('t_m',{m})};
 function petFighter(){const e=$('petf');if(!e)return;const P=G&&G.pet;if(P&&P.act){const p=P.list[P.act];e.innerHTML=`<img src="${petImg(P.act,p.l)}" alt="">`;e.className='petf evo'+petEvoN(p.l);e.style.display=''}else e.style.display='none'}
+// 15.11 (Влад): склад вихованців — повтори з яєць і куплені на ринку. Повтор зливається у свого вихованця (2 → +1★, до ★5) або йде на ринок за Попіл;
+// куплений (b) на зірки не зливається — лише продати. Склад повний — нові повтори зливаються самі (сервер: PET.storeMax, petMerge, marketSell kind:'pet')
+const pstC=()=>((V.pet||{}).cfg||{}),pstMax=()=>pstC().storeMax||10,pstDup=()=>pstC().dupStar||2;
+const pstWhy=(P,x)=>x.b?'b':!P.list[x.sp]?'none':P.list[x.sp].s>=5?'max':''; // чому не зливається ('' — можна)
+const pstNext=(P,sp)=>{const p=P.list[sp],d=p.d+1;return d>=pstDup()?T('pst_star_next',{s:p.s+1}):T('pst_d_next',{d,n:pstDup(),s:p.s+1})};
+const pstNote=(P,x)=>{const w=pstWhy(P,x);return w?T('pst_why_'+w):pstNext(P,x.sp)};
+function pstAllN(P){const q={};let n=0;for(const x of P.st||[]){const p=P.list[x.sp];if(x.b||!p)continue;const c=q[x.sp]=q[x.sp]||{s:p.s,d:p.d};if(c.s>=5)continue;c.d++;if(c.d>=pstDup()){c.d-=pstDup();c.s++}n++}return n}
+const pstSellT=()=>RIS('ash')+' '+T('pst_sell'),pstTag=b=>b?` <small class="pstb">${T('pst_bought')}</small>`:'';
+function pstMergeFx(r){const o=r.out,k=Object.keys(o.stars||{});haptic(k.length?'heavy':'medium');toast(k.length?k.map(sp=>T('pst_star_got',{p:T('pet_'+sp),s:o.stars[sp]})).join(' · '):T('pst_merged',{n:o.n}))}
+function pstSellDlg(id){const x=((G.pet||{}).st||[]).find(y=>y.id===id);if(!x)return;
+ modal(`<div class="big">${petFrame(x.sp,1,1,1)}</div><h3>${T('pet_'+x.sp)}${pstTag(x.b)}</h3><p class="hint">${T('pst_sell_hint',{p:Math.round(((mktData&&mktData.fee)||0.1)*100)})}</p><input id="mPrice" class="inp" type="number" min="1" max="1000000" inputmode="numeric" placeholder="${T('mkt_price')} · ${T('ash')}" style="width:100%">`,T('mkt_put'),
+  ()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1||p>1e6){toast(T('mkt_price_bad'));return false}mktAct('marketSell',{kind:'pet',id,price:p},()=>{toast(T('mkt_listed'));haptic('light')})},()=>{const i=$('mPrice');if(i)i.focus()})}
+// вікно дій для одного вихованця зі складу; got — щойно вилупився (тоді є «Лишити на складі»)
+function pstAsk(id,got){const P=G.pet||{},x=(P.st||[]).find(y=>y.id===id);if(!x)return;const w=pstWhy(P,x);
+ const sell=()=>{queue.shift();pstSellDlg(id);showModal()},keep=()=>{queue.shift();showModal()};
+ modal(`<div class="big">${petFrame(x.sp,1,1,1)}</div><h3>${got?T('pet_dup',{p:T('pet_'+x.sp)}):T('pet_'+x.sp)}${pstTag(x.b)}</h3>${got?`<p>${T('pst_got',{n:(P.st||[]).length,m:pstMax()})}</p>`:''}<p class="hint">${pstNote(P,x)}</p>`+
+  `<div class="row pstq">${w?'':`<button class="btn" id="pstSellQ">${pstSellT()}</button>`}${got?`<button class="btn" id="pstKeep">${T('pst_keep')}</button>`:''}</div>`,
+  w?pstSellT():T('pst_merge'),()=>{if(w){queue.shift();pstSellDlg(id);showModal();return false}act('petMerge',{sid:id},pstMergeFx)},
+  ()=>{if($('pstSellQ'))$('pstSellQ').onclick=sell;if($('pstKeep'))$('pstKeep').onclick=keep},'pst'+id)}
+function pstMergeAll(){const n=pstAllN(G.pet||{});if(!n)return;modal(`<div class="big">⭐</div><h3>${T('pst_merge_all',{n})}</h3><p class="hint">${T('pst_merge_all_q')}</p>`,T('pst_merge'),()=>act('petMerge',{all:true},pstMergeFx))}
+function pstRows(P){const g={};for(const x of P.st||[]){const k=x.sp+(x.b?'b':'');(g[k]=g[k]||{sp:x.sp,b:x.b,ids:[]}).ids.push(x.id)}
+ return Object.values(g).map(o=>{const x={sp:o.sp,b:o.b},w=pstWhy(P,x);return `<div class="item pst"><div class="ic">${petIc(o.sp,0,1)}</div><div class="info"><div class="nm">${T('pet_'+o.sp)}${o.ids.length>1?' ×'+o.ids.length:''}${pstTag(o.b)}</div><div class="sub">${pstNote(P,x)}</div></div><div class="acts">${w?'':`<button class="btn" data-pstm="${o.ids[0]}">${T('pst_merge')}</button>`}<button class="btn" data-psts="${o.ids[0]}">${pstSellT()}</button></div></div>`}).join('')}
+function pstBind(E){E.querySelectorAll('[data-pstm]').forEach(b=>b.onclick=()=>act('petMerge',{sid:+b.dataset.pstm},pstMergeFx));E.querySelectorAll('[data-psts]').forEach(b=>b.onclick=()=>pstSellDlg(+b.dataset.psts));const a=E.querySelector('#pstAll');if(a)a.onclick=pstMergeAll}
+function pstCard(P){const st=P.st||[],m=pstMax();if(!st.length)return '';const n=pstAllN(P); // 15.11: варіант «А» (Влад) — список, згрупований за видом
+ return `<div class="card"><h4>📦 ${T('pst_t',{n:st.length,m})}</h4><p class="hint">${T('pst_hint')}</p>${st.length>=m?`<p class="hint" style="color:var(--gold)">⚠️ ${T('pst_full')}</p>`:''}${pstRows(P)}${n?`<div class="row"><button class="btn pri" id="pstAll">${T('pst_merge_all',{n})}</button></div>`:''}</div>`}
 function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn:0},D=V.pet||{},I=D.info||{},C=D.cfg||{},now=Date.now();
  let h='';const a=P.act&&P.list[P.act];
  if(a){const sp=P.act,b=(D.defs||{})[sp]||{},bv=(I.bonus||{})[sp]||0,nx=I.next,f=petEvoN(a.l);
@@ -1001,6 +1030,7 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
   else h+=`<div class="inc2rent"><span>${rl?T('inc2_on2',{t:hms(rl)}):T('inc2_end')}</span><button class="btn" id="pRent">${rl?T('inc2_more'):T('inc2_buy')}</button></div>`;
   var canHatch=!P.inc||(rl>0&&!P2)}
  h+=`<div class="row">${['c','r'].map(e=>`<button class="btn" data-hatch="${e}" ${P.eggs[e]>0&&canHatch?'':'disabled'}>${eggIc(e)} ${T(e==='r'?'egg_r':'egg_c')} ×${P.eggs[e]||0}</button>`).join('')}</div><p class="hint">${T('pet_egg_hint',{c:Math.round((C.hatch&&C.hatch.c||216e5)/36e5),r:Math.round((C.hatch&&C.hatch.r||576e5)/36e5)})}</p></div>`;
+ h+=pstCard(P);
  // колекція
  h+=`<div class="card"><h4>📖 ${T('pet_coll')}</h4><div class="petgrid">`+PETS_ORD.map(sp=>{const p=P.list[sp],b=(D.defs||{})[sp]||{};return p?`<button class="petc pfc ${P.act===sp?'act':''}" data-pset="${sp}">${P.act===sp?`<em class="pact">${T('pet_active')}</em>`:''}${petFrame(sp,p.l,p.s,0)}<b>${T('pet_'+sp)}</b><small>${T('lvl',{n:p.l})} · ${T('petb_'+b.b,{v:(I.bonus||{})[sp]||0})}</small></button>`:`<div class="petc no"><span class="pet-ic">❔</span><b>${T('pet_'+sp)}</b><small>${T('petb_'+b.b,{v:b.v||0})}${b.rare?' · '+T('egg_r'):''}</small></div>`}).join('')+`</div><p class="hint">${T('pet_coll_hint')}</p></div>`;
  if(!a&&!P.inc&&!(P.eggs.c||P.eggs.r))h=`<div class="card"><h4>🐾 ${T('sub_pet')}</h4><p class="hint">${T('pet_intro')}</p></div>`+h;
@@ -1018,8 +1048,10 @@ function renderPet(){const P=G.pet||{list:{},act:null,eggs:{c:0,r:0},inc:null,fn
  if($('pFind'))$('pFind').onclick=()=>act('petFind',{},r=>{const g=r.out.got;const sum={};for(const x of g){const k=x.k+(x.x||'');sum[k]=sum[k]||{...x,n:0};sum[k].n+=x.n}
   modal(`<div class="big">${petFrame(P.act,(P.list[P.act]||{}).l,(P.list[P.act]||{}).s,1)}</div><h3>${T('pet_found')}</h3>`+Object.values(sum).map(x=>`<p>${x.k==='pgear'?T('find_pgear')+' '+RAR[+String(x.x).split(':')[1]].n:x.k==='chest'?'🧰 '+T('chest_1'):x.k==='gem'?gemIc(x.x)+' '+gemName(x.x):x.k==='mat'?'⛏️ '+T('mat_n',{n:MATN[+x.x]}):x.k==='ash'?'⚱️ '+T('ash'):'🔩 '+T('shards')} <b>+${fmt(x.n)}</b></p>`).join(''),T('ok'));haptic('light')});
  if($('pSpeed'))$('pSpeed').onclick=()=>act('petSpeed',{},()=>haptic('light'));if($('pSpeed2'))$('pSpeed2').onclick=()=>act('petSpeed',{slot:2},()=>haptic('light'));if($('pRent'))$('pRent').onclick=()=>{haptic('light');ssub='conv';shopData=null;document.querySelector(tabBtn('shop')).click()};if($('pAd'))$('pAd').onclick=()=>act('adIntent',{k:'egg'},()=>{adEggAt=Date.now();adEggK='egg';watchAd()});if($('pAd2'))$('pAd2').onclick=()=>act('adIntent',{k:'egg2'},()=>{adEggAt=Date.now();adEggK='egg2';watchAd()});
- const claimFx=slot=>r=>{const o=r.out;modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}`,T('ok'));haptic('heavy')};if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},claimFx(1));if($('pClaim2'))$('pClaim2').onclick=()=>act('petClaim',{slot:2},claimFx(2));
+ const claimFx=slot=>r=>{const o=r.out;haptic('heavy');if(o.sid){pstAsk(o.sid,1);return} // 15.11: повтор пішов на склад — гравець обирає: злити, на ринок чи лишити
+  modal(`<div class="big">${petFrame(o.sp,(G.pet.list[o.sp]||{}).l,(G.pet.list[o.sp]||{}).s,1)}</div><h3>${T(o.isNew?'pet_new':'pet_dup',{p:T('pet_'+o.sp)})}</h3>${o.star?`<p>${T('pet_star_up',{s:o.star})}</p>`:''}${o.auto?`<p class="hint">${o.auto===2?T('pst_auto_lost',{p:T('pet_'+o.sp)}):T('pst_auto')}</p>`:''}`,T('ok'))};if($('pClaim'))$('pClaim').onclick=()=>act('petClaim',{},claimFx(1));if($('pClaim2'))$('pClaim2').onclick=()=>act('petClaim',{slot:2},claimFx(2));
  E.querySelectorAll('[data-hatch]').forEach(b=>b.onclick=()=>act('petHatch',{e:b.dataset.hatch},()=>haptic('light')));
+ pstBind(E);
  if($('pgLvM'))$('pgLvM').onclick=()=>{pgLv=Math.max(1,pgLv-1);haptic('light');dirty.pet=1;flush()};if($('pgLvP'))$('pgLvP').onclick=()=>{pgLv++;haptic('light');dirty.pet=1;flush()};
  if($('pgCat'))$('pgCat').onclick=()=>{pgCat=!pgCat;haptic('light');dirty.pet=1;flush()}; // 13.11: було видно лише клас 'on' без стилю — гравці думали, що кнопка не натискається
  E.querySelectorAll('[data-pgc]').forEach(b=>b.onclick=()=>matAsk(+b.dataset.m,+b.dataset.n,()=>act('petCraft',{slot:b.dataset.pgc,cat:pgCat,l:pgLv},r=>{const it=r.out.item;pgCat=pgCat&&G.cat>0;toast(`${RAR[it.r].n} ${T('pslot_'+it.slot)} · ${T('lvl',{n:it.il})}`);haptic(it.r>=3?'heavy':'light')})));
