@@ -572,3 +572,4 @@ h4.cih .cic{width:30px;height:30px;vertical-align:0;flex:0 0 30px}
 .chero-st b{font-size:13px}
 .chero-st .cic{width:20px;height:20px;vertical-align:0}
 .bpr{height:4px;margin:4px 0 5px;border-radius:3px;background:#ffffff12;overflow:hidden}.bpr i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#b8642e,#f0c060);box-shadow:0 0 6px #f0b05a88}
+.afkp{position:fixed;left:50%;top:calc(var(--tg-safe-area-inset-top,0px) + 64px);transform:translateX(-50%);z-index:19;max-width:calc(100vw - 24px);width:max-content;padding:8px 14px;border-radius:14px;background:linear-gradient(180deg,#2a2440,#1b1726);border:1px solid #7d6bd255;box-shadow:0 8px 24px #000a;font-size:12.5px;text-align:center;line-height:1.3;pointer-events:none}.afkp small{display:block;opacity:.75;font-size:11px;margin-top:2px}

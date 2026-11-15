@@ -87,10 +87,18 @@ function devFp(){if(devFpS!==null)return devFpS;let c='';
  const w=tg(),sc=window.screen||{},n=navigator;let tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(e){}
  devFpS=[w&&w.platform||'',(sc.width||0)+'x'+(sc.height||0),window.devicePixelRatio||1,tz,n.language||'',n.hardwareConcurrency||0,n.deviceMemory||0,n.maxTouchPoints||0,c].join('|');return devFpS}
 // 14.11: сесія (id відкриття сторінки, версія, кількість дотиків)
-const SS={i:Math.random().toString(36).slice(2,10)+Date.now().toString(36),t:0};
+const SS={i:Math.random().toString(36).slice(2,10)+Date.now().toString(36),t:0,a:0}; // t — кліки (для перевірок), a — будь-яка дія гравця (AFK)
 addEventListener('click',e=>{if(e.isTrusted)SS.t++},{capture:true,passive:true});
+// 14.11 (критик): дотик по порожньому місцю на iOS не дає click, прокрутка теж — рахуємо будь-яку дію
+for(const ev of ['pointerdown','keydown','wheel','touchmove'])addEventListener(ev,e=>{if(e.isTrusted){SS.a++;afkWake()}},{capture:true,passive:true});
+// 14.11 (Влад «А»): 15 хв без дотиків — сервер рахує фарм як офлайн; плашка 💤, перший дотик одразу повідомляє сервер
+let afkLoc=0,afkAgain=0; // 14.11 (критик): після дотику плашку ховаємо локально, V не чіпаємо (він — база дельти екрана)
+const afkLv=()=>V&&V.afk&&!afkLoc?V.afk:0;
+function afkPill(){let el=document.getElementById('afkP');const on=!!afkLv();if(!on){if(el)el.remove();return}
+ if(!el){el=document.createElement('div');el.id='afkP';el.className='afkp';document.body.appendChild(el)}el.innerHTML=`💤 ${T(afkLv()>1?'afk_t2':'afk_t')}<small>${T('afk_h')}</small>`}
+function afkWake(){try{if(!afkLv())return;afkLoc=1;afkPill();setTimeout(()=>{try{if(syncing)afkAgain=1;else sync(true)}catch(e){}},300)}catch(e){}} // критик 14.11: якщо запит уже летить — повторити після нього
 var banWhy='';async function api(action,args){
- const body={action,args:args||{}};body.fp=devFp();body.ss={i:SS.i,v:MYV||0,t:SS.t};const headers={'content-type':'application/json'};
+ const body={action,args:args||{}};body.fp=devFp();body.ss={i:SS.i,v:MYV||0,t:SS.t,a:SS.a};const headers={'content-type':'application/json'};
  lastSync=Date.now();const base=VC;if(base&&VH)body.vh=VH; // дельта екрана (11.11): сервер не надсилає частини, які вже є
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}
@@ -145,7 +153,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;heroPen();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -184,6 +192,7 @@ function tick(dt){
  if(B.rep){replayTick(dt);return}
  if(B.hp>H.hp)B.hp=H.hp;
  if(B.dead>0){B.dead-=dt;if(B.dead<=0){$('dead').style.display='none';B.hp=H.hp;spawn()}return}
+ {const k=afkLv();if(k){dt*=k>1?0:0.5;if(!dt)return}} // 14.11: без дій бій на екрані як на сервері — удвічі повільніше або стоїть
  if(B.resp>0){B.hp=Math.min(H.hp,B.hp+H.hp*0.02*dt);B.resp-=dt;if(B.resp<=0)spawn();return}
  if(!B.m)spawn();
  B.hp=Math.min(H.hp,B.hp+H.hp*0.02*dt);
@@ -1210,7 +1219,7 @@ function clanAct(a,args,cb){return act(a,args,r=>{if(r.out)clanData=r.out;dirty.
 // Опитування окремим запитом (chatApi — без перерахунку екрана й без зсуву звичайної синхронізації): раз на 3 с, поки в чаті жваво, інакше раз на 8 с.
 var chatU=0;const CH={clan:0,msgs:[],sys:[],pin:null,after:0,since:0,logAfter:0,typing:[],online:0,mem:[],me:0,role:'',mute:0,reply:null,busy:0,t:null,last:0,mine:0,first:1,bottom:1,reacts:['👍','🔥','😂','😮','🙏','❤️']};
 const CHQ=['chq_dng','chq_keys','chq_help','chq_hi'];
-async function chatApi(action,args){const body={action,args:args||{},fp:devFp(),ss:{i:SS.i,v:MYV||0,t:SS.t}};const headers={'content-type':'application/json'};const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
+async function chatApi(action,args){const body={action,args:args||{},fp:devFp(),ss:{i:SS.i,v:MYV||0,t:SS.t,a:SS.a}};const headers={'content-type':'application/json'};const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}const j=await r.json().catch(()=>({ok:false,err:'bad'}));if(!j.ok)throw new Error(j.err||'err');return j.out}
 // 14.11 (Влад: «незручно читати») — чат клану на весь екран: шапка з «назад», назвою клану й онлайном; системна «Назад» Telegram теж закриває
 function chShell(){const cn=(clanData&&clanData.clan&&clanData.clan.name)||'';return `<div id="chatRoot" class="chat full"><div class="chhead"><button class="chb chback" id="chBack" aria-label="back">←</button><div class="chht"><b>💬 ${esc(cn)}</b><span id="chOn"></span></div></div><div class="chtop"><span class="sub">${T('chat_hint')}</span></div><div id="chPin"></div><div class="chwrap"><div id="chFeed" class="chfeed"><p class="hint" style="text-align:center">${T('loading')}</p></div><button id="chDown" class="chdown" style="display:none">↓</button></div><div id="chTyping" class="chtyping"></div><div id="chReply"></div>
@@ -1614,8 +1623,8 @@ function boot(msg,retry){
  if(retry)$('bootR').onclick=start;
 }
 let syncing=false;
-async function sync(force){if(syncing||busy||B.rep||!G)return;if(force!==true&&Date.now()-lastSync<(document.hidden?80000:55000))return; // force — підняти рівень одразу (13.11)
- /* згорнута гра — раз на 80 с: менше трафіку, але в межах «онлайн» сервера (ONLINE_WINDOW 90 с), фарм у фоні не сповільнюється */lastSync=Date.now();syncing=true;try{const r=await api('sync');afterSync(r)}catch(e){if(e.message==='auth')boot(ERR.auth)}finally{syncing=false}}
+async function sync(force){if(syncing||busy||B.rep||!G)return;if(force!==true&&Date.now()-lastSync<(document.hidden?50000:55000))return; // force — підняти рівень одразу (13.11)
+ /* 14.11: згорнута гра — раз на ~60 с (було 80: проміжок часом перевищував ONLINE_WINDOW 90 с і фарм ішов як офлайн) */lastSync=Date.now();syncing=true;try{const r=await api('sync');afterSync(r)}catch(e){if(e.message==='auth')boot(ERR.auth)}finally{if(afkAgain){afkAgain=0;setTimeout(()=>{try{sync(true)}catch(e){}},200)}syncing=false}}
 async function start(){
  applyLang();
  const w=tg();
