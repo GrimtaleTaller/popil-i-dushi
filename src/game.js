@@ -153,7 +153,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -1067,7 +1067,7 @@ function renderProfile(){
 }
 // ---------- магазин (08.11, варіант А): Stars і крипто в мережі TON ----------
 let shopData=null,shopBusy=false,tcUI=null,tcLoading=null,shopPoll=0;
-const SHOP_DESC={inc12:'shop_d_inc12',inc24:'shop_d_inc24',ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
+const SHOP_DESC={newb:'shop_d_newb',inc12:'shop_d_inc12',inc24:'shop_d_inc24',ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function vipLine(k){const n=k==='starter'?3:VIP_D[k];if(!n||!vipActive())return '';return `<p class="hint" style="color:var(--gold)">${T('shop_vip_on',{d:dt(G.vip)})} — ${T('shop_vip_ext',{n,d:dt(G.vip+n*864e5)})}</p>`} // 13.11 (Влад): VIP активний — покупка продовжить дні
@@ -1081,11 +1081,11 @@ async function tcWallet(){const ui=await loadTC();if(ui.account&&ui.account.addr
   const off1=ui.onStatusChange(w=>fin(w&&w.account?w.account.address:null));
   const off2=ui.onModalStateChange?ui.onModalStateChange(st=>{if(st&&st.status==='closed')setTimeout(()=>fin(ui.account?ui.account.address:null),300)}):()=>{}})} // закрив вікно без підключення — не чекаємо (критик 08.11)
 // 12.11 (Влад): карти на 30 днів — «Дар Хранителя» (60 ⚱️ щодня, 30 разів) і «Клятва Мисливця» (×1,5 досвіду, +25% золота, 5 яєць); забрати — тут і в «Завданнях»
-function cardLine(k){const C=V&&V.cards;if(!C||(k!=='ash30'&&k!=='hunt30'))return '';const now=Date.now(),c=k==='ash30'?C.a:C.h;if(!(c.end>now)&&!(k==='hunt30'&&c.eggs>0)||(k==='ash30'&&!(c.n>0)))return '';
- const days=k==='ash30'?(c.n||0):Math.max(0,Math.ceil((c.end-now)/864e5)),st=k==='ash30'?(c.ready?'':`✅ ${T('card_got')}`):(c.ready?'':c.eggs>0?`🥚 ${T('card_egg_next',{d:Math.max(1,Math.ceil((c.next-now)/864e5)),n:c.eggs})}`:'');
+function cardLine(k){const C=V&&V.cards;if(!C||(k!=='ash30'&&k!=='hunt30'&&k!=='newb'))return '';const now=Date.now(),D=k==='newb'||k==='ash30',c=k==='ash30'?C.a:k==='newb'?C.n:C.h;if(!c||!(c.end>now)&&!(k==='hunt30'&&c.eggs>0)||(D&&!(c.n>0)))return '';
+ const days=D?(c.n||0):Math.max(0,Math.ceil((c.end-now)/864e5)),st=D?(c.ready?'':`✅ ${T('card_got')}`):(c.ready?'':c.eggs>0?`🥚 ${T('card_egg_next',{d:Math.max(1,Math.ceil((c.next-now)/864e5)),n:c.eggs})}`:'');
  return `<div class="cardst">${c.end>now?`<span>⏳ ${T('card_left',{n:days})}</span>`:''}${st?`<span class="hint" style="margin:0">${st}</span>`:''}${c.ready?`<button class="btn pri" data-cardc="1">${T('card_claim')}</button>`:''}</div>`}
-function cardsBox(){const C=V&&V.cards;if(!C)return '';const now=Date.now();if(!(C.a.end>now&&C.a.n>0)&&!(C.h.end>now)&&!(C.h.eggs>0))return '';
- return `<div class="card"><h4>🎴 ${T('card_mine')}</h4>${C.a.end>now&&C.a.n>0?`<p style="margin:4px 0"><b>${T('shop_i_ash30')}</b></p>${cardLine('ash30')}`:''}${C.h.end>now||C.h.eggs>0?`<p style="margin:8px 0 4px"><b>${T('shop_i_hunt30')}</b>${C.h.end>now?` · ×${C.h.xp} ${T('card_xp')}, +${Math.round((C.h.gold-1)*100)}% ${T('card_gold')}`:''}</p>${cardLine('hunt30')}`:''}</div>`}
+function cardsBox(){const C=V&&V.cards;if(!C)return '';const now=Date.now(),N=C.n,nOn=!!N&&N.end>now&&N.n>0;if(!nOn&&!(C.a.end>now&&C.a.n>0)&&!(C.h.end>now)&&!(C.h.eggs>0))return '';
+ return `<div class="card"><h4>🎴 ${T('card_mine')}</h4>${nOn?`<p style="margin:4px 0"><b>🎁 ${T('shop_i_newb')}</b> · +${N.off} ${T('nb_off')}, +${N.gold}% ${T('card_gold')}</p>${cardLine('newb')}`:''}${C.a.end>now&&C.a.n>0?`<p style="margin:4px 0"><b>${T('shop_i_ash30')}</b></p>${cardLine('ash30')}`:''}${C.h.end>now||C.h.eggs>0?`<p style="margin:8px 0 4px"><b>${T('shop_i_hunt30')}</b>${C.h.end>now?` · ×${C.h.xp} ${T('card_xp')}, +${Math.round((C.h.gold-1)*100)}% ${T('card_gold')}`:''}</p>${cardLine('hunt30')}`:''}</div>`}
 function cardClaim(){act('cardClaim',{},r=>{const o=r.out;toast('🎴 '+[o.ash?'+⚱️'+o.ash:'',o.egg?(o.egg==='r'?T('card_egg_r'):T('card_egg_c')):''].filter(Boolean).join(' · '));haptic('medium');dirty.tasks=1;dirty.shop=1})}
 function shopReload(){shopData=null;dirty.shop=1;flush()}
 function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
@@ -1093,7 +1093,7 @@ function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
 let ssub='deal';
 const n3=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'\u202f'); // 1 500 — точна сума пакета без «K»
 const ASH_BON={ash100:1,ash500:1,ash1000:1,ash5000:1}; // пакети з бонусом +50% на першу покупку за добу (сервер — SHOP.bon)
-const SHOP_CAT={inc12:'conv',inc24:'conv',ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
+const SHOP_CAT={newb:'deal',inc12:'conv',inc24:'conv',ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
 function renderShop(){
  const el=$('p-shop');if(!el)return;
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
@@ -1104,14 +1104,14 @@ function renderShop(){
   ${soon?`<p class="hint" style="color:var(--gold)">${T('shop_soon_t')}</p>`:''}
   ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
  const vips=S.items.filter(x=>VIP_D[x.k]),pd=x=>x.stars/VIP_D[x.k],best=vips.length?vips.reduce((a,b)=>pd(b)<pd(a)?b:a):null,base=vips.find(x=>x.k==='vip1');
- const ashB=S.items.find(x=>x.ash&&x.bon>0),list=ssub==='deal'?[...S.items.filter(x=>x.k==='starter'&&x.left!==0),...(best?[best]:[]),...(ashB?[ashB]:[])]:ssub==='mine'?[]:S.items.filter(x=>(SHOP_CAT[x.k]||'conv')===ssub);
+ const ashB=S.items.find(x=>x.ash&&x.bon>0),list=ssub==='deal'?[...S.items.filter(x=>x.k==='newb'&&x.left!==0),...S.items.filter(x=>x.k==='starter'&&x.left!==0),...(best?[best]:[]),...(ashB?[ashB]:[])]:ssub==='mine'?[]:S.items.filter(x=>(SHOP_CAT[x.k]||'conv')===ssub);
  if(ssub!=='deal')h=''; // шапка з пулом — лише на «Вигідне»
  if(ssub==='deal')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_deal_h')}</p>`;
  if(ssub==='ash')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_ash_h',{a:fmt(G.ash||0)})}</p><p class="hint" style="margin:0 4px 10px">🔥 ${T('shop_d_ash')}</p>`;
  if(ssub!=='mine'&&list.length)h+=`<div class="crnote"><span>💱</span><p>${T('shop_cr_rate')}</p></div>`; // 14.11 (Влад): ціна в крипті — за курсом
  for(const it of list){
   const done=it.left===0,desc=T(SHOP_DESC[it.k]||''),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
-  h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${fmtN(save)}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}${it.bon>0?`<div class="shtag">🔥 ${T('shop_bon_tag')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'&&it.pool?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4>${desc?`<p class="hint">${desc}</p>`:''}${it.ash?`<p class="shash">${it.bon>0?`<s>⚱️ ${n3(it.ash)}</s> <b>⚱️ ${n3(it.ash+it.bon)}</b> <em>+${n3(it.bon)}</em>`:`<b>⚱️ ${n3(it.ash)}</b>`}</p>${it.bon===0&&ASH_BON[it.k]?`<p class="hint">${T('shop_bon_used')}</p>`:''}`:''}${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
+  h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${fmtN(save)}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}${it.k==='newb'?`<div class="shtag shnew">🎁 ${T('nb_tag')} · −${Math.round((1-it.usd/(it.old||40))*100)}%</div>`:''}${it.bon>0?`<div class="shtag">🔥 ${T('shop_bon_tag')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'&&it.pool?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4>${desc?`<p class="hint">${desc}</p>`:''}${it.k==='newb'?`<p class="shash"><s>$${it.old||40}</s> <b>$${it.usd.toFixed(2)}</b>${it.until>Date.now()?` <em>⏳ ${sbHms(it.until-Date.now())}</em>`:''}</p>`:''}${it.ash?`<p class="shash">${it.bon>0?`<s>⚱️ ${n3(it.ash)}</s> <b>⚱️ ${n3(it.ash+it.bon)}</b> <em>+${n3(it.bon)}</em>`:`<b>⚱️ ${n3(it.ash)}</b>`}</p>${it.bon===0&&ASH_BON[it.k]?`<p class="hint">${T('shop_bon_used')}</p>`:''}`:''}${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
    ${done?"":vipLine(it.k)}${cardLine(it.k)}${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
    ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
@@ -1845,7 +1845,7 @@ function heroSheet(open){
   sh.classList.remove('open');document.body.classList.remove('hs-open');
  }
 }
-function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready||C.h.ready)),quest:!!(P&&(P.lv>P.f.length||(P.prem&&P.lv>P.p.length))),ach:!!((V&&V.ach)||[]).some(x=>x.done>x.got)}}
+function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready||C.h.ready||(C.n&&C.n.ready))),quest:!!(P&&(P.lv>P.f.length||(P.prem&&P.lv>P.p.length))),ach:!!((V&&V.ach)||[]).some(x=>x.done>x.got)}}
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
@@ -1875,6 +1875,33 @@ function sbOpen(){haptic('medium');const l=sbLeft();
   <div class="sbrules"><div>🗡️ ${T('sb_r1')}</div><div>⚔️ ${T('sb_r2')}</div><div>⚱️ ${T('sb_r3')}</div><div>🏆 ${T('sb_r4')}</div></div></div>`,'🔒 '+T('sb_lock'),()=>{},null,'sboss')}
 if($('sBos'))$('sBos').onclick=sbOpen;
 setInterval(sbPaint,1e3);
+// 15.11 (Влад): «Пакет новачка» — лише перші 24 год від реєстрації; плашка з таймером над ареною і вікно при кожному заході в гру
+var NB=null,nbShown=0;
+function nbSet(o){NB=o&&o.until>Date.now()?o:null;nbPaint();if(NB&&!nbShown&&!V.isAdmin){nbShown=1;nbAuto(0)}}
+function nbAuto(n){setTimeout(()=>{if(!NB)return;if(tutCur&&n<60){nbAuto(n+1);return}nbOpen()},n?5000:1500)} // під час навчання не заважаємо — чекаємо до 5 хв
+function nbPaint(){const b=$('nbOf');if(!b)return;const l=NB?NB.until-Date.now():0;if(l<=0){b.style.display='none';if(NB){NB=null;shopData=null;dirty.shop=1}return}
+ b.style.display='';$('nbOfT').textContent='−'+nbOff()+'%';b.title=T('nb_t');$('nbOfC').textContent=sbHms(l);const c=$('nbCd');if(c)c.textContent=sbHms(l)}
+const nbOff=()=>NB?Math.round((1-NB.usd/NB.old)*100):0;
+function nbOpen(){if(!NB)return;haptic('medium');const o=NB,l=o.until-Date.now();
+ const row=(ic,t,s)=>`<div class="nbr"><span class="nbi">${ic}</span><span><b>${t}</b>${s?`<small>${s}</small>`:''}</span></div>`;
+ modal(`<div class="nbw"><div class="nbart"><img src="assets/offer/newb.webp?v=1" alt=""><i class="nbglow"></i><div class="nbbadge">−${nbOff()}%</div></div>
+  <div class="nbtag">${T('nb_tag')}</div><h3 class="nbh">${T('nb_t')}</h3>
+  <div class="nbprice"><s>$${o.old}</s><b>$${o.usd.toFixed(2)}</b></div>
+  <div class="nbnow"><div class="nbsec">${T('nb_now')}</div>${row(RIC('ash'),'+'+n3(o.ash)+' '+T('nb_ash'),'')}${row(eggIc('c'),T('nb_eggs',{n:o.eggs}),'')}</div>
+  <div class="nbnow"><div class="nbsec">${T('nb_30',{d:o.days})}</div>${row('💤','+'+(o.off/3600)+' '+T('nb_off'),T('nb_off_s'))}${row(RIC('ash'),'+'+o.ashDay+' '+T('nb_day'),T('nb_day_s',{n:n3(o.ashDay*o.days)}))}${row(RIC('gold'),'+'+o.gold+'% '+T('nb_gold'),T('nb_gold_s'))}</div>
+  <div class="nbcdw"><span>${T('nb_ends')}</span><b id="nbCd">${sbHms(l)}</b></div>
+  <div class="nbbuy" id="nbBuy"><button class="btn pri nbmain" data-nbm="stars">⭐ ${o.stars} ${T('nb_buy')}</button>
+   <div class="row shopb"><button class="btn" data-nbm="usdt">💵 ${o.usd.toFixed(2)} USDT</button><button class="btn" data-nbm="gram">💎 GRAM</button></div>
+   <button class="btn shoth" data-nbm="other">${T('shop_other_link')} ›</button></div>
+  <p class="hint nbonce">${T('nb_once')}</p></div>`,null,null,()=>{
+  document.querySelectorAll('#mbox [data-nbm]').forEach(b=>b.onclick=async()=>{const m=b.dataset.nbm;
+   if(m==='stars'){queue.shift();showModal();shopBuy('newb','stars');return}
+   if(!shopData){try{shopData=(await api('shopInfo')).out}catch(e){toast(errT(e));return}}
+   queue.shift();showModal();
+   if(m==='other')shopOther('newb');
+   else if(m==='gram'&&!(shopData.items.find(x=>x.k==='newb')||{}).gram)toast(T('nb_nogram'));
+   else shopBuy('newb',m)})},'newb')}
+setInterval(nbPaint,1e3);if($('nbOf'))$('nbOf').onclick=nbOpen;window.__nbOpen=nbOpen; // __nbOpen — для тестів
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
 $('lvl').onclick=$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click(); // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
