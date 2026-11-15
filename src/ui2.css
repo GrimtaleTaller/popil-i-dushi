@@ -602,3 +602,35 @@ h4.cih .cic[src*="/chat."],h4.cih .cic[src*="/members."],h4.cih .cic[src*="/log.
 .subtabs button.csb .cic{opacity:1}
 .subtabs button.csb:not(.act) .cic{transform:scale(.95)}
 .subtabs button.csb.act .cic{transform:translateY(-1px) scale(1.15);filter:brightness(1.9) saturate(1.45) drop-shadow(0 0 1px #fffb) drop-shadow(0 0 8px #ffb04acc) drop-shadow(0 2px 3px #000)!important}
+/* 15.11 (Влад): анонс боса сервера — смуга на екрані бою й вікно з анімацією */
+.sbos{display:flex;align-items:center;gap:8px;width:calc(100% - 16px);margin:6px 8px 0;padding:7px 12px 7px 8px;border-radius:12px;border:1.5px solid #c2303f;color:#ffd9d9;font-weight:800;font-size:13px;
+ background:linear-gradient(90deg,#3a0b12ee,#1b070bee 60%,#3a0b12ee);box-shadow:0 0 14px #c2303f66,inset 0 0 12px #ff3b4a22;animation:sbglow 2.2s ease-in-out infinite;position:relative;overflow:hidden}
+.sbos::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ff5a6a33 50%,transparent 70%);transform:translateX(-100%);animation:sbshine 3.5s ease-in-out infinite}
+.sbos-ic{flex:0 0 30px;height:30px;border-radius:8px;background:url(../assets/boss_teaser.webp) 50% 33%/280% no-repeat;box-shadow:0 0 0 1px #ff4a5a77}
+.sbos-t{flex:1;text-align:left;letter-spacing:.2px}
+.sbos-c{font-variant-numeric:tabular-nums;font-size:15px;color:#fff;text-shadow:0 0 8px #ff3040}
+@keyframes sbglow{50%{box-shadow:0 0 22px #ff304088,inset 0 0 16px #ff3b4a33;border-color:#ff4a5a}}
+@keyframes sbshine{60%,100%{transform:translateX(100%)}}
+.sbw{text-align:center}
+.sbart{position:relative;margin:-6px -6px 10px;border-radius:14px;overflow:hidden;aspect-ratio:720/700;box-shadow:0 0 24px #c2303f55}
+.sbart img{width:100%;height:100%;object-fit:cover;display:block;animation:sbbreath 5s ease-in-out infinite;transform-origin:50% 40%}
+@keyframes sbbreath{50%{transform:scale(1.025);filter:brightness(1.12) saturate(1.15)}}
+.sbeye{position:absolute;top:35.2%;width:3.2%;height:2.2%;border-radius:50%;background:radial-gradient(circle,#fff 0,#ff3a3a 35%,#ff000000 70%);box-shadow:0 0 14px 6px #ff2030aa;animation:sbeye 2.6s ease-in-out infinite}
+.sbeye.l{left:44.6%}.sbeye.r{left:52.2%}
+@keyframes sbeye{0%,100%{opacity:.55;transform:scale(.8)}45%{opacity:1;transform:scale(1.25)}52%{opacity:.15;transform:scale(1,.15)}58%{opacity:1;transform:scale(1.15)}}
+.sbcrk{position:absolute;inset:8% 25% 22%;background:radial-gradient(ellipse at 50% 40%,#ff203055,transparent 60%);mix-blend-mode:screen;animation:sbcrk 3.1s ease-in-out infinite}
+@keyframes sbcrk{50%{opacity:.25}}
+.sbfog{position:absolute;left:-30%;right:-30%;bottom:-6%;height:38%;background:radial-gradient(ellipse at 30% 60%,#3b2a3acc,transparent 60%),radial-gradient(ellipse at 75% 70%,#2a1e2acc,transparent 55%);filter:blur(6px);opacity:.75;animation:sbfog 14s linear infinite alternate}
+.sbfog.b{bottom:-12%;opacity:.55;animation-duration:19s;animation-direction:alternate-reverse}
+@keyframes sbfog{to{transform:translateX(18%)}}
+.sbbat{position:absolute;width:26px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 12'%3E%3Cpath d='M13 4c1-2 2-2 2-2l-1 2c3-3 8-3 12 1-3-1-5 0-6 2-1-1-3-1-4 1-1-1-2-1-3-1-1 0-2 0-3 1-1-2-3-2-4-1-1-2-3-3-6-2 4-4 9-4 12-1l-1-2s1 0 2 2z' fill='%230b0608'/%3E%3C/svg%3E") center/contain no-repeat;animation:sbbat 9s linear infinite}
+.sbbat.b1{top:12%;left:-10%}.sbbat.b2{top:22%;left:-15%;animation-delay:3.2s;transform:scale(.7)}.sbbat.b3{top:6%;left:-12%;animation-delay:6.1s;animation-duration:11s}
+@keyframes sbbat{0%{transform:translate(0,0)}25%{transform:translate(40vw,-12px) scaleY(.6)}50%{transform:translate(80vw,6px)}75%{transform:translate(120vw,-8px) scaleY(.6)}100%{transform:translate(160vw,0)}}
+.sbtag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#ffb3b3;background:#5a121c;border:1px solid #c2303f88}
+.sbh{margin:8px 0 4px;color:#ffd0d0;text-shadow:0 0 10px #ff304066}
+.sbq{font-size:13px;opacity:.85;margin:0 4px 10px}
+.sbcdw{display:flex;flex-direction:column;align-items:center;gap:2px;margin:0 auto 12px;padding:8px 18px;border-radius:12px;background:#22080dcc;border:1px solid #c2303f77;max-width:240px}
+.sbcdw span{font-size:11.5px;opacity:.8;text-transform:uppercase;letter-spacing:.5px}
+.sbcdw b{font-size:28px;font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 0 12px #ff3040}
+.sbrules{display:grid;gap:6px;text-align:left;font-size:12.5px}
+.sbrules div{padding:6px 10px;border-radius:10px;background:#ffffff0a;border:1px solid #ffffff10}

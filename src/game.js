@@ -1845,6 +1845,19 @@ function rkLoad(){if(document.visibilityState!=='visible')return;for(const k of 
 // тап — рейтинг, де в тебе найкраще місце (Сила чи Етап; при рівності — Сила). Влад 13.11
 if($('rkBtn'))$('rkBtn').onclick=()=>{haptic('light');const p=rkPlace('power'),s=rkPlace('stage');topKind=s&&(!p||s<p)?'stage':'power';lastSub.arena='top';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();setTimeout(()=>{const t=document.querySelector('.tabsw');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})},50)};
 setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
+// 15.11 (Влад): анонс боса сервера — хто він, поки таємниця; поява — з новим ігровим днем (00:00 UTC = 02:00 Київ). Сам бос ще неактивний (рішення в Штабі)
+const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
+const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
+const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
+function sbPaint(){const b=$('sBos');if(!b)return;if(SBOSS.on||!G){b.style.display='none';return}b.style.display='';const l=sbLeft();
+ $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
+function sbOpen(){haptic('medium');const l=sbLeft();
+ modal(`<div class="sbw"><div class="sbart"><img src="assets/boss_teaser.webp?v=1" alt=""><i class="sbeye l"></i><i class="sbeye r"></i><i class="sbcrk"></i><i class="sbfog a"></i><i class="sbfog b"></i><i class="sbbat b1"></i><i class="sbbat b2"></i><i class="sbbat b3"></i></div>
+  <div class="sbtag">${T('sb_tag')}</div><h3 class="sbh">${T('sb_t')}</h3><p class="sbq">${T('sb_q')}</p>
+  <div class="sbcdw"><span>${T(l?'sb_in':'sb_soon_t')}</span><b id="sbCd">${l?sbHms(l):T('sb_soon')}</b></div>
+  <div class="sbrules"><div>🗡️ ${T('sb_r1')}</div><div>⚔️ ${T('sb_r2')}</div><div>⚱️ ${T('sb_r3')}</div><div>🏆 ${T('sb_r4')}</div></div></div>`,'🔒 '+T('sb_lock'),()=>{},null,'sboss')}
+if($('sBos'))$('sBos').onclick=sbOpen;
+setInterval(sbPaint,1e3);
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
 $('lvl').onclick=$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click(); // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
