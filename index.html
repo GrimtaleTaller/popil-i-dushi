@@ -205,7 +205,7 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
 .petinc{display:flex;align-items:center;gap:10px;margin:6px 0 10px}.petinc>div{flex:1}.egg{font-size:22px}.egg.r{filter:hue-rotate(200deg) saturate(2) drop-shadow(0 0 4px #7aa8ff)}
 .petgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.petc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:12px;text-align:center}.petc.act{border-color:var(--acc);background:#2c1d1f}.petc.no{opacity:.45}.petc small{color:var(--mut);font-size:10px}
 </style>
-<link rel="stylesheet" href="src/ui2.css?v=82">
+<link rel="stylesheet" href="src/ui2.css?v=83">
 </head>
 <body>
 <!-- заставка -->
@@ -496,6 +496,7 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
 
 <div class="scene" id="scene"></div>
 <div class="arena" id="arena">
+  <button class="nbof mpof" id="mpOf" style="display:none"><span class="nbof-ic mpof-ic"></span><span class="nbof-p" id="mpOfT"></span><span class="nbof-c" id="mpOfC"></span></button>
   <button class="nbof" id="nbOf" style="display:none"><span class="nbof-ic"></span><span class="nbof-p" id="nbOfT"></span><span class="nbof-c" id="nbOfC"></span></button>
   <div class="ahead">
     <button class="nav" id="prev">‹</button>
@@ -553,9 +554,9 @@ body[data-scene=clan] .scene{background-image:radial-gradient(ellipse at center,
 <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="src/i18n.js?v=154"></script>
+<script src="src/i18n.js?v=155"></script>
 <script src="src/gear.js?v=5"></script>
 <script src="src/pen.js?v=2"></script>
-<script src="src/game.js?v=220"></script>
+<script src="src/game.js?v=221"></script>
 </body>
 </html>

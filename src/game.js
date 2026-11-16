@@ -313,7 +313,7 @@ function renderTop(){
  {const hs=$('hsSub');if(hs&&G&&document.body.classList.contains('hs-open'))hs.textContent=T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)})} // 13.11 (Влад): рівень і Сила в шапці «Герой» оновлюються разом із верхньою панеллю
  if(!G)return;
  const gold=G.gold+pend.gold;let xp=G.xp+pend.xp;
- $('lvl').textContent=G.lvl;$('gold').textContent=fmt(gold);$('souls').textContent=fmt(G.souls||0);$('ashv').textContent=fmt(G.ash||0);$('pw').textContent=T('power',{n:fmt(power(H))});
+ $('lvl').textContent=G.lvl;$('lvl').classList.toggle('frm-moon',G.frm==='moon');$('gold').textContent=fmt(gold);$('souls').textContent=fmt(G.souls||0);$('ashv').textContent=fmt(G.ash||0);$('pw').textContent=T('power',{n:fmt(power(H))});
  {const xn=xpNeed(G.lvl);$('xpt').textContent=fmt(Math.min(xp,xn))+' / '+fmt(xn)+' · '+Math.min(100,Math.floor(xp/xn*100))+'%'}$('xpb').style.width=Math.min(100,xp/xpNeed(G.lvl)*100)+'%';
  if(xp>=xpNeed(G.lvl)&&Date.now()-lvlSyncAt>8000){lvlSyncAt=Date.now();setTimeout(()=>sync(true),300)} // 13.11 (Влад): смуга повна, а рівень чекав синхронізації до хвилини — тепер одразу
  const mhp=B.rep?B.rep.maxHp:H.hp;
@@ -898,6 +898,7 @@ const LOGT={
  lvl:a=>T('log_lvl',{n:a[0]}),
  loot:a=>`<span style="color:${RAR[a[0]].c}">${SLOT[a[1]].ic} ${RAR[a[0]].n}: ${SLOT[a[1]].names[a[2]]||''}</span>`,
  bagfull:()=>T('log_bagfull'),
+ mp:a=>T('lg_mp',{n:a[0]}),mpAuto:a=>T('lg_mpauto',{n:a[0]}),
  igive:a=>`<span style="color:${(RAR[a[1]]||RAR[0]).c}">${T('lg_igive',{w:esc(String(a[0]||'')),r:(RAR[a[1]]||RAR[0]).n})}</span>`,
  igot:a=>`<span style="color:${(RAR[a[1]]||RAR[0]).c}">${T('lg_igot',{w:esc(String(a[0]||'')),r:(RAR[a[1]]||RAR[0]).n})}</span>`,
  offline:a=>T('log_offline',{h:Math.floor(a[0]/3600),m:Math.floor(a[0]%3600/60),g:fmt(a[1]),i:a[2]})+(a[3]?', +'+a[3]+' 🔥':'')+(a[4]?', +'+fmt(a[4])+' 🔩':''),
@@ -1553,7 +1554,7 @@ function renderRank(){
   if(d.prizes){const ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
    h+=`<div class="card"><h4>🏆 ${T('prize_t')}</h4><p class="hint">${T('prize_hint')}</p>${hasPrize?`<div class="chips">${P.map(q=>`<span class="chip">${q.from===q.to?q.from:q.from+'–'+q.to}: ⚱️${q.ash}</span>`).join('')}</div>`:`<p class="hint">${T('prize_none')}</p>`}
    ${aw?`<p class="hint">${T('top_rating_w',{n:d.arenaMin||20})}</p><p class="hint">${T('top_rating_f',{f:d.me?Number(d.me.f)||0:0,n:d.arenaMin||20})}</p>`:''}${d.pot>0?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
-  const row=r=>{const pl=aw?(r.cp||0):r.place;return `<div class="${r.me?'me':''}"${aw&&!r.cp?' style="opacity:.55"':''}><b>${!pl?'—':pl<=3?['🥇','🥈','🥉'][pl-1]:pl}</b><span>${penI(r.pn)}${esc(r.name)}${hasPrize&&(aw?r.cp&&prizeOf(r.cp):prizeOf(r.place))?` <small style="color:var(--gold)">⚱️${prizeOf(aw?r.cp:r.place)}</small>`:''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`};
+  const row=r=>{const pl=aw?(r.cp||0):r.place;return `<div class="${r.me?'me':''}"${aw&&!r.cp?' style="opacity:.55"':''}><b>${!pl?'—':pl<=3?['🥇','🥈','🥉'][pl-1]:pl}</b><span>${penI(r.pn)}${r.frm==='moon'?FRM_MOON:''}${esc(r.name)}${hasPrize&&(aw?r.cp&&prizeOf(r.cp):prizeOf(r.place))?` <small style="color:var(--gold)">⚱️${prizeOf(aw?r.cp:r.place)}</small>`:''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`};
   h+='<div class="rank">'+d.rows.map(row).join('')+'</div>';
   if(d.me&&!d.rows.some(r=>r.me))h+='<div class="rank" style="margin-top:8px">'+row(d.me)+'</div>';
   h+=`<p class="hint">${T('top_total',{n:d.total})}</p><div class="row"><button class="btn" id="tRef">🔄 ${T('refresh')}</button></div>`}
@@ -1734,7 +1735,7 @@ function qRow(q,pts,rw){return `<div class="item" style="border-left-color:${q.o
 function renderQuest(){
  const P=V.pass,el=$('p-quest');if(!P){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
  const pvT=MP?`<div class="seg pvseg"><button data-pv="w" class="${passView==='w'?'act':''}">🎟️ ${T('mp_week')}</button><button data-pv="m" class="${passView==='m'?'act':''}">🌙 ${T('mp_month')}${MP.prem?'':' · −'+mpOff(MP)+'%'}</button></div>`:'';
- if(MP&&passView==='m'){el.innerHTML=pvT+mpRoad();el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});el.querySelectorAll('[data-mpopen]').forEach(b=>b.onclick=mpOpen);return}
+ if(MP&&passView==='m'){el.innerHTML=pvT+mpRoad();el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});el.querySelectorAll('[data-mpopen]').forEach(b=>b.onclick=mpOpen);if($('mpClaim'))$('mpClaim').onclick=()=>act('mpClaim',{},r=>{haptic('heavy');toast(T('mp_got',{n:(r.out||{}).n||0}))});return}
  const can=P.lv>P.f.length||(P.prem&&P.lv>P.p.length),inLv=P.lv>=P.max?P.per:P.pts-P.lv*P.per;
  // 13.11 (Влад): пропуск яскравіше — медаль рівня з кільцем прогресу, смуга «X / Y очок до рівня N», дорога нагород з плитками
  const mx=P.lv>=P.max,pct=mx?100:Math.max(0,Math.min(100,inLv/P.per*100)),nCl=[...Array(Math.min(P.lv,P.max)).keys()].reduce((a,k)=>a+(P.f.includes(k+1)?0:1)+(P.prem&&!P.p.includes(k+1)?1:0),0);
@@ -1966,8 +1967,8 @@ setInterval(sbPaint,1e3);
 var passView='w',MP=null,mpShown=0;
 function mpRw(x){const o=[];if(x.a)o.push([RIC('ash'),n3(x.a),T('mp_r_ash')]);if(x.scroll)o.push([RIC('scroll'),'×'+x.scroll,T('mp_r_scroll')]);if(x.egg)o.push([eggIc(x.egg[0]),'×'+x.egg[1],T(x.egg[0]==='r'?'pass_egg_r':'pass_egg')]);
  if(x.gem)o.push([gemIc('d'+x.gem[0]),'×'+x.gem[1],T('mp_r_gem',{l:ROM[x.gem[0]-1]})]);if(x.cat)o.push(['💎','×'+x.cat,T('mp_r_cat')]);if(x.ch)o.push([chestIc(x.ch[0]),'×'+x.ch[1],T('mp_r_ch')]);
- if(x.key)o.push([RIC('key'),'×'+x.key[1],T('mp_r_key',{t:x.key[0]})]);if(x.vip)o.push(['👑',x.vip+' '+T('mp_d'),'VIP']);if(x.frame)o.push(['🌙','',T('mp_r_frame')]);return o}
-function mpSum(rw){const s={a:0,scroll:0,egg:0,key:0,cat:0,vip:0};for(const x of rw){s.a+=x.a||0;s.scroll+=x.scroll||0;s.egg+=x.egg&&x.egg[0]==='r'?x.egg[1]:0;s.key+=x.key?x.key[1]:0;s.cat+=x.cat||0;s.vip+=x.vip||0}return s}
+ if(x.key)o.push(x.kt?[RIC('key'),'×'+x.key,T('mp_r_key',{t:x.kt})]:[chestIc(2),'×'+x.key,T('mp_r_ch')]);if(x.vip)o.push(['👑',x.vip+' '+T('mp_d'),'VIP']);if(x.frame)o.push(['🌙','',T('mp_r_frame')]);return o}
+function mpSum(rw){const s={a:0,scroll:0,egg:0,key:0,cat:0,vip:0};for(const x of rw){s.a+=x.a||0;s.scroll+=x.scroll||0;s.egg+=x.egg&&x.egg[0]==='r'?x.egg[1]:0;s.key+=x.key||0;s.cat+=x.cat||0;s.vip+=x.vip||0}return s}
 const mpOff=o=>Math.round((1-o.usd/o.old)*100);
 function mpOpen(){const o=MP;if(!o)return;haptic('medium');const promo=o.until>Date.now(),S=mpSum(o.rw),tile=(ic,v,t)=>`<div class="nbt"><span class="nbti">${ic}</span><b>${v}</b><small>${t}</small></div>`;
  modal(`<div class="nbw mpw"><div class="nbart mpart"><img src="assets/offer/mpass.webp?v=1" alt=""><i class="nbglow"></i>${promo?`<div class="nbbadge">−${mpOff(o)}%</div>`:''}
@@ -1983,7 +1984,8 @@ function mpOpen(){const o=MP;if(!o)return;haptic('medium');const promo=o.until>D
    if(m==='see'){passView='m';tab='quest';lastSub.quest='quest';document.querySelector(tabBtn('quest')).click();dirty.quest=1;return}
    shopBuy('mpass',m)})},'mpass')}
 function mpTick(){const c=$('mpCd');if(c&&MP)c.textContent=sbHms(Math.max(0,MP.until-Date.now()));document.querySelectorAll('[data-mpcd]').forEach(e=>{e.textContent=MP?sbHms(Math.max(0,MP.until-Date.now())):''})}
-setInterval(mpTick,1e3);window.__mpOpen=mpOpen; // __mpOpen — для тестів
+function mpPaint(){const b=$('mpOf');if(!b)return;const on=MP&&!MP.prem&&MP.until>Date.now();b.style.display=on?'':'none';b.classList.toggle('dual',!!(NB&&NB.until>Date.now()));if(on){$('mpOfT').textContent='−'+mpOff(MP)+'%';$('mpOfC').textContent=sbHms(MP.until-Date.now())}}
+setInterval(()=>{mpTick();mpPaint()},1e3);if($('mpOf'))$('mpOf').onclick=()=>mpOpen();window.__mpOpen=mpOpen; // __mpOpen — для тестів
 function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw);
  return `<div class="card shopc mpcard"><div class="mpthumb" data-mpopen><img src="assets/offer/mpass.webp?v=1" alt="">${promo?`<div class="mpbadge">−${mpOff(o)}%</div><div class="mpcdp">⏳ <span data-mpcd>${sbHms(o.until-Date.now())}</span></div>`:''}<span class="mptag2">🌙 ${T('mp_tag')}</span></div>
   <h4 class="shh"><span>${T('mp_t')}</span></h4><p class="hint">${T('mp_d_shop',{l:o.max,d:30})}</p>
@@ -1991,14 +1993,16 @@ function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw);
   <p class="shash">${promo?`<s>$${o.old}</s> `:''}<b>$${(promo?o.usd:o.old).toFixed(2)}</b></p>
   <div class="row shopb"><button class="btn pri" data-buy="mpass" data-m="stars">⭐ ${promo?o.stars:o.ostars}</button><button class="btn" data-buy="mpass" data-m="usdt">💵 ${(promo?o.usd:o.old).toFixed(2)} USDT</button></div>
   <button class="btn shoth" data-mpopen>${T('mp_more')} ›</button></div>`}
+const mpCan=o=>o&&o.prem?Math.max(0,o.lv-(o.got||[]).filter(l=>l<=o.lv).length):0;
+const FRM_MOON='<img class="frmm" src="assets/offer/moon_frame.webp?v=1" alt="🌙">'; // 16.11: рамка «Місячна» (45-й рівень Місячної стежки) — біля ніка в рейтингах і біля рівня в шапці
 function mpRoad(){const o=MP;if(!o)return '';const inLv=o.lv>=o.max?o.per:o.pts-o.lv*o.per,pct=o.lv>=o.max?100:Math.max(0,Math.min(100,inLv/o.per*100)),promo=o.until>Date.now();
  let h=`<div class="card mptop"><div class="mptop-h"><div class="pt2-medal mpmedal"><b>${o.lv}</b><small>${T('pass_lv_s')}</small></div><div><h4>🌙 ${T('mp_t')}</h4><div class="pt2-sub">${T('pass_lv',{l:o.lv,m:o.max})} · ${T('pass_pts',{p:fmt(o.pts)})}</div>
   <div class="pt2-time">${o.prem?'⏳ '+T('pass_end',{t:tLeft(o.end-Date.now())})+' · <b class="pt2-on">🌙 '+T('mp_on')+'</b>':'🔒 '+T('mp_off')}</div></div></div>
   <div class="pt2-bar mpbar"><i style="width:${pct}%"></i><span>${T('pass_next',{a:fmt(inLv),b:fmt(o.per),l:Math.min(o.max,o.lv+1)})}</span></div>
-  ${o.prem?`<button class="btn pri pt2-claim glow">🎁 ${T('claim_all')}</button>`:`<button class="btn pri pt2-claim glow" data-mpopen>🌙 ${T('mp_unlock')} · ${promo?`<s>$${o.old}</s> `:''}$${(promo?o.usd:o.old).toFixed(2)}</button>${promo?`<p class="pt2-hint">⏳ ${T('mp_promo_left')} <b data-mpcd>${sbHms(o.until-Date.now())}</b></p>`:''}`}</div>`;
+  ${o.prem?`<button class="btn pri pt2-claim${mpCan(o)?' glow':''}" id="mpClaim" ${mpCan(o)&&!busy?'':'disabled'}>🎁 ${T('claim_all')}${mpCan(o)?' · '+mpCan(o):''}</button>`:`<button class="btn pri pt2-claim glow" data-mpopen>🌙 ${T('mp_unlock')} · ${promo?`<s>$${o.old}</s> `:''}$${(promo?o.usd:o.old).toFixed(2)}</button>${promo?`<p class="pt2-hint">⏳ ${T('mp_promo_left')} <b data-mpcd>${sbHms(o.until-Date.now())}</b></p>`:''}`}</div>`;
  h+=`<div class="card mproad"><h4>🛤️ ${T('mp_road',{n:o.max})}</h4><div class="mpgrid">`;
  o.rw.forEach((x,i)=>{const l=i+1,ok=o.lv>=l,big=x.scroll||x.vip||x.frame||(x.egg&&x.egg[0]==='r'),r=mpRw(x),m=r[0],ex=r.slice(1);
-  h+=`<div class="mpc${ok?' ok':''}${big?' big':''}${l===o.lv+1?' nx':''}"><span class="mpl">${l}</span><div class="mpi">${m[0]}<b>${m[1]}</b></div>${ex.length?`<div class="mpx">${ex.map(e=>`<span>${e[0]}${e[1]?`<em>${e[1]}</em>`:''}</span>`).join('')}</div>`:''}${!o.prem?'<i class="lk">🔒</i>':ok?'<i class="cn">🎁</i>':''}</div>`});
+  h+=`<div class="mpc${ok?' ok':''}${big?' big':''}${l===o.lv+1?' nx':''}"><span class="mpl">${l}</span><div class="mpi">${m[0]}<b>${m[1]}</b></div>${ex.length?`<div class="mpx">${ex.map(e=>`<span>${e[0]}${e[1]?`<em>${e[1]}</em>`:''}</span>`).join('')}</div>`:''}${!o.prem?'<i class="lk">🔒</i>':(o.got||[]).includes(l)?'<i class="ck">✓</i>':ok?'<i class="cn">🎁</i>':''}</div>`});
  return h+`</div><p class="hint" style="margin-top:8px">${T('mp_road_h',{p:o.per})}</p></div>`}
 // 15.11 (Влад): «Пакет новачка» — лише перші 24 год від реєстрації; плашка з таймером над ареною і вікно при кожному заході в гру
 var NB=null,nbShown=0;

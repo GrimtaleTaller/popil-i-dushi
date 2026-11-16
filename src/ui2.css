@@ -848,3 +848,10 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .mpx{display:flex;flex-wrap:wrap;justify-content:center;gap:2px}.mpx span{display:inline-flex;align-items:center;font-size:12px}.mpx em{font-style:normal;font-size:10px;font-weight:800;margin-left:1px}
 .mpx .ric{width:16px;height:16px}.mpx .chimg{width:18px!important;height:18px!important}.mpi .chimg{width:28px!important;height:28px!important}
 .mpc .lk,.mpc .cn{position:absolute;top:2px;right:4px;font-size:10px;font-style:normal}
+.mpof{right:6px}.mpof.dual{right:66px}
+.mpof-ic{background-image:url(../assets/offer/mpass_ic.webp)!important;border-color:#b9a6ff!important;box-shadow:0 0 12px #8f7cffcc,0 2px 6px #000a!important}
+.mpof .nbof-c{border-color:#8f7cff99;text-shadow:0 0 6px #8f7cff}
+.mpc .ck{position:absolute;top:2px;right:4px;font-size:11px;font-style:normal;color:#6fd38f}
+.lvl.frm-moon{box-shadow:0 0 0 2px #b9a6ff,0 0 14px #8f7cffcc!important}
+.lvl.frm-moon::before{content:'';position:absolute;left:-10px;bottom:-10px;width:22px;height:22px;background:url(../assets/offer/moon_frame.webp?v=1) center/contain no-repeat;filter:drop-shadow(0 0 4px #8f7cff);pointer-events:none}
+.frmm{width:16px;height:16px;vertical-align:-3px;margin-right:2px;filter:drop-shadow(0 0 3px #8f7cff)}
