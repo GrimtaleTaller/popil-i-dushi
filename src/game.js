@@ -1496,7 +1496,7 @@ function renderClan(){
  el.querySelectorAll('[data-kbt]').forEach(b=>b.onclick=()=>{kbT=+b.dataset.kbt;renderClan()});
  {const kc=(clanData.craft||[]).find(x=>x.t===kbT);if(kc){const k1=kc.ash,inp=$('kbN'),go=$('kbGo'),mx=Math.min(500,Math.floor((G.ash||0)/k1));
   const upd=()=>{const n=Math.floor(+inp.value||0);go.disabled=!(n>=1&&n<=mx);go.textContent=n>=1?`🛒 ×${n} · ⚱️${fmt(n*k1)}`:'🛒 ×N'};
-  if(inp){inp.oninput=upd;$('kbMax').onclick=()=>{inp.value=mx||'';upd();if(!mx)toast(ERR.no_ash)};go.onclick=()=>kbAsk(kbT,Math.floor(+inp.value||0),k1)}
+  if(inp){inp.oninput=upd;$('kbMax').onclick=()=>{inp.value=mx||'';upd();if(!mx)toast(ERR.no_ash)};go.onclick=()=>kbAsk(kbT,Math.floor(+inp.value||0),k1);if(inp.value)upd()} // 16.11 (скрін Влада): автооновлення клану зберігає введене число, а кнопку малює заново — перераховуємо
   el.querySelectorAll('[data-kbn]').forEach(b=>b.onclick=()=>{const n=+b.dataset.kbn;kbAsk(kbT,n,n===5?kc.ash5/5:k1)})}}
  // 14.11 (Влад): крафт N ключів за раз — поле, «Макс» (скільки дозволяє Попіл казни), ціна наживо
  if($('cKN')){const inp=$('cKN'),go=$('cKGo'),k1=+go.dataset.k1||1,cAsh=(C.clan&&C.clan.ash)||0,mx=Math.max(0,Math.min(500,Math.floor(cAsh/k1)));
