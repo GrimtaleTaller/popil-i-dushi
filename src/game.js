@@ -153,7 +153,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);if(v&&'mp' in v){MP=v.mp||null;if(MP&&!MP.prem&&MP.until>Date.now()&&!mpShown&&!(NB&&!nbShown)){mpShown=1;setTimeout(()=>{if(!tutCur)mpOpen()},2500)}}if(v&&v.pjoin)pjoinShow(v.pjoin);if(v&&v.cinv)cinvShow(v.cinv);heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);if(v&&'mp' in v){MP=v.mp||null;if(MP&&!MP.prem&&MP.until>Date.now()&&!mpShown){mpShown=1;if(!NB)mpAuto(0)}}if(v&&v.pjoin)pjoinShow(v.pjoin);if(v&&v.cinv)cinvShow(v.cinv);heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -1150,7 +1150,7 @@ function renderShop(){
   ${soon?`<p class="hint" style="color:var(--gold)">${T('shop_soon_t')}</p>`:''}
   ${(G.rn||0)>0?`<div class="row"><button class="btn pri" id="shRn">${T('shop_rn',{n:G.rn})}</button></div>`:''}</div>`;
  const vips=S.items.filter(x=>VIP_D[x.k]),pd=x=>x.stars/VIP_D[x.k],best=vips.length?vips.reduce((a,b)=>pd(b)<pd(a)?b:a):null,base=vips.find(x=>x.k==='vip1');
- const ashB=S.items.find(x=>x.ash&&x.bon>0),list=ssub==='deal'?[...S.items.filter(x=>x.k==='newb'&&x.left!==0),...S.items.filter(x=>x.k==='starter'&&x.left!==0),...(best?[best]:[]),...(ashB?[ashB]:[])]:ssub==='mine'?[]:S.items.filter(x=>(SHOP_CAT[x.k]||'conv')===ssub);
+ const ashB=S.items.find(x=>x.ash&&x.bon>0),list=ssub==='deal'?[...S.items.filter(x=>x.k==='newb'&&x.left!==0),...S.items.filter(x=>x.k==='starter'&&x.left!==0),...(best?[best]:[]),...(ashB?[ashB]:[])]:ssub==='mine'?[]:S.items.filter(x=>x.k!=='mpass'&&(SHOP_CAT[x.k]||'conv')===ssub);
  if(ssub!=='deal')h=''; // шапка з пулом — лише на «Вигідне»
  if(ssub==='deal')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_deal_h')}</p>`;
  if(ssub==='deal'&&MP&&!MP.prem)h+=mpShopCard(MP);
@@ -1734,7 +1734,7 @@ function ptTiles(x,st){const a=[];if(x.gold)a.push(['💰',fmt(x.gold)]);if(x.sh
 function qRow(q,pts,rw){return `<div class="item" style="border-left-color:${q.ok?'#56c271':'#3a3340'}"><div class="ic">${q.ok?'✅':'📜'}</div><div class="info"><div class="nm">${qTxt(q)}</div><div class="bar"><i style="width:${Math.min(100,q.c/q.n*100)}%;background:${q.ok?'#56c271':'#f2c14e'}"></i></div><div class="sub">${fmt(Math.max(0,q.c))}/${fmt(q.n)} · +${pts} ${T('pass_pts_s')}${rw?' · '+rw:''}</div></div></div>`}
 function renderQuest(){
  const P=V.pass,el=$('p-quest');if(!P){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
- const pvT=MP?`<div class="seg pvseg"><button data-pv="w" class="${passView==='w'?'act':''}">🎟️ ${T('mp_week')}</button><button data-pv="m" class="${passView==='m'?'act':''}">🌙 ${T('mp_month')}${MP.prem?'':' · −'+mpOff(MP)+'%'}</button></div>`:'';
+ const pvT=MP?`<div class="seg pvseg"><button data-pv="w" class="${passView==='w'?'act':''}">🎟️ ${T('mp_week')}</button><button data-pv="m" class="${passView==='m'?'act':''}">🌙 ${T('mp_month')}${!MP.prem&&MP.until>Date.now()?' · −'+mpOff(MP)+'%':''}</button></div>`:'';
  if(MP&&passView==='m'){el.innerHTML=pvT+mpRoad();el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});el.querySelectorAll('[data-mpopen]').forEach(b=>b.onclick=mpOpen);if($('mpClaim'))$('mpClaim').onclick=()=>act('mpClaim',{},r=>{haptic('heavy');toast(T('mp_got',{n:(r.out||{}).n||0}))});return}
  const can=P.lv>P.f.length||(P.prem&&P.lv>P.p.length),inLv=P.lv>=P.max?P.per:P.pts-P.lv*P.per;
  // 13.11 (Влад): пропуск яскравіше — медаль рівня з кільцем прогресу, смуга «X / Y очок до рівня N», дорога нагород з плитками
@@ -1972,7 +1972,7 @@ function mpSum(rw){const s={a:0,scroll:0,egg:0,key:0,cat:0,vip:0};for(const x of
 const mpOff=o=>Math.round((1-o.usd/o.old)*100);
 function mpOpen(){const o=MP;if(!o)return;haptic('medium');const promo=o.until>Date.now(),S=mpSum(o.rw),tile=(ic,v,t)=>`<div class="nbt"><span class="nbti">${ic}</span><b>${v}</b><small>${t}</small></div>`;
  modal(`<div class="nbw mpw"><div class="nbart mpart"><img src="assets/offer/mpass.webp?v=1" alt=""><i class="nbglow"></i>${promo?`<div class="nbbadge">−${mpOff(o)}%</div>`:''}
-   <div class="nbcap"><span class="nbtag mptag">🌙 ${T('mp_tag')}</span><h3 class="nbh">${T('mp_t')}</h3><span class="nbdays">📅 ${T('mp_for',{l:o.max,d:30})}</span></div></div>
+   <div class="nbcap"><span class="nbtag mptag">🌙 ${T(promo?'mp_tag':'mp_tag_new')}</span><h3 class="nbh">${T('mp_t')}</h3><span class="nbdays">📅 ${T('mp_for',{l:o.max,d:30})}</span></div></div>
   <div class="nbpr"><div class="nbprice">${promo?`<s>$${o.old}</s>`:''}<b>$${(promo?o.usd:o.old).toFixed(2)}</b></div>${promo?`<div class="nbcd"><small>${T('mp_ends')}</small><b id="mpCd">${sbHms(o.until-Date.now())}</b></div>`:''}</div>
   <div class="mpx2">✨ ${T('mp_x2')}</div>
   <div class="nbg g3">${tile(RIC('ash'),n3(S.a)+'+',T('mp_r_ash'))}${tile(RIC('scroll'),'×'+S.scroll,T('mp_r_scroll'))}${tile(eggIc('r'),'×'+S.egg,T('mp_eggs_r'))}</div>
@@ -1983,11 +1983,12 @@ function mpOpen(){const o=MP;if(!o)return;haptic('medium');const promo=o.until>D
   document.querySelectorAll('#mbox [data-mpm]').forEach(b=>b.onclick=()=>{const m=b.dataset.mpm;queue.shift();showModal();
    if(m==='see'){passView='m';tab='quest';lastSub.quest='quest';document.querySelector(tabBtn('quest')).click();dirty.quest=1;return}
    shopBuy('mpass',m)})},'mpass')}
+function mpAuto(n){setTimeout(()=>{if(!MP||MP.prem||!(MP.until>Date.now()))return;if(tutCur&&n<60){mpAuto(n+1);return}mpOpen()},n?5000:2500)} // під час навчання не заважаємо — чекаємо до 5 хв (як пакет новачка); новачку в цей захід — лише його пакет
 function mpTick(){const c=$('mpCd');if(c&&MP)c.textContent=sbHms(Math.max(0,MP.until-Date.now()));document.querySelectorAll('[data-mpcd]').forEach(e=>{e.textContent=MP?sbHms(Math.max(0,MP.until-Date.now())):''})}
 function mpPaint(){const b=$('mpOf');if(!b)return;const on=MP&&!MP.prem&&MP.until>Date.now();b.style.display=on?'':'none';b.classList.toggle('dual',!!(NB&&NB.until>Date.now()));if(on){$('mpOfT').textContent='−'+mpOff(MP)+'%';$('mpOfC').textContent=sbHms(MP.until-Date.now())}}
 setInterval(()=>{mpTick();mpPaint()},1e3);if($('mpOf'))$('mpOf').onclick=()=>mpOpen();window.__mpOpen=mpOpen; // __mpOpen — для тестів
 function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw);
- return `<div class="card shopc mpcard"><div class="mpthumb" data-mpopen><img src="assets/offer/mpass.webp?v=1" alt="">${promo?`<div class="mpbadge">−${mpOff(o)}%</div><div class="mpcdp">⏳ <span data-mpcd>${sbHms(o.until-Date.now())}</span></div>`:''}<span class="mptag2">🌙 ${T('mp_tag')}</span></div>
+ return `<div class="card shopc mpcard"><div class="mpthumb" data-mpopen><img src="assets/offer/mpass.webp?v=1" alt="">${promo?`<div class="mpbadge">−${mpOff(o)}%</div><div class="mpcdp">⏳ <span data-mpcd>${sbHms(o.until-Date.now())}</span></div>`:''}<span class="mptag2">🌙 ${T(promo?'mp_tag':'mp_tag_new')}</span></div>
   <h4 class="shh"><span>${T('mp_t')}</span></h4><p class="hint">${T('mp_d_shop',{l:o.max,d:30})}</p>
   <div class="mpchips"><span>${RIC('ash')} ${n3(S.a)}+</span><span>${RIC('scroll')} ×${S.scroll}</span><span>${eggIc('r')} ×${S.egg}</span><span>${RIC('key')} ×${S.key}</span><span>👑 VIP ${S.vip} ${T('mp_d')}</span></div>
   <p class="shash">${promo?`<s>$${o.old}</s> `:''}<b>$${(promo?o.usd:o.old).toFixed(2)}</b></p>
