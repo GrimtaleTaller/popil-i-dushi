@@ -813,3 +813,5 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .card.pclan{text-align:center;border-color:#e2b04a88}
 .reflist .btn.rinv{display:inline-block;margin-top:4px;padding:3px 10px;font-size:12px;border-radius:999px;border:1px solid #e2b04a88;background:#3a2a0e66;color:#ffe3a3}
 .reflist .rinvok{display:inline-block;margin-top:4px;font-size:12px;font-style:normal;color:#7fd67f}
+.plist button[disabled]{opacity:.45}
+.acts2{display:flex;gap:4px;width:0;min-width:100%}.acts .acts2 .btn{flex:1 1 0;min-width:0;padding:2px 1px!important;white-space:nowrap;overflow:hidden;font-size:11px!important;letter-spacing:-.02em}

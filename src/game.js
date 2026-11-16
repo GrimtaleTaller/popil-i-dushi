@@ -432,6 +432,23 @@ function keyGiveDlg(){
   },'keygive')};
  if(clanData)go();else api('clan').then(r=>{clanData=r.out;go()}).catch(e=>toast(errT(e)));
 }
+// 16.11 (Влад): передати річ учаснику свого клану — до легендарної, без зірок/перекидань/каменів; обидва в клані від 3 днів, до 10 на добу; плата ⚱️5 (легендарна ⚱️10)
+function igiveDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;
+ const go=()=>{const C=clanData;if(!C||!C.clan){toast(ERR.igv_noclan);return}
+  const D3=3*864e5,nw=Date.now(),mine=(C.members||[]).find(m=>m.me);if(mine&&mine.ja&&nw-mine.ja<D3){toast(ERR.igv_new);return}
+  const ms=(C.members||[]).filter(m=>!m.me);if(!ms.length){toast(T('igv_none'));return}
+  const fee=it.r>=4?10:5,rl=m=>m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤',dd=t=>{const d=new Date(t);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')};
+  let pid=0,pnm='';
+  modal(`<div class="big">🎁</div><h3>${T('igv_t')}</h3><p style="color:${RAR[it.r].c};margin:4px 0"><b>${itemName(it)}</b></p><p class="hint">${T('igv_hint')}</p>
+   <div class="pick"><button class="pickb" id="igPick"><span>${T('igv_pick')}</span><i>▾</i></button><div class="plist" id="igList">${ms.map(m=>{const nn=m.ja&&nw-m.ja<D3;return `<button data-ip="${m.id}"${nn?' disabled':''}>${rl(m)} <b>${esc(m.name)}</b><small>${nn?T('igv_new_m',{d:dd(m.ja+D3)}):T('lvl',{n:m.lvl||'—'})}</small></button>`}).join('')}</div></div>
+   <p class="hint"${(G.ash||0)<fee?' style="color:#e55"':''}>${T('igv_fee',{n:fee})}${(G.ash||0)<fee?' · '+ERR.no_ash:''}</p>`,T('igv_go'),()=>{
+   if(!pid){toast(T('key_pick_err'));$('igPick').classList.add('shake');setTimeout(()=>$('igPick')&&$('igPick').classList.remove('shake'),400);return false}
+   act('clanItemGive',{id,pid},r=>{const o=(r.out||{}).igive||{};haptic('light');clanData=null;toast(T('igv_ok',{w:esc(o.who||pnm)})+(o.left!=null?' · '+T('igv_left',{n:o.left}):''))})},()=>{const pb=$('igPick'),pl=$('igList');if(!pb)return;
+   pb.onclick=()=>pl.classList.toggle('open');
+   pl.querySelectorAll('[data-ip]:not([disabled])').forEach(b=>b.onclick=()=>{pid=+b.dataset.ip;pnm=b.querySelector('b').textContent;pb.querySelector('span').innerHTML=b.innerHTML.replace(/<small>.*<\/small>/,'');pb.classList.add('set');pl.classList.remove('open');pl.querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b))});
+  },'igive')};
+ if(clanData)go();else api('clan').then(r=>{clanData=r.out;go()}).catch(e=>toast(errT(e)));
+}
 let bagFilter='all';
 // 14.11 (Влад): фільтри Сумки як на Ринку — сховати рідкості, точна рідкість, сортування; запам'ятовуються на пристрої
 let bagF=(()=>{try{const f=JSON.parse(localStorage.getItem('gt_bag_f')||'{}')||{};return {show:Array.isArray(f.show)?f.show:[],sort:f.sort||'def'}}catch(e){return {show:[],sort:'def'}}})(); // 14.11: «Сховати» → «Показати лише» (порожньо = усі) + «Скинути»
@@ -459,7 +476,7 @@ function renderBag(){
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="ic">${gearIc(it)}</div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il,it)).join(' · ')}</div>`:''}</div>
-   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
+   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${((mk,gv)=>mk&&gv?`<div class="acts2"><button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt_s')}</button><button class="btn" data-igv="${it.id}">🎁 ${T('btn_igv_s')}</button></div>`:(mk?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:'')+(gv?`<button class="btn" data-igv="${it.id}">🎁 ${T('btn_igv')}</button>`:''))(it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length),V.pen&&!V.twin&&it.r<=4&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length))}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  setH($('p-bag'),h);
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
@@ -475,6 +492,7 @@ function renderBag(){
  $('p-bag').querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>relicAsk([+b.dataset.rel],'relic'));
  if($('relJ'))$('relJ').onclick=()=>askOnce('relicJ',`<div class="ask ask-a"><div class="ask-ic">⚱️</div><h3>${T('ask_relic_t')}</h3><p class="ask-q">${T('relic_junk_ask',{n:V.forge.relic})}</p></div>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
+ $('p-bag').querySelectorAll('[data-igv]').forEach(b=>b.onclick=()=>igiveDlg(+b.dataset.igv));
  $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
  $('sellC').onclick=()=>sellAsk(G.inv.filter(i=>i.r===0&&!(i.gm&&i.gm.length)).map(i=>i.id),'sellC');
  $('disW').onclick=()=>{const n=(V.forge&&V.forge.junk)||0;if(!n){toast(ERR.no_junk);return}disAsk(worseIds(),'shards','disW',()=>act('dismantleJunk',{mode:'shards'},r=>toast(disMsg(r.out))))}; // 09.11 (Влад): розбір гірших (без легендарних) на уламки прямо в Сумці
@@ -880,6 +898,8 @@ const LOGT={
  lvl:a=>T('log_lvl',{n:a[0]}),
  loot:a=>`<span style="color:${RAR[a[0]].c}">${SLOT[a[1]].ic} ${RAR[a[0]].n}: ${SLOT[a[1]].names[a[2]]||''}</span>`,
  bagfull:()=>T('log_bagfull'),
+ igive:a=>`<span style="color:${(RAR[a[1]]||RAR[0]).c}">${T('lg_igive',{w:esc(String(a[0]||'')),r:(RAR[a[1]]||RAR[0]).n})}</span>`,
+ igot:a=>`<span style="color:${(RAR[a[1]]||RAR[0]).c}">${T('lg_igot',{w:esc(String(a[0]||'')),r:(RAR[a[1]]||RAR[0]).n})}</span>`,
  offline:a=>T('log_offline',{h:Math.floor(a[0]/3600),m:Math.floor(a[0]%3600/60),g:fmt(a[1]),i:a[2]})+(a[3]?', +'+a[3]+' 🔥':'')+(a[4]?', +'+fmt(a[4])+' 🔩':''),
  boss:a=>T('log_boss',{s:a[0],g:fmt(a[1])}),
  wb:a=>T('log_wb',{d:fmt(a[0]),f:a[1]?T('log_wb_f'):''}), // 15.11: бос сервера
@@ -1437,7 +1457,7 @@ function renderClan(){
   return `<div class="item${isOn(m.seen)?' mon':''}" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic cav">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}${isOn(m.seen)?'<i class="ondot"></i>':''}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · ${T('given',{n:'💰'+fmt(m.given||0)+(m.givenAsh?' · ⚱️'+fmt(m.givenAsh):'')})}</div></div>
    <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
  // 14.11 (гравці): фільтри журналу клану за типом подій
- const LOGF={gold:['give'],ash:['giveash','rating'],keys:['craft','kbuy','take','givekey','keygift'],bld:['build','proj','giveres'],ppl:['join','leave','kick','accept','apply','reject','role','create','settings','tg','desc','mute']};
+ const LOGF={gold:['give'],ash:['giveash','rating'],keys:['craft','kbuy','take','givekey','keygift'],bld:['build','proj','giveres'],ppl:['igive','join','leave','kick','accept','apply','reject','role','create','settings','tg','desc','mute']};
  const LG=(C.log||[]).filter(x=>clogF==='all'||(LOGF[clogF]||[]).includes(x.kind));
  S.log+=`<div class="card"><h4>📜 ${T('clan_log')}</h4><div class="chips clogf">${['all','gold','ash','keys','bld','ppl'].map(k=>`<button data-clf="${k}" class="${clogF===k?'act':''}">${T('clf_'+k)}</button>`).join('')}</div>`+(LG.length?LG.map(x=>`<div class="logl"><span>${logTime(x.at)}</span> ${esc(clogTxt(x))}</div>`).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
  S.main+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
