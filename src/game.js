@@ -153,7 +153,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);if(v&&v.pjoin)pjoinShow(v.pjoin);if(v&&v.cinv)cinvShow(v.cinv);heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -925,10 +925,15 @@ function refsCard(pane){
  const D=refData,L=D.lv[refLv]||[],now=Date.now(),day=864e5,shown=refAll?L:L.slice(0,30);
  const seen=x=>{if(!x.seen)return '';const d=Math.floor((now-Date.parse(x.seen))/day);return d<1?`🟢 ${T('ref_seen_now')}`:d<2?T('ref_seen_1'):T('ref_seen_d',{n:d})};
  return `<div class="card"><h4>👥 ${T('myrefs')}</h4>${D.usd>0?`<p style="margin:4px 0"><b>💵 ${T('ref_got',{n:D.usd.toFixed(2)})}</b></p>`:''}
+  ${D.clan?`<button class="btn pri" id="refClanInv" style="width:100%;margin:2px 0 6px">🔗 ${T('ref_clan_inv',{c:esc(D.clan.n)})}</button>${(()=>{const n=(D.lv[0]||[]).filter(x=>x.id&&!x.cl&&!refInvSent[x.id]).length; /* лише 1-ша лінія (Влад 16.11) */return n?`<button class="btn" id="refInvAll" style="width:100%;margin:0 0 8px">🏰 ${T('rinv_all',{n})}</button>`:''})()}`:''}
   <div class="row reflv">${[0,1,2].map(k=>`<button class="btn ${k===refLv?'on pri':''}" data-reflv="${k}">${T('ref_tab',{n:k+1})} · ${D.n[k]}</button>`).join('')}</div>
   <p class="hint" style="margin:4px 0 6px">${T('ref_lv_h'+(refLv+1),{p:D.pct[refLv]})}</p>
-  ${L.length?'<div class="rank reflist">'+shown.map(x=>`<div><b>👤</b><span>${esc(x.name)}<small>${T('lvl',{n:x.lvl})} · ${T('stage',{n:x.stage})} · ${T('ref_join',{d:dt(x.joined)})}${seen(x)?' · '+seen(x):''}</small></span><i style="color:${x.usd>0?'var(--green,#7fd67f)':'var(--mut)'};font-weight:700">${x.usd>0?'+$'+x.usd.toFixed(2):'—'}</i></div>`).join('')+'</div>'+(L.length>shown.length?`<button class="btn" data-refall="1" style="margin-top:6px;width:100%">${T('ref_all',{n:L.length})}</button>`:''):`<p class="hint">${refLv?T('ref_none_lv'):T('no_refs')}</p>`}</div>`}
-function refsBind(root,pane){root.querySelectorAll('[data-reflv]').forEach(b=>b.onclick=()=>{refLv=+b.dataset.reflv;refAll=false;dirty[pane]=1;flush()});
+  ${L.length?'<div class="rank reflist">'+shown.map(x=>`<div><b>👤</b><span>${esc(x.name)}<small>${T('lvl',{n:x.lvl})} · ${T('stage',{n:x.stage})} · ${T('ref_join',{d:dt(x.joined)})}${seen(x)?' · '+seen(x):''}</small>${D.clan&&x.id&&!x.cl?(refInvSent[x.id]?`<em class="rinvok">✓ ${T('rinv_sent')}</em>`:`<button class="btn rinv" data-rinv="${x.id}">🏰 ${T('rinv_btn')}</button>`):''}</span><i style="color:${x.usd>0?'var(--green,#7fd67f)':'var(--mut)'};font-weight:700">${x.usd>0?'+$'+x.usd.toFixed(2):'—'}</i></div>`).join('')+'</div>'+(L.length>shown.length?`<button class="btn" data-refall="1" style="margin-top:6px;width:100%">${T('ref_all',{n:L.length})}</button>`:''):`<p class="hint">${refLv?T('ref_none_lv'):T('no_refs')}</p>`}</div>`}
+var refInvSent={}; // 16.11: кому вже надіслано запрошення в клан у цій сесії
+function refsBind(root,pane){const ia=root.querySelector('#refInvAll');if(ia)ia.onclick=()=>{ia.disabled=true;ia.textContent='⏳';api('clanInviteAll').then(r=>{const o=r.out||{};(o.ids||[]).forEach(id=>refInvSent[id]=1);haptic('medium');toast(T('rinv_all_ok',{n:o.sent})+(o.left?' · '+T('rinv_all_left',{n:o.left}):''));dirty[pane]=1;flush()}).catch(e=>{toast(errT(e));ia.disabled=false;dirty[pane]=1;flush()})};
+ root.querySelectorAll('[data-rinv]').forEach(b=>b.onclick=()=>{const pid=+b.dataset.rinv;b.disabled=true;b.textContent='⏳';api('clanInvite',{pid}).then(()=>{refInvSent[pid]=1;haptic('light');toast(T('rinv_ok'));dirty[pane]=1;flush()}).catch(e=>{toast(errT(e));if(/cinv_dup|cinv_in/.test(e.message)){refInvSent[pid]=1;dirty[pane]=1;flush()}else{b.disabled=false;b.textContent='🏰 '+T('rinv_btn')}})});
+ const ci=root.querySelector('#refClanInv');if(ci&&refData&&refData.clan)ci.onclick=()=>{const C=refData.clan,u=clanLink(C.id),t=T('cinv_msg',{c:C.n}),w=tg(),sh='https://t.me/share/url?url='+encodeURIComponent(u)+'&text='+encodeURIComponent(t);if(w&&w.openTelegramLink)w.openTelegramLink(sh);else window.open(sh,'_blank','noopener')};
+ root.querySelectorAll('[data-reflv]').forEach(b=>b.onclick=()=>{refLv=+b.dataset.reflv;refAll=false;dirty[pane]=1;flush()});
  root.querySelectorAll('[data-refall]').forEach(b=>b.onclick=()=>{refAll=true;dirty[pane]=1;flush()})}
 function renderWd(){const el=$('p-wd');
  if(wdData)live('wd',()=>api('wdInfo').then(r=>r.out),o=>{if(same(o,wdData))return false;wdData=o;wdAt=Date.now();return true}); // свіжі статуси заявок раз на хвилину (поки показуємо старі)
@@ -1087,7 +1092,7 @@ function renderProfile(){
 }
 // ---------- магазин (08.11, варіант А): Stars і крипто в мережі TON ----------
 let shopData=null,shopBusy=false,tcUI=null,tcLoading=null,shopPoll=0;
-const SHOP_DESC={newb:'shop_d_newb',inc12:'shop_d_inc12',inc24:'shop_d_inc24',ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',rename:'shop_d_rename',test:'shop_d_test'};
+const SHOP_DESC={newb:'shop_d_newb',inc12:'shop_d_inc12',inc24:'shop_d_inc24',ash30:'shop_d_ash30',hunt30:'shop_d_hunt30',vip1:'shop_d_vip',vip3:'shop_d_vip',vip6:'shop_d_vip',pass:'shop_d_pass',starter:'shop_d_starter',bag:'shop_d_bag',bag50:'shop_d_bagx',bag75:'shop_d_bagx',bag100:'shop_d_bagx',rename:'shop_d_rename',test:'shop_d_test'};
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function vipLine(k){const n=k==='starter'?3:VIP_D[k];if(!n||!vipActive())return '';return `<p class="hint" style="color:var(--gold)">${T('shop_vip_on',{d:dt(G.vip)})} — ${T('shop_vip_ext',{n,d:dt(G.vip+n*864e5)})}</p>`} // 13.11 (Влад): VIP активний — покупка продовжить дні
@@ -1113,7 +1118,7 @@ function shopPaid(){haptic('heavy');sync();setTimeout(shopReload,800)}
 let ssub='deal';
 const n3=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'\u202f'); // 1 500 — точна сума пакета без «K»
 const ASH_BON={ash100:1,ash500:1,ash1000:1,ash5000:1}; // пакети з бонусом +50% на першу покупку за добу (сервер — SHOP.bon)
-const SHOP_CAT={newb:'deal',inc12:'conv',inc24:'conv',ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
+const SHOP_CAT={newb:'deal',inc12:'conv',inc24:'conv',ash100:'ash',ash250:'ash',ash500:'ash',ash750:'ash',ash1000:'ash',ash2000:'ash',ash5000:'ash',ash30:'vip',hunt30:'vip',starter:'deal',vip1:'vip',vip3:'vip',vip6:'vip',pass:'vip',bag:'conv',bag50:'conv',bag75:'conv',bag100:'conv',rename:'conv',test:'conv'},VIP_D={vip1:30,vip3:90,vip6:180};
 function renderShop(){
  const el=$('p-shop');if(!el)return;
  if(!shopData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
@@ -1130,10 +1135,10 @@ function renderShop(){
  if(ssub==='ash')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_ash_h',{a:fmt(G.ash||0)})}</p><p class="hint" style="margin:0 4px 10px">🔥 ${T('shop_d_ash')}</p>`;
  if(ssub!=='mine'&&list.length)h+=`<div class="crnote"><span>💱</span><p>${T('shop_cr_rate')}</p></div>`; // 14.11 (Влад): ціна в крипті — за курсом
  for(const it of list){
-  const done=it.left===0,desc=T(SHOP_DESC[it.k]||''),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
+  const done=it.left===0,full=!!it.cap,desc=T(SHOP_DESC[it.k]||'',{s:it.slots||0,r:it.room!=null?it.room:''}),isBest=it===best&&best!==base,perDay=VIP_D[it.k]?T('shop_perday',{n:(pd(it)).toFixed(1)}):'',save=isBest&&base?Math.round((1-pd(it)/pd(base))*100):0;
   h+=`<div class="card shopc${isBest?' shbest':''}">${isBest?`<div class="shtag">${T('shop_best')}${save?` · −${fmtN(save)}%`:''}</div>`:''}${it.k==='starter'?`<div class="shtag shnew">${T('shop_once')}</div>`:''}${it.k==='newb'?`<div class="shtag shnew">🎁 ${T('nb_tag')} · −${Math.round((1-it.usd/(it.old||40))*100)}%</div>`:''}${it.bon>0?`<div class="shtag">🔥 ${T('shop_bon_tag')}</div>`:''}<h4 class="shh"><span>${T('shop_i_'+it.k)}</span>${it.k!=='test'&&it.pool?`<em>${T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))})}</em>`:''}</h4>${desc?`<p class="hint">${desc}</p>`:''}${it.k==='newb'?`<p class="shash"><s>$${it.old||40}</s> <b>$${it.usd.toFixed(2)}</b>${it.until>Date.now()?` <em>⏳ ${sbHms(it.until-Date.now())}</em>`:''}</p>`:''}${it.ash?`<p class="shash">${it.bon>0?`<s>⚱️ ${n3(it.ash)}</s> <b>⚱️ ${n3(it.ash+it.bon)}</b> <em>+${n3(it.bon)}</em>`:`<b>⚱️ ${n3(it.ash)}</b>`}</p>${it.bon===0&&ASH_BON[it.k]?`<p class="hint">${T('shop_bon_used')}</p>`:''}`:''}${perDay?`<p class="hint shpd">⭐ ${perDay}</p>`:''}
    ${done?"":vipLine(it.k)}${cardLine(it.k)}${it.left!=null&&!done?`<p class="hint">${T('shop_left',{n:it.left})}</p>`:''}
-   ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:`<div class="row shopb">
+   ${done?`<p class="hint"><b>${T('shop_done')}</b></p>`:full?`<p class="hint"><b>🎒 ${T('bag_cap_t',{r:it.room})}</b></p>`:`<div class="row shopb">
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
     ${it.gram?`<button class="btn" data-buy="${it.k}" data-m="gram"${soon?' disabled':''}>💎 ${it.gram} GRAM</button>`:''}
     <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 ${it.usd.toFixed(2)} USDT</button></div>
@@ -1240,7 +1245,7 @@ function adminHtml(){
   <div class="rank">${A.top.map((t,i)=>`<div><b>${i+1}</b><span>${esc(t.name)}</span><i>${T('stage',{n:t.stage})}</i></div>`).join('')}</div></div>`;
 }
 // ---------- клан ----------
-let clanAt=0,clogF='all';let csub='main',clanData=null,clanBusy=false,craftT=1,clanModeSel=null,resK='m0';
+let clanAt=0,clogF='all';let csub='main',clanData=null,clanBusy=false,craftT=1,kbT=0,clanModeSel=null,resK='m0';
 const roleT=r=>T('role_'+r);
 // 15.11 (Влад): хто з клану зараз у грі — останній запит до сервера не пізніше 3 хв тому (гра шле синхронізацію щохвилини)
 const isOn=s=>!!s&&Date.now()-new Date(s)<180e3;
@@ -1343,9 +1348,17 @@ function clanInvite(){const w=tg(),sp=(w&&w.initDataUnsafe&&w.initDataUnsafe.sta
   modal(`<div class="cinvm"><div class="ic">${penI([c.name,c.pt],56)||'🏰'}</div><h3>${esc(c.name)}</h3><p class="hint">${T('cinv_you')}</p><div class="sub">👥 ${c.members}/${c.max||o.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${c.desc?`<div class="cdesc s" style="margin:8px 0">${esc(c.desc)}</div>`:''}${reqs?`<p class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</p>`:''}${full?`<p class="dn">${ERR.clan_full||T('err',{e:'clan_full'})}</p>`:''}</div>`,
    c.join_mode==='closed'||full||!c.ok?null:(c.join_mode==='apply'?T('apply'):T('join')),()=>act('clanJoin',{id:c.id},x=>{if(x.out)clanData=x.out;profData=null;dirty.clan=1;toast(x.out&&x.out.applied?T('app_sent'):T('cinv_in',{c:c.name}));haptic('heavy');const b=document.querySelector(tabBtn('clan'));if(b)b.click()}))}).catch(e=>toast(errT(e)))}
 function clogTxt(x){const d=x.data||{};return T('lc_'+x.kind,{n:x.name||'—',w:d.who||'',r:d.role?roleT(d.role):'',g:fmt(d.gold||0),a:d.ash!=null?'⚱️'+fmt(d.ash):'💰'+fmt(d.gold||0),t:d.t||d.place||'',c:d.n||1,k:d.k?(d.k==='sh'?'🔩':/^m\d$/.test(d.k)?'⛏️'+MATN[+d.k[1]]:T('bld_'+d.k)):'',l:d.l||'',x:fmt(d.n||0)})}
+// 16.11: гравець, запрошений посиланням клану, дійшов до етапу вступу — сервер сам приєднав його до клану
+var cinvSeen={};function cinvShow(L){for(const x of L){if(cinvSeen[x.id])continue;cinvSeen[x.id]=1;
+ const ans=ok=>api('clanInvAns',{id:x.id,ok:ok?1:0}).then(r=>{const o=r.out||{};if(o.joined){clanData=o;profData=null;dirty.clan=1;pjoinShow(o.joined)}else if(o.pin){toast(T('cinv_pin',{c:x.cn,n:o.pin.st}));dirty.clan=1;sync(true)}else toast(T('cinv_no_ok'))}).catch(e=>toast(errT(e)));
+ modal(`<div class="cinvm"><div class="ic">🏰</div><h3>${esc(x.cn)}</h3><p>${T('cinv_from',{w:esc(x.bn),c:esc(x.cn)})}</p><button class="btn" id="cinvNo${x.id}" style="margin-top:6px">${T('cinv_decl')}</button></div>`,T('join'),()=>ans(1),()=>{const b=$('cinvNo'+x.id);if(b)b.onclick=()=>{queue.shift();showModal();ans(0)}},'cinv'+x.id)}}
+function pjoinShow(o){clanData=null;profData=null;dirty.clan=1;modal(`<div class="cinvm"><div class="ic">🏰</div><h3>${esc(o.n)}</h3><p>${T('pjoin_t',{c:esc(o.n)})}</p></div>`,T('ok'),()=>{const b=document.querySelector(tabBtn('clan'));if(b)b.click()},null,'pjoin');haptic('heavy')}
+function kbAsk(t,n,k1){if(!(n>=1))return;const c=Math.round(n*k1),a=G.ash||0;if(c>a){toast(ERR.no_ash+': ⚱️'+fmt(a));return}
+ modal(`<div class="big">🗝️</div><h3>${T('kb_q',{n,t})}</h3><div class="kbsum"><div><span class="hint">${T('kb_price')}</span><b>⚱️ ${fmt(c)}</b></div><div><span class="hint">${T('kb_left')}</span><b>⚱️ ${fmt(a-c)}</b></div></div><p class="hint">${T('kb_note')}</p>`,
+  T('kb_buy'),()=>act('clanKeyBuy',{t,n,max:c},r=>{const o=r.out&&r.out.kbuy;haptic('medium');toast(T('kb_ok',{n:o?o.n:n,t,a:fmt(o?o.ash:c)}));clanAt=0;dirty.clan=1}),null,'kbuy')}
 function renderClan(){
  const el=$('p-clan');
- if(G.maxStage<(V.clanStage||5)){el.innerHTML=`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
+ if(G.maxStage<(V.clanStage||5)){const P=V.pclan;el.innerHTML=(P?`<div class="card cinvm pclan"><div class="ic">🏰</div><h3>${esc(P.n)}</h3><p>${T('pclan_h',{n:P.st||5,s:G.maxStage})}</p></div>`:'')+`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
  if(!clanData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;
   if(!clanBusy){clanBusy=true;api('clan').then(r=>{clanData=r.out;clanAt=Date.now()}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{clanBusy=false;dirty.clan=1})}return}
  const C=clanData;let h='';
@@ -1388,6 +1401,13 @@ function renderClan(){
   S.keys+=`<div class="card"><h4>⚒️ ${T('clan_craft')}</h4>`+(opts.length?`<div class="chips">${C.craft.map(x=>x.can?`<button data-cc="${x.t}" class="${x.t===craftT?'act':''}">${T('tier',{n:x.t})}</button>`:`<button disabled title="${esc(T('craft_lock',{n:x.t-1}))}">🔒 ${T('tier',{n:x.t})}</button>`).join('')}</div>${C.craft.some(x=>!x.can)?`<p class="hint">${T('craft_lock',{n:C.craft.find(x=>!x.can).t-1})}</p>`:''}
    <div class="row"><button class="btn pri" data-cn="1" ${(C.clan.ash||0)>=cur.ash?'':'disabled'}>×1 · ⚱️${fmt(cur.ash)}</button><button class="btn" data-cn="5" ${(C.clan.ash||0)>=cur.ash5?'':'disabled'}>×5 · ⚱️${fmt(cur.ash5)}</button></div>
    <div class="row ckn" style="align-items:center;gap:8px;margin-top:8px"><input id="cKN" class="inp" type="number" min="1" max="500" step="1" inputmode="numeric" placeholder="${T('ckn_ph')}" style="flex:1;min-width:0"><button class="btn" id="cKMax">${T('ckn_max')}</button><button class="btn pri" id="cKGo" data-k1="${cur.ash}" disabled>⚒️ ×N</button></div><p class="hint">${T('clan_craft_hint')}</p>`:`<p class="hint">${T('clan_craft_none')}</p>`)+'</div>'}
+ {const opts=C.craft.filter(x=>x.can); // 16.11 (Влад, ідея Влада-менеджера): кожен учасник купує ключі собі за свій Попіл — ціна як у казни
+  if(opts.length){if(!opts.some(x=>x.t===kbT))kbT=opts[opts.length-1].t;const cur=C.craft.find(x=>x.t===kbT),a=G.ash||0;
+   S.keys+=`<div class="card kbuy"><h4>🛒 ${T('kb_t')} <small class="hint">· ${T('kb_own')}</small></h4><div class="kbhave"><span>${T('kb_have')}</span><b>⚱️ ${fmt(a)}</b></div>
+    <div class="chips">${C.craft.map(x=>x.can?`<button data-kbt="${x.t}" class="${x.t===kbT?'act':''}">${T('tier',{n:x.t})}</button>`:`<button disabled>🔒 ${T('tier',{n:x.t})}</button>`).join('')}</div>
+    <div class="row"><button class="btn pri" data-kbn="1" ${a>=cur.ash?'':'disabled'}>×1 · ⚱️${fmt(cur.ash)}</button><button class="btn" data-kbn="5" ${a>=cur.ash5?'':'disabled'}>×5 · ⚱️${fmt(cur.ash5)}</button></div>
+    <div class="row ckn" style="align-items:center;gap:8px;margin-top:8px"><input id="kbN" class="inp" type="number" min="1" max="500" step="1" inputmode="numeric" placeholder="${T('ckn_ph')}" style="flex:1;min-width:0"><button class="btn" id="kbMax">${T('ckn_max')}</button><button class="btn pri" id="kbGo" data-k1="${cur.ash}" disabled>🛒 ×N</button></div>
+    <p class="hint">${T('kb_hint')}</p></div>`}}
  S.keys+=stor; // 09.11 (Влад): крафт — над складом, щоб кнопки не з'їжджали вниз, коли на складі з'являються ключі
  const BL=C.builds||[],RS=C.clan.res||{m:[0,0,0,0],sh:0};
  const bldOk=c=>(C.clan.bank||0)>=c.gold&&(RS.m[c.mat]||0)>=c.matN&&(RS.sh||0)>=c.sh;
@@ -1417,7 +1437,7 @@ function renderClan(){
   return `<div class="item${isOn(m.seen)?' mon':''}" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic cav">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}${isOn(m.seen)?'<i class="ondot"></i>':''}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · ${T('given',{n:'💰'+fmt(m.given||0)+(m.givenAsh?' · ⚱️'+fmt(m.givenAsh):'')})}</div></div>
    <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
  // 14.11 (гравці): фільтри журналу клану за типом подій
- const LOGF={gold:['give'],ash:['giveash','rating'],keys:['craft','take','givekey','keygift'],bld:['build','proj','giveres'],ppl:['join','leave','kick','accept','apply','reject','role','create','settings','tg','desc','mute']};
+ const LOGF={gold:['give'],ash:['giveash','rating'],keys:['craft','kbuy','take','givekey','keygift'],bld:['build','proj','giveres'],ppl:['join','leave','kick','accept','apply','reject','role','create','settings','tg','desc','mute']};
  const LG=(C.log||[]).filter(x=>clogF==='all'||(LOGF[clogF]||[]).includes(x.kind));
  S.log+=`<div class="card"><h4>📜 ${T('clan_log')}</h4><div class="chips clogf">${['all','gold','ash','keys','bld','ppl'].map(k=>`<button data-clf="${k}" class="${clogF===k?'act':''}">${T('clf_'+k)}</button>`).join('')}</div>`+(LG.length?LG.map(x=>`<div class="logl"><span>${logTime(x.at)}</span> ${esc(clogTxt(x))}</div>`).join(''):`<p class="hint">${T('clan_log_empty')}</p>`)+'</div>';
  S.main+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
@@ -1453,6 +1473,11 @@ function renderClan(){
  if($('cAshGo'))$('cAshGo').onclick=()=>{const a=Math.floor(+$('cAsh').value||0);if(a<1)return;if(a>(G.ash||0)){toast(ERR.no_ash+': ⚱️'+fmtX(G.ash));return}clanAct('clanGiveAsh',{amt:a})};
  if($('cGiveGo'))$('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
+ el.querySelectorAll('[data-kbt]').forEach(b=>b.onclick=()=>{kbT=+b.dataset.kbt;renderClan()});
+ {const kc=(clanData.craft||[]).find(x=>x.t===kbT);if(kc){const k1=kc.ash,inp=$('kbN'),go=$('kbGo'),mx=Math.min(500,Math.floor((G.ash||0)/k1));
+  const upd=()=>{const n=Math.floor(+inp.value||0);go.disabled=!(n>=1&&n<=mx);go.textContent=n>=1?`🛒 ×${n} · ⚱️${fmt(n*k1)}`:'🛒 ×N'};
+  if(inp){inp.oninput=upd;$('kbMax').onclick=()=>{inp.value=mx||'';upd();if(!mx)toast(ERR.no_ash)};go.onclick=()=>kbAsk(kbT,Math.floor(+inp.value||0),k1)}
+  el.querySelectorAll('[data-kbn]').forEach(b=>b.onclick=()=>{const n=+b.dataset.kbn;kbAsk(kbT,n,n===5?kc.ash5/5:k1)})}}
  // 14.11 (Влад): крафт N ключів за раз — поле, «Макс» (скільки дозволяє Попіл казни), ціна наживо
  if($('cKN')){const inp=$('cKN'),go=$('cKGo'),k1=+go.dataset.k1||1,cAsh=(C.clan&&C.clan.ash)||0,mx=Math.max(0,Math.min(500,Math.floor(cAsh/k1)));
   const upd=()=>{const n=Math.floor(+inp.value||0);go.disabled=!(n>=1&&n<=500&&n*k1<=cAsh);go.textContent=n>=1?`⚒️ ×${fmt(n)} · ⚱️${fmt(n*k1)}`:'⚒️ ×N'};inp.oninput=upd;upd();
@@ -1756,7 +1781,7 @@ function mountAdTask(K){const c=$('adTaskCard');if(!c)return;
   setTimeout(()=>{const m=$('adtNone');if(m&&adTaskEl===e&&e.getBoundingClientRect().height<20&&!$('adTaskCard').hidden&&$('adTaskCard').offsetParent)m.hidden=false},8000)},true,()=>gone(6e5,null))}
 function watchAd(){const K=V.tasks;if(!K||!K.block)return toast(T('ad_soon'));
  adsgram(()=>{try{adCtl=adCtl||window.Adsgram.init({blockId:String(K.block)});adCtl.show().then(r=>{if(r&&r.done){const E=adEggOn()&&V&&V.tasks&&V.tasks[adEggK];if(E){E.n=(E.n||0)+1;E.next=Date.now()+(E.gap||7200e3);dirty.pet=1;flush()}adEggAt=0;toast(T('ad_wait'));setTimeout(()=>sync(true),3000);setTimeout(()=>sync(true),9000)} /* 13.11 (Влад): кнопка й таймер оновлюються одразу, а не після наступної синхронізації */else adEggDrop()}).catch(()=>{adEggDrop();toast(T('ad_none'))})}catch(e){adEggDrop();toast(T('ad_err'))}})}
-const SUB_N={news:'@GRIMTALENEWS',chat:'@GRIMTALECHAT',pay:'@GRIMTALEPAYOUTS'};
+const SUB_N={news:'@GRIMTALENEWS',chat:'@GRIMTALECHAT',pay:'@GRIMTALEPAYOUTS',serr:'@cryptoserror'};
 function tgOpen(u){const w=window.Telegram&&Telegram.WebApp;if(/^https:\/\/t\.me\//.test(u)&&w&&w.openTelegramLink)w.openTelegramLink(u);else if(w&&w.openLink)w.openLink(u);else window.open(u,'_blank')}
 var humF=0; // 15.11: гравець у чаті Grimtale, але ще не натиснув «Я людина» — підтвердити через @GrimtaleGuardBot
 function humGo(){const u='https://t.me/GrimtaleGuardBot?start=human',w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')}
@@ -1769,7 +1794,7 @@ function renderTasks(){
  h+=`<div class="card"><h4>📺 ${T('ad_t')}</h4><p class="hint" style="margin:0 0 6px">${T('ad_hint',{c:chestIc(1)+'×'+A.ch,n:A.keyEvery,k:keyTxt})}</p><div class="bar"><i style="width:${A.n/A.max*100}%;background:#f2c14e"></i></div><div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('ad_cnt',{n:A.n,m:A.max})}</span><button class="btn pri" id="tkAd" ${A.n<A.max?'':'disabled'}>▶️ ${T('ad_btn')}</button></div></div>`;
  const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?'✅ '+T('share_again'):T('share_btn')}</button></div>`;
  const BI=V.bio||{};h+=`<div class="card"><h4>🔗 ${T('q_bio')} · ⚱️${BI.ash||10}</h4>`+(BI.taken?`<p class="hint">✅ ${T('tk_done_today')}</p>`:`<p class="hint" style="margin:0 0 6px">${T('bio_hint',{l:bioLink()})}</p><div class="row" style="gap:8px"><button class="btn" id="qBioCopy">📋 ${T('bio_copy')}</button><button class="btn pri" id="qBioChk">🔗 ${T('bio_check')}</button></div>`)+`</div>`;
- h+=K.subs.map(x=>`<div class="card"${x.ok?' style="opacity:.6"':''}><div class="row" style="align-items:center;gap:8px"><div style="flex:1;min-width:0"><h4 style="margin:0">${x.ok?'✅':'📢'} ${T('sub_one',{c:SUB_N[x.k]||x.chat})}</h4><span class="hint" style="margin:0">${T('tk_rw')}: ⚱️${K.subAsh}</span></div>${x.ok?'':`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div></div>`).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
+ h+=K.subs.map(x=>`<div class="card"${x.ok?' style="opacity:.6"':''}><div class="row" style="align-items:center;gap:8px"><div style="flex:1;min-width:0"><h4 style="margin:0">${x.ok?'✅':'📢'} ${T('sub_one',{c:SUB_N[x.k]||x.chat})}</h4><span class="hint" style="margin:0">${T('tk_rw')}: ⚱️${x.ash||K.subAsh}</span></div>${x.ok?'':`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div></div>`).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
  if(K.ptn.length){h+=`<div class="card"><h4>🤝 ${T('ptn_t')}</h4>`+K.ptn.map(p=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0">${p.ok?'✅':'🎯'} ${esc(p.t[LANG]||p.t.en||p.id)} <span class="hint">· ${chestIc(1)}×${p.ch}${p.key?' +🗝️×'+p.key:''}</span></span>${p.ok?'':`<button class="btn" style="flex:0 0 auto" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`}</div>`).join('')+`</div>`}
  el.innerHTML=h;
  mountAdTask(K);el.querySelectorAll('[data-cardc]').forEach(b=>b.onclick=cardClaim);

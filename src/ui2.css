@@ -803,3 +803,13 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .sbr-n.cr{color:#ffd24a;font-size:26px}.sbr-n.bt{color:#9be07a;font-size:18px}
 @keyframes sbrIn{to{opacity:1;transform:scale(1)}}
 .sbr-c{display:flex;align-items:center;justify-content:center;gap:6px}.sbr-c .svi{width:28px;height:28px}
+
+/* 16.11: ключі за свій Попіл (клан → Ключі) і запрошення в клан до етапу 5 */
+.card.kbuy{border-color:#e2b04a66;box-shadow:0 0 12px #e2b04a1a}
+.card.kbuy h4 small{font-weight:600;font-size:12px}
+.kbhave{display:flex;justify-content:space-between;align-items:center;margin:4px 0 8px;padding:6px 10px;border-radius:10px;background:#ffffff08}
+.kbhave b{color:#ffe08a}
+.kbsum{display:flex;justify-content:space-around;margin:8px 0}.kbsum div{display:flex;flex-direction:column;gap:2px}.kbsum b{font-size:18px}
+.card.pclan{text-align:center;border-color:#e2b04a88}
+.reflist .btn.rinv{display:inline-block;margin-top:4px;padding:3px 10px;font-size:12px;border-radius:999px;border:1px solid #e2b04a88;background:#3a2a0e66;color:#ffe3a3}
+.reflist .rinvok{display:inline-block;margin-top:4px;font-size:12px;font-style:normal;color:#7fd67f}
