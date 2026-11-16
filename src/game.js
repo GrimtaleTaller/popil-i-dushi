@@ -389,7 +389,7 @@ function findItem(id){return Object.values(G.eq).find(x=>x&&x.id===id)||G.inv.fi
 // 14.11 (Влад): «На все, що є» — спершу вікно: до якого рівня, скільки золота й уламків піде, що лишиться, нові стати
 function refMaxAsk(it){const R0=V.refine||{},cap=R0.capL??R0.cap;let il=it.il,g=0,sh=0,stop='';
  while(il<cap){const c=refCost({...it,il});if(G.gold-g<c.gold){stop='gold';break}if(G.shards-sh<c.shards){stop='shards';break}g+=c.gold;sh+=c.shards;il++}
- const k=il-it.il;if(!k){toast(T(stop==='shards'?'no_shards':'no_gold'));return}
+ const k=il-it.il;if(!k){toast(ERR[stop==='shards'?'no_shards':'no_gold']);return}
  const cur=stSr(it),nx={...cur};for(const s of ['atk','hp','def'])if(cur[s])nx[s]=Math.round(cur[s]*Math.pow(1.16,k));
  modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="refto"><b>${T('lvl',{n:it.il})} → ${il}</b> <span class="hint">(+${k})</span></p><div class="st">${statLine(nx,cur)}</div><div class="refsum"><div><span>${T('ref_spend')}</span><b>💰${fmt(g)} · 🔩${fmt(sh)}</b></div><div><span>${T('ref_left')}</span><b>💰${fmt(G.gold-g)} · 🔩${fmt(G.shards-sh)}</b></div></div>${il<cap?`<p class="hint">${T(stop==='shards'?'ref_stop_s':'ref_stop_g',{n:cap})}</p>`:`<p class="hint">${T('ref_to_cap',{n:cap})}</p>`}`,'⬆️ '+T('ref_go',{n:il}),()=>{act('refine',{id:it.id,n:k<=100?k:0},r=>{haptic('heavy');toast(T('ref_done_n',{k:r.out.n,n:r.out.il,g:fmt(r.out.gold),s:fmt(r.out.shards)}))})})}
 function refineDlg(id){const it=findItem(id);if(!it)return;const R0=V.refine||{},R={...R0,cap:R0.capL??R0.cap},A=V.afx,shown={};
