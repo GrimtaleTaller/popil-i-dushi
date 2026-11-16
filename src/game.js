@@ -1978,10 +1978,11 @@ function mpOpen(){const o=MP;if(!o)return;haptic('medium');const promo=o.until>D
   <div class="nbg g3">${tile(RIC('ash'),n3(S.a)+'+',T('mp_r_ash'))}${tile(RIC('scroll'),'×'+S.scroll,T('mp_r_scroll'))}${tile(eggIc('r'),'×'+S.egg,T('mp_eggs_r'))}</div>
   <div class="nbg g3">${tile(RIC('key'),'×'+S.key,T('mp_keys'))}${tile('💎','×'+S.cat,T('mp_r_cat'))}${tile('👑',S.vip+' '+T('mp_d'),'VIP')}</div>
   <div class="nbbuy"><button class="btn pri nbmain" data-mpm="stars">⭐ ${promo?o.stars:o.ostars} · ${T('mp_buy')}</button>
-   <div class="nbpay"><button class="btn" data-mpm="usdt">💵 USDT</button><button class="btn" data-mpm="gram">💎 GRAM</button><button class="btn" data-mpm="see">👁 ${T('mp_see')}</button></div></div>
+   <div class="nbpay"><button class="btn" data-mpm="usdt">💵 USDT</button><button class="btn" data-mpm="gram">💎 GRAM</button><button class="btn" data-mpm="other">🪙 ${T('nb_other')}</button></div><button class="btn shoth mpsee" data-mpm="see">👁 ${T('mp_more')} ›</button></div>
   <p class="nbonce">${promo?T('mp_after',{p:'$'+o.old}):T('mp_note')}</p></div>`,null,null,()=>{
   document.querySelectorAll('#mbox [data-mpm]').forEach(b=>b.onclick=()=>{const m=b.dataset.mpm;queue.shift();showModal();
    if(m==='see'){passView='m';tab='quest';lastSub.quest='quest';document.querySelector(tabBtn('quest')).click();dirty.quest=1;return}
+   if(m==='other'){(shopData?Promise.resolve():api('shopInfo').then(r=>{shopData=r.out})).then(()=>shopOther('mpass')).catch(e=>toast(errT(e)));return} // 16.11 (Влад): інші способи оплати — як у пакета новачка
    shopBuy('mpass',m)})},'mpass')}
 function mpAuto(n){setTimeout(()=>{if(!MP||MP.prem||!(MP.until>Date.now()))return;if(tutCur&&n<60){mpAuto(n+1);return}mpOpen()},n?5000:2500)} // під час навчання не заважаємо — чекаємо до 5 хв (як пакет новачка); новачку в цей захід — лише його пакет
 function mpTick(){const c=$('mpCd');if(c&&MP)c.textContent=sbHms(Math.max(0,MP.until-Date.now()));document.querySelectorAll('[data-mpcd]').forEach(e=>{e.textContent=MP?sbHms(Math.max(0,MP.until-Date.now())):''})}
@@ -1993,7 +1994,7 @@ function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw);
   <div class="mpchips"><span>${RIC('ash')} ${n3(S.a)}+</span><span>${RIC('scroll')} ×${S.scroll}</span><span>${eggIc('r')} ×${S.egg}</span><span>${RIC('key')} ×${S.key}</span><span>👑 VIP ${S.vip} ${T('mp_d')}</span></div>
   <p class="shash">${promo?`<s>$${o.old}</s> `:''}<b>$${(promo?o.usd:o.old).toFixed(2)}</b></p>
   <div class="row shopb"><button class="btn pri" data-buy="mpass" data-m="stars">⭐ ${promo?o.stars:o.ostars}</button><button class="btn" data-buy="mpass" data-m="usdt">💵 ${(promo?o.usd:o.old).toFixed(2)} USDT</button></div>
-  <button class="btn shoth" data-mpopen>${T('mp_more')} ›</button></div>`}
+  <button class="btn shoth" data-other="mpass">${T('shop_other_link')} ›</button><button class="btn shoth" data-mpopen>${T('mp_more')} ›</button></div>`}
 const mpCan=o=>o&&o.prem?Math.max(0,o.lv-(o.got||[]).filter(l=>l<=o.lv).length):0;
 const FRM_MOON='<img class="frmm" src="assets/offer/moon_frame.webp?v=1" alt="🌙">'; // 16.11: рамка «Місячна» (45-й рівень Місячної стежки) — біля ніка в рейтингах і біля рівня в шапці
 function mpRoad(){const o=MP;if(!o)return '';const inLv=o.lv>=o.max?o.per:o.pts-o.lv*o.per,pct=o.lv>=o.max?100:Math.max(0,Math.min(100,inLv/o.per*100)),promo=o.until>Date.now();

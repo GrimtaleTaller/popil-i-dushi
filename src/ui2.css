@@ -855,3 +855,4 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .lvl.frm-moon{box-shadow:0 0 0 2px #b9a6ff,0 0 14px #8f7cffcc!important}
 .lvl.frm-moon::before{content:'';position:absolute;left:-10px;bottom:-10px;width:22px;height:22px;background:url(../assets/offer/moon_frame.webp?v=1) center/contain no-repeat;filter:drop-shadow(0 0 4px #8f7cff);pointer-events:none}
 .frmm{width:16px;height:16px;vertical-align:-3px;margin-right:2px;filter:drop-shadow(0 0 3px #8f7cff)}
+.mpsee{margin-top:6px;width:100%}
