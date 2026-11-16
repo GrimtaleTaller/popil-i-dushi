@@ -814,4 +814,4 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .reflist .btn.rinv{display:inline-block;margin-top:4px;padding:3px 10px;font-size:12px;border-radius:999px;border:1px solid #e2b04a88;background:#3a2a0e66;color:#ffe3a3}
 .reflist .rinvok{display:inline-block;margin-top:4px;font-size:12px;font-style:normal;color:#7fd67f}
 .plist button[disabled]{opacity:.45}
-.acts2{display:flex;gap:4px;width:0;min-width:100%}.acts .acts2 .btn{flex:1 1 0;min-width:0;padding:2px 1px!important;white-space:nowrap;overflow:hidden;font-size:11px!important;letter-spacing:-.02em}
+.icw{display:flex;flex-direction:column;align-items:center;gap:12px;flex:0 0 46px;width:46px;align-self:stretch;justify-content:center}.icw .ic{flex:0 0 auto}.igvb{font:inherit;font-size:22px;line-height:1;background:#2a2026;border:1px solid #6b4a3a;border-radius:50%;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}.igvb:active{transform:scale(.92)}
