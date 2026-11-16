@@ -815,3 +815,36 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .reflist .rinvok{display:inline-block;margin-top:4px;font-size:12px;font-style:normal;color:#7fd67f}
 .plist button[disabled]{opacity:.45}
 .icw{display:flex;flex-direction:column;align-items:center;gap:12px;flex:0 0 46px;width:46px;align-self:stretch;justify-content:center}.icw .ic{flex:0 0 auto}.igvb{font:inherit;font-size:22px;line-height:1;background:#2a2026;border:1px solid #6b4a3a;border-radius:50%;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}.igvb:active{transform:scale(.92)}
+/* 16.11: Місячна стежка */
+.pvseg{display:flex;gap:6px;margin:0 0 10px;padding:4px;background:#17121c;border:1px solid #3a2c44;border-radius:14px}
+.pvseg button{flex:1;font:inherit;font-weight:700;font-size:14px;color:#b9a9c9;background:transparent;border:0;border-radius:10px;padding:9px 6px;cursor:pointer}
+.pvseg button.act{color:#fff;background:linear-gradient(135deg,#5b3aa0,#2d6f9e);box-shadow:0 0 14px #7b5cff55}
+.mpart img{object-position:60% 55%}
+.mptag{background:linear-gradient(90deg,#6c4bd6,#2fa4c9)!important;color:#fff!important}
+.mpx2{margin:6px 0 2px;padding:7px 10px;border-radius:10px;text-align:center;font-weight:800;font-size:13px;color:#ffe9a8;background:linear-gradient(90deg,#3a2470aa,#1e5a7aaa);border:1px solid #8f7cff66}
+.mpcard{position:relative;overflow:hidden;border:1.5px solid #8f7cffaa;box-shadow:0 0 22px #7b5cff40;background:radial-gradient(ellipse at 80% 0,#6c4bd630,transparent 60%),linear-gradient(170deg,#1d1730,#120f1c)}
+.mpthumb{position:relative;aspect-ratio:16/7;overflow:hidden}
+.mpthumb img{width:100%;height:100%;object-fit:cover;object-position:60% 50%;display:block}
+.mpcard{padding-top:0}.mpthumb{cursor:pointer;margin:0 -10px 10px;border-radius:14px 14px 0 0}
+.mpbadge{position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:9px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(135deg,#e2343f,#9b1430);box-shadow:0 0 0 2px #ffd36a;transform:rotate(-6deg)}
+.mpcdp{position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:9px;font-weight:800;font-size:12px;color:#fff;background:#000a;border:1px solid #ffd36a88}
+.mptag2{position:absolute;bottom:8px;left:8px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;color:#fff;background:linear-gradient(90deg,#6c4bd6,#2fa4c9)}
+.mpchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+.mpchips span{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#e9dcff;background:#2a2140;border:1px solid #4b3b6e;border-radius:999px;padding:3px 8px}
+.mpchips .ric,.mpx .ric,.mpi .ric{width:18px;height:18px}
+.mptop{background:radial-gradient(ellipse at 80% 0,#6c4bd640,transparent 60%),linear-gradient(170deg,#211a36,#130f1e);border:1.5px solid #8f7cffaa;box-shadow:0 0 22px #7b5cff33}
+.mptop-h{display:flex;gap:12px;align-items:center}.mptop-h h4{margin:0 0 2px}
+.mpmedal{width:58px;height:58px;flex:0 0 58px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#3d2c6e,#1b1430);border:2px solid #b9a6ff;box-shadow:0 0 16px #8f7cff66}
+.mpmedal b{font-size:22px;line-height:1}.mpmedal small{font-size:9px;opacity:.8}
+.mpbar i{background:linear-gradient(90deg,#6c4bd6,#4fd2e8)!important}
+.mproad h4{margin:0 0 10px}
+.mpgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mpc{position:relative;min-height:74px;border-radius:12px;padding:16px 2px 5px;text-align:center;background:#1c1726;border:1px solid #3a2f4d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.mpc.big{background:radial-gradient(circle at 50% 30%,#f2c14e33,#211a2e 70%);border-color:#f2c14eaa;box-shadow:0 0 12px #f2c14e33}
+.mpc.ok{border-color:#6fd38f99}.mpc.nx{outline:2px solid #8f7cff;outline-offset:1px}
+.mpl{position:absolute;top:3px;left:6px;font-size:10px;font-weight:800;color:#a99bc4}
+.mpi{display:flex;flex-direction:column;align-items:center;line-height:1}.mpi .ric{width:26px;height:26px}.mpi b{font-size:12px;margin-top:2px}
+.mpi .gem,.mpx .gem{transform:scale(.8)}.mpi .egg{font-size:22px}
+.mpx{display:flex;flex-wrap:wrap;justify-content:center;gap:2px}.mpx span{display:inline-flex;align-items:center;font-size:12px}.mpx em{font-style:normal;font-size:10px;font-weight:800;margin-left:1px}
+.mpx .ric{width:16px;height:16px}.mpx .chimg{width:18px!important;height:18px!important}.mpi .chimg{width:28px!important;height:28px!important}
+.mpc .lk,.mpc .cn{position:absolute;top:2px;right:4px;font-size:10px;font-style:normal}

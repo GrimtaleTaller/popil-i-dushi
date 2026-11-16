@@ -153,7 +153,7 @@ function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAM
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
 function apply(v){
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
- V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);if(v&&v.pjoin)pjoinShow(v.pjoin);if(v&&v.cinv)cinvShow(v.cinv);heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
+ V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);if(v&&'mp' in v){MP=v.mp||null;if(MP&&!MP.prem&&MP.until>Date.now()&&!mpShown&&!(NB&&!nbShown)){mpShown=1;setTimeout(()=>{if(!tutCur)mpOpen()},2500)}}if(v&&v.pjoin)pjoinShow(v.pjoin);if(v&&v.cinv)cinvShow(v.cinv);heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
 }
 const ERR={dng_locked:'Цей данж ще закритий',bag_full:'Сумка повна',no_chests:'Скринь немає',not_mythic:'Потрібен міфічний предмет',no_essence:'Потрібна Астральна есенція (з глибоких данжів)',no_shards:'Не вистачає уламків',no_legendary:'Потрібна легендарка в сумці',no_catalyst:'Потрібен каталізатор (падає з босів)',no_souls:'Не вистачає Душ',no_junk:'Нема непотрібних речей',not_legendary:'Потрібні лише легендарки',mixed_slots:'Легендарки мають бути одного слота',no_item:'Предмет не знайдено',no_gold:'Не вистачає золота',max:'Максимальний рівень',boss_locked:'Спершу переможи 10 ворогів',daily_taken:'Нагороду вже забрано',net:'Немає зв’язку з сервером',auth:'Відкрий гру через Telegram',server:'Помилка сервера, спробуй ще раз',busy:'Сервер зайнятий, спробуй ще раз'};
@@ -1152,6 +1152,7 @@ function renderShop(){
  const ashB=S.items.find(x=>x.ash&&x.bon>0),list=ssub==='deal'?[...S.items.filter(x=>x.k==='newb'&&x.left!==0),...S.items.filter(x=>x.k==='starter'&&x.left!==0),...(best?[best]:[]),...(ashB?[ashB]:[])]:ssub==='mine'?[]:S.items.filter(x=>(SHOP_CAT[x.k]||'conv')===ssub);
  if(ssub!=='deal')h=''; // шапка з пулом — лише на «Вигідне»
  if(ssub==='deal')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_deal_h')}</p>`;
+ if(ssub==='deal'&&MP&&!MP.prem)h+=mpShopCard(MP);
  if(ssub==='ash')h+=`<p class="hint" style="margin:2px 4px 8px">${T('ssub_ash_h',{a:fmt(G.ash||0)})}</p><p class="hint" style="margin:0 4px 10px">🔥 ${T('shop_d_ash')}</p>`;
  if(ssub!=='mine'&&list.length)h+=`<div class="crnote"><span>💱</span><p>${T('shop_cr_rate')}</p></div>`; // 14.11 (Влад): ціна в крипті — за курсом
  for(const it of list){
@@ -1172,6 +1173,7 @@ function renderShop(){
  if(ssub==='mine')h+=(S.ops&&S.ops.length)?opsHtml(S.ops):`<div class="empty">${T('ssub_mine_empty')}</div>`; // «Мої операції» — у самому низу магазину (прохання Влада)
  el.innerHTML=h;
  el.querySelectorAll('[data-cardc]').forEach(b=>b.onclick=cardClaim);
+ el.querySelectorAll('[data-mpopen]').forEach(b=>b.onclick=mpOpen);
  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const k=b.dataset.buy,m=b.dataset.m;
   // USDT у мережі TON: перед першою оплатою пояснюємо, що потрібно трохи GRAM на комісію і звідки списуються гроші (08.11, Влад: «А»)
   let seen=false;try{seen=localStorage.getItem('gtUsdtHint')==='1'}catch(e){}
@@ -1731,6 +1733,8 @@ function ptTiles(x,st){const a=[];if(x.gold)a.push(['💰',fmt(x.gold)]);if(x.sh
 function qRow(q,pts,rw){return `<div class="item" style="border-left-color:${q.ok?'#56c271':'#3a3340'}"><div class="ic">${q.ok?'✅':'📜'}</div><div class="info"><div class="nm">${qTxt(q)}</div><div class="bar"><i style="width:${Math.min(100,q.c/q.n*100)}%;background:${q.ok?'#56c271':'#f2c14e'}"></i></div><div class="sub">${fmt(Math.max(0,q.c))}/${fmt(q.n)} · +${pts} ${T('pass_pts_s')}${rw?' · '+rw:''}</div></div></div>`}
 function renderQuest(){
  const P=V.pass,el=$('p-quest');if(!P){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
+ const pvT=MP?`<div class="seg pvseg"><button data-pv="w" class="${passView==='w'?'act':''}">🎟️ ${T('mp_week')}</button><button data-pv="m" class="${passView==='m'?'act':''}">🌙 ${T('mp_month')}${MP.prem?'':' · −'+mpOff(MP)+'%'}</button></div>`:'';
+ if(MP&&passView==='m'){el.innerHTML=pvT+mpRoad();el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});el.querySelectorAll('[data-mpopen]').forEach(b=>b.onclick=mpOpen);return}
  const can=P.lv>P.f.length||(P.prem&&P.lv>P.p.length),inLv=P.lv>=P.max?P.per:P.pts-P.lv*P.per;
  // 13.11 (Влад): пропуск яскравіше — медаль рівня з кільцем прогресу, смуга «X / Y очок до рівня N», дорога нагород з плитками
  const mx=P.lv>=P.max,pct=mx?100:Math.max(0,Math.min(100,inLv/P.per*100)),nCl=[...Array(Math.min(P.lv,P.max)).keys()].reduce((a,k)=>a+(P.f.includes(k+1)?0:1)+(P.prem&&!P.p.includes(k+1)?1:0),0);
@@ -1765,7 +1769,7 @@ function renderQuest(){
  h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`</div>`; // 09.11: тижневий Сувій прибрано (лише з Відьми в Болоті) → Сувій вічності
  
  h+=`<p class="hint">${T('pass_hint')}</p>`;
- el.innerHTML=h;passBuyBind(el);if($('peAll'))$('peAll').onclick=()=>{passAll=!passAll;renderQuest()};
+ el.innerHTML=pvT+h;passBuyBind(el);el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});if($('peAll'))$('peAll').onclick=()=>{passAll=!passAll;renderQuest()};
  $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
@@ -1957,6 +1961,45 @@ function sbOpen(){haptic('medium');if(V&&V.wb&&!V.wb.off){lastSub.arena='wboss';
   <div class="sbrules"><div>🗡️ ${T('sb_r1')}</div><div>⚔️ ${T('sb_r2')}</div><div>⚱️ ${T('sb_r3')}</div><div>🏆 ${T('sb_r4')}</div></div></div>`,'🔒 '+T('sb_lock'),()=>{},null,'sboss')}
 if($('sBos'))$('sBos').onclick=sbOpen;
 setInterval(sbPaint,1e3);
+// 16.11 (Влад): «Місячна стежка» — 45 рівнів на 30 днів, платна; нагороди ×2 проти тижневої платної стежки + Сувої, ключі, VIP; акція $5.99 замість $11.99 — 24 год, далі $11.99 назавжди
+// V.mp від сервера: {lv,max,pts,per,end,prem,got[],until,usd,old,stars,ostars,rw[]}; rw[i] — нагорода рівня i+1: a (Попіл), gem [рівень, к-сть], cat, ch [вид, к-сть], egg ['c'|'r', к-сть], scroll, key [тир, к-сть], vip (днів), frame
+var passView='w',MP=null,mpShown=0;
+function mpRw(x){const o=[];if(x.a)o.push([RIC('ash'),n3(x.a),T('mp_r_ash')]);if(x.scroll)o.push([RIC('scroll'),'×'+x.scroll,T('mp_r_scroll')]);if(x.egg)o.push([eggIc(x.egg[0]),'×'+x.egg[1],T(x.egg[0]==='r'?'pass_egg_r':'pass_egg')]);
+ if(x.gem)o.push([gemIc('d'+x.gem[0]),'×'+x.gem[1],T('mp_r_gem',{l:ROM[x.gem[0]-1]})]);if(x.cat)o.push(['💎','×'+x.cat,T('mp_r_cat')]);if(x.ch)o.push([chestIc(x.ch[0]),'×'+x.ch[1],T('mp_r_ch')]);
+ if(x.key)o.push([RIC('key'),'×'+x.key[1],T('mp_r_key',{t:x.key[0]})]);if(x.vip)o.push(['👑',x.vip+' '+T('mp_d'),'VIP']);if(x.frame)o.push(['🌙','',T('mp_r_frame')]);return o}
+function mpSum(rw){const s={a:0,scroll:0,egg:0,key:0,cat:0,vip:0};for(const x of rw){s.a+=x.a||0;s.scroll+=x.scroll||0;s.egg+=x.egg&&x.egg[0]==='r'?x.egg[1]:0;s.key+=x.key?x.key[1]:0;s.cat+=x.cat||0;s.vip+=x.vip||0}return s}
+const mpOff=o=>Math.round((1-o.usd/o.old)*100);
+function mpOpen(){const o=MP;if(!o)return;haptic('medium');const promo=o.until>Date.now(),S=mpSum(o.rw),tile=(ic,v,t)=>`<div class="nbt"><span class="nbti">${ic}</span><b>${v}</b><small>${t}</small></div>`;
+ modal(`<div class="nbw mpw"><div class="nbart mpart"><img src="assets/offer/mpass.webp?v=1" alt=""><i class="nbglow"></i>${promo?`<div class="nbbadge">−${mpOff(o)}%</div>`:''}
+   <div class="nbcap"><span class="nbtag mptag">🌙 ${T('mp_tag')}</span><h3 class="nbh">${T('mp_t')}</h3><span class="nbdays">📅 ${T('mp_for',{l:o.max,d:30})}</span></div></div>
+  <div class="nbpr"><div class="nbprice">${promo?`<s>$${o.old}</s>`:''}<b>$${(promo?o.usd:o.old).toFixed(2)}</b></div>${promo?`<div class="nbcd"><small>${T('mp_ends')}</small><b id="mpCd">${sbHms(o.until-Date.now())}</b></div>`:''}</div>
+  <div class="mpx2">✨ ${T('mp_x2')}</div>
+  <div class="nbg g3">${tile(RIC('ash'),n3(S.a)+'+',T('mp_r_ash'))}${tile(RIC('scroll'),'×'+S.scroll,T('mp_r_scroll'))}${tile(eggIc('r'),'×'+S.egg,T('mp_eggs_r'))}</div>
+  <div class="nbg g3">${tile(RIC('key'),'×'+S.key,T('mp_keys'))}${tile('💎','×'+S.cat,T('mp_r_cat'))}${tile('👑',S.vip+' '+T('mp_d'),'VIP')}</div>
+  <div class="nbbuy"><button class="btn pri nbmain" data-mpm="stars">⭐ ${promo?o.stars:o.ostars} · ${T('mp_buy')}</button>
+   <div class="nbpay"><button class="btn" data-mpm="usdt">💵 USDT</button><button class="btn" data-mpm="gram">💎 GRAM</button><button class="btn" data-mpm="see">👁 ${T('mp_see')}</button></div></div>
+  <p class="nbonce">${promo?T('mp_after',{p:'$'+o.old}):T('mp_note')}</p></div>`,null,null,()=>{
+  document.querySelectorAll('#mbox [data-mpm]').forEach(b=>b.onclick=()=>{const m=b.dataset.mpm;queue.shift();showModal();
+   if(m==='see'){passView='m';tab='quest';lastSub.quest='quest';document.querySelector(tabBtn('quest')).click();dirty.quest=1;return}
+   shopBuy('mpass',m)})},'mpass')}
+function mpTick(){const c=$('mpCd');if(c&&MP)c.textContent=sbHms(Math.max(0,MP.until-Date.now()));document.querySelectorAll('[data-mpcd]').forEach(e=>{e.textContent=MP?sbHms(Math.max(0,MP.until-Date.now())):''})}
+setInterval(mpTick,1e3);window.__mpOpen=mpOpen; // __mpOpen — для тестів
+function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw);
+ return `<div class="card shopc mpcard"><div class="mpthumb" data-mpopen><img src="assets/offer/mpass.webp?v=1" alt="">${promo?`<div class="mpbadge">−${mpOff(o)}%</div><div class="mpcdp">⏳ <span data-mpcd>${sbHms(o.until-Date.now())}</span></div>`:''}<span class="mptag2">🌙 ${T('mp_tag')}</span></div>
+  <h4 class="shh"><span>${T('mp_t')}</span></h4><p class="hint">${T('mp_d_shop',{l:o.max,d:30})}</p>
+  <div class="mpchips"><span>${RIC('ash')} ${n3(S.a)}+</span><span>${RIC('scroll')} ×${S.scroll}</span><span>${eggIc('r')} ×${S.egg}</span><span>${RIC('key')} ×${S.key}</span><span>👑 VIP ${S.vip} ${T('mp_d')}</span></div>
+  <p class="shash">${promo?`<s>$${o.old}</s> `:''}<b>$${(promo?o.usd:o.old).toFixed(2)}</b></p>
+  <div class="row shopb"><button class="btn pri" data-buy="mpass" data-m="stars">⭐ ${promo?o.stars:o.ostars}</button><button class="btn" data-buy="mpass" data-m="usdt">💵 ${(promo?o.usd:o.old).toFixed(2)} USDT</button></div>
+  <button class="btn shoth" data-mpopen>${T('mp_more')} ›</button></div>`}
+function mpRoad(){const o=MP;if(!o)return '';const inLv=o.lv>=o.max?o.per:o.pts-o.lv*o.per,pct=o.lv>=o.max?100:Math.max(0,Math.min(100,inLv/o.per*100)),promo=o.until>Date.now();
+ let h=`<div class="card mptop"><div class="mptop-h"><div class="pt2-medal mpmedal"><b>${o.lv}</b><small>${T('pass_lv_s')}</small></div><div><h4>🌙 ${T('mp_t')}</h4><div class="pt2-sub">${T('pass_lv',{l:o.lv,m:o.max})} · ${T('pass_pts',{p:fmt(o.pts)})}</div>
+  <div class="pt2-time">${o.prem?'⏳ '+T('pass_end',{t:tLeft(o.end-Date.now())})+' · <b class="pt2-on">🌙 '+T('mp_on')+'</b>':'🔒 '+T('mp_off')}</div></div></div>
+  <div class="pt2-bar mpbar"><i style="width:${pct}%"></i><span>${T('pass_next',{a:fmt(inLv),b:fmt(o.per),l:Math.min(o.max,o.lv+1)})}</span></div>
+  ${o.prem?`<button class="btn pri pt2-claim glow">🎁 ${T('claim_all')}</button>`:`<button class="btn pri pt2-claim glow" data-mpopen>🌙 ${T('mp_unlock')} · ${promo?`<s>$${o.old}</s> `:''}$${(promo?o.usd:o.old).toFixed(2)}</button>${promo?`<p class="pt2-hint">⏳ ${T('mp_promo_left')} <b data-mpcd>${sbHms(o.until-Date.now())}</b></p>`:''}`}</div>`;
+ h+=`<div class="card mproad"><h4>🛤️ ${T('mp_road',{n:o.max})}</h4><div class="mpgrid">`;
+ o.rw.forEach((x,i)=>{const l=i+1,ok=o.lv>=l,big=x.scroll||x.vip||x.frame||(x.egg&&x.egg[0]==='r'),r=mpRw(x),m=r[0],ex=r.slice(1);
+  h+=`<div class="mpc${ok?' ok':''}${big?' big':''}${l===o.lv+1?' nx':''}"><span class="mpl">${l}</span><div class="mpi">${m[0]}<b>${m[1]}</b></div>${ex.length?`<div class="mpx">${ex.map(e=>`<span>${e[0]}${e[1]?`<em>${e[1]}</em>`:''}</span>`).join('')}</div>`:''}${!o.prem?'<i class="lk">🔒</i>':ok?'<i class="cn">🎁</i>':''}</div>`});
+ return h+`</div><p class="hint" style="margin-top:8px">${T('mp_road_h',{p:o.per})}</p></div>`}
 // 15.11 (Влад): «Пакет новачка» — лише перші 24 год від реєстрації; плашка з таймером над ареною і вікно при кожному заході в гру
 var NB=null,nbShown=0;
 function nbSet(o){NB=o&&o.until>Date.now()?o:null;nbPaint();if(NB&&!nbShown){nbShown=1;nbAuto(0)}}
