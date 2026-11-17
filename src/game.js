@@ -4,7 +4,7 @@
 // Усі таймери гри рахуємо за часом сервера: view.now задає зсув, якщо різниця > 1 хв.
 const __now0=Date.now.bind(Date);let SKEW=0;Date.now=()=>__now0()+SKEW;
 // ---------- налаштування ----------
-const API='https://fatpfzstkjtfcunlwnvx.supabase.co/functions/v1/game';
+const API='https://grimtale.duckdns.org/functions/v1/game'; // 18.11: гра переїхала з Supabase на власний сервер (VPS)
 var lastSync=0,VC=null,VH=null; // остання синхронізація; повний view і хеші його частин (дельта, 11.11)
 const SYNC_MS=30000; // крок перевірки; сама синхронізація — раз на 60 с відкрита / 80+ с згорнута, і не раніше ніж через 55 с після будь-якого запиту (11.11, Влад, ліміти Supabase «А»; 10.11 було 30 с). Бій і нагороди між синхронізаціями клієнт показує сам (pend)
 const $=id=>document.getElementById(id);
@@ -103,7 +103,7 @@ var banWhy='';async function api(action,args){
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}
  const j=await r.json().catch(()=>({ok:false,err:'bad'}));
- if(!j.ok){if(j.err==='prelaunch'&&j.launch)lnchLock(j.launch);if(j.err==='acc_banned')banWhy=j.why||'';throw new Error(j.err||'err')}
+ if(!j.ok){if(j.err==='prelaunch'&&j.launch)lnchLock(j.maint?Object.assign({maint:1},j.launch):j.launch);if(j.err==='acc_banned')banWhy=j.why||'';throw new Error(j.err||'err')}
  if(j.view){if(j.vd){if(!base){VC=null;VH=null;throw new Error('net')}j.view=vmerge(base,j.view,j.vh)}VC=j.view;VH=j.vh||null}
  apply(j.view);
  return j;
@@ -135,10 +135,11 @@ function lnchWhen(at){const z={uk:[2,'Київ'],ru:[3,'МСК'],en:[0,'GMT']}[L
 // заставка на час скидання (10.11): як екран гри, але без жодної кнопки; смуга завантаження = частка часу, що минула від закриття гри до старту
 function lnchLock(l){let e=$('lnchLock');if(!e){e=document.createElement('div');e.id='lnchLock';e.className='lnchlock';e.innerHTML='<img class="lnchv" src="assets/restart/restart.jpg?v=2" alt=""><video class="lnchv" src="assets/restart/restart.mp4?v=2" poster="assets/restart/restart.jpg?v=2" autoplay muted loop playsinline></video><div class="lnchbox"><p class="lnchprep" id="lnchLP"></p><div class="lnchbar"><i id="lnchLB"></i><b id="lnchLPc"></b></div><p id="lnchLT"></p><p class="lnchat" id="lnchLA"></p><p class="hint" id="lnchLR"></p></div><div class="lnchrun"><span id="lnchLM"></span></div>';document.body.appendChild(e);const v=e.querySelector('video');if(v){v.onerror=()=>v.remove();try{const pr=v.play();if(pr&&pr.catch)pr.catch(()=>{})}catch(x){}}}
  const off=l.now-Date.now(),p2=x=>String(x).padStart(2,'0'),from=l.from&&l.from<l.at?l.from:l.at-33*6e4;
- $('lnchLP').textContent=T('lnch_prep');$('lnchLA').textContent=T('lnch_at',{t:lnchWhen(l.at)});const lm=$('lnchLM');lm.innerHTML=esc0(T('lnch_marq')).replace('@GRIMTALENEWS','<a class="lnchlink" data-l="ch">@GRIMTALENEWS</a>').replace('@GRIMTALECHAT','<a class="lnchlink" data-l="chat">@GRIMTALECHAT</a>');lm.querySelectorAll('.lnchlink').forEach(a=>a.onclick=ev=>{ev.preventDefault();a.dataset.l==='ch'?openCh():openChat()});
- const tk=()=>{const nw=Date.now()+off,left=l.at-nw;if(left<=0){$('lnchLB').style.width='100%';$('lnchLPc').textContent='100%';clearInterval(iv);setTimeout(()=>location.reload(),Math.random()*20e3);return} /* 0–20 с розкиду, щоб усі не прийшли в ту саму секунду */const s=Math.floor(left/1e3),d=Math.floor(s/86400);
+ const mt=!!l.maint,t0=Date.now(),rl=4e4+Math.random()*3e4; /* 18.11: технічна пауза — свої тексти й перезапуск кожні 40–70 с, щоб гра відкрилась одразу після робіт */
+ $('lnchLP').textContent=T(mt?'mnt_prep':'lnch_prep');$('lnchLA').textContent=mt?'':T('lnch_at',{t:lnchWhen(l.at)});const lm=$('lnchLM');lm.innerHTML=esc0(T('lnch_marq')).replace('@GRIMTALENEWS','<a class="lnchlink" data-l="ch">@GRIMTALENEWS</a>').replace('@GRIMTALECHAT','<a class="lnchlink" data-l="chat">@GRIMTALECHAT</a>');lm.querySelectorAll('.lnchlink').forEach(a=>a.onclick=ev=>{ev.preventDefault();a.dataset.l==='ch'?openCh():openChat()});
+ const tk=()=>{const nw=Date.now()+off,left=l.at-nw;if(left<=0||(mt&&Date.now()-t0>rl)){$('lnchLB').style.width='100%';$('lnchLPc').textContent='100%';clearInterval(iv);setTimeout(()=>location.reload(),Math.random()*20e3);return} /* 0–20 с розкиду, щоб усі не прийшли в ту саму секунду */const s=Math.floor(left/1e3),d=Math.floor(s/86400);
   const pc=Math.max(0,Math.min(0.99,(nw-from)/(l.at-from)));$('lnchLB').style.width=(pc*100).toFixed(2)+'%';$('lnchLPc').textContent=Math.floor(pc*100)+'%';
-  $('lnchLT').textContent=T('lnch_t')+' '+(d?d+' '+T('lnch_d')+' ':'')+p2(Math.floor(s%86400/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60);$('lnchLR').textContent=T('lnch_run2')};
+  $('lnchLT').textContent=(mt?T('mnt_t'):T('lnch_t'))+' '+(d?d+' '+T('lnch_d')+' ':'')+p2(Math.floor(s%86400/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60);$('lnchLR').textContent=T(mt?'mnt_note':'lnch_run2')};
  if(window.__lnchIv)clearInterval(window.__lnchIv);const iv=setInterval(tk,1000);window.__lnchIv=iv;tk()}
 const GAME_CH='https://t.me/GRIMTALENEWS'; // канал новин гри (картка 6)
 function openCh(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CH);else window.open(GAME_CH,'_blank','noopener')}
