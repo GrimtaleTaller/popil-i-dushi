@@ -1989,12 +1989,12 @@ function mpAuto(n){setTimeout(()=>{if(!MP||MP.prem||!(MP.until>Date.now()))retur
 function mpTick(){const c=$('mpCd');if(c&&MP)c.textContent=sbHms(Math.max(0,MP.until-Date.now()));document.querySelectorAll('[data-mpcd]').forEach(e=>{e.textContent=MP?sbHms(Math.max(0,MP.until-Date.now())):''})}
 function mpPaint(){const b=$('mpOf');if(!b)return;const on=MP&&!MP.prem&&MP.until>Date.now();b.style.display=on?'':'none';b.classList.toggle('dual',!!(NB&&NB.until>Date.now()));if(on){$('mpOfT').textContent='−'+mpOff(MP)+'%';$('mpOfC').textContent=sbHms(MP.until-Date.now())}}
 setInterval(()=>{mpTick();mpPaint()},1e3);if($('mpOf'))$('mpOf').onclick=()=>mpOpen();window.__mpOpen=mpOpen; // __mpOpen — для тестів
-function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw);
+function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw),gr=((shopData&&shopData.items||[]).find(x=>x.k==='mpass')||{}).gram||0; // 18.11 (Влад): у картці стежки — і оплата GRAM, як в інших товарах
  return `<div class="card shopc mpcard"><div class="mpthumb" data-mpopen><img src="assets/offer/mpass.webp?v=1" alt="">${promo?`<div class="mpbadge">−${mpOff(o)}%</div><div class="mpcdp">⏳ <span data-mpcd>${sbHms(o.until-Date.now())}</span></div>`:''}<span class="mptag2">🌙 ${T(promo?'mp_tag':'mp_tag_new')}</span></div>
   <h4 class="shh"><span>${T('mp_t')}</span></h4><p class="hint">${T('mp_d_shop',{l:o.max,d:30})}</p>
   <div class="mpchips"><span>${RIC('ash')} ${n3(S.a)}+</span><span>${RIC('scroll')} ×${S.scroll}</span><span>${eggIc('r')} ×${S.egg}</span><span>${RIC('key')} ×${S.key}</span><span>👑 VIP ${S.vip} ${T('mp_d')}</span></div>
   <p class="shash">${promo?`<s>$${o.old}</s> `:''}<b>$${(promo?o.usd:o.old).toFixed(2)}</b></p>
-  <div class="row shopb"><button class="btn pri" data-buy="mpass" data-m="stars">⭐ ${promo?o.stars:o.ostars}</button><button class="btn" data-buy="mpass" data-m="usdt">💵 ${(promo?o.usd:o.old).toFixed(2)} USDT</button></div>
+  <div class="row shopb"><button class="btn pri" data-buy="mpass" data-m="stars">⭐ ${promo?o.stars:o.ostars}</button>${gr?`<button class="btn" data-buy="mpass" data-m="gram">💎 ${gr} GRAM</button>`:''}<button class="btn" data-buy="mpass" data-m="usdt">💵 ${(promo?o.usd:o.old).toFixed(2)} USDT</button></div>
   <button class="btn shoth" data-other="mpass">${T('shop_other_link')} ›</button><button class="btn shoth" data-mpopen>${T('mp_more')} ›</button></div>`}
 const mpCan=o=>o&&o.prem?Math.max(0,o.lv-(o.got||[]).filter(l=>l<=o.lv).length):0;
 const FRM_MOON='<img class="frmm" src="assets/offer/moon_frame.webp?v=1" alt="🌙">'; // 16.11: рамка «Місячна» (45-й рівень Місячної стежки) — біля ніка в рейтингах і біля рівня в шапці
