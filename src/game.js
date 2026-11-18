@@ -1419,7 +1419,7 @@ function renderClan(){
    const mine=apps.includes(c.id),full=c.members>=(c.max||C.max),reqs=(c.min_stage?`${T('stage',{n:c.min_stage})}`:'')+(c.min_power?`${c.min_stage?' · ':''}💪 ${fmt(c.min_power)}`:'');
    const btn=mine?`<button class="btn" data-cu="${c.id}">${T('app_cancel')}</button>`:c.join_mode==='closed'?`<button class="btn" disabled>🔒 ${T('clan_mode_closed')}</button>`:`<button class="btn pri" data-cj="${c.id}" ${!full&&c.ok?'':'disabled'}>${c.join_mode==='apply'?T('apply'):T('join')}</button>`;
    return `<div class="item" style="border-left-color:#7a5a26"><div class="ic">${penI([c.name,c.pt],30)||'🛡️'}</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">👥 ${c.members}/${c.max||C.max} · ${T('power',{n:fmt(c.power)})} · ${T('clan_mode_'+c.join_mode)}</div>${c.desc?`<div class="cdesc s">${esc(c.desc)}</div>`:''}${reqs?`<div class="st ${c.ok?'':'dn'}">${T('clan_reqs')}: ${reqs}</div>`:''}${mine?`<div class="st up">${T('app_sent')}</div>`:''}</div><div class="acts">${btn}</div></div>`}).join(''):`<p class="hint">${T(C.q?'clan_nothing':'clan_none_yet')}</p>`)+'</div>';
-  {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]})}renderSub(); // не губимо введене при оновленні
+  {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]});if(csub!=='chat')iconize(el)} /* 18.11 (Влад): у клані ті самі намальовані значки ресурсів, що й у Кузні */renderSub(); // не губимо введене при оновленні
   const srch=()=>{clanBusy=true;api('clan',{q:$('cQ').value.trim()}).then(r=>{clanData=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{clanBusy=false;dirty.clan=1})};
   $('cQgo').onclick=srch;$('cQ').onkeydown=e=>{if(e.key==='Enter')srch()};
   el.querySelectorAll('[data-cu]').forEach(b=>b.onclick=()=>clanAct('clanUnapply',{id:+b.dataset.cu}));
@@ -1492,7 +1492,7 @@ function renderClan(){
  if(C.role==='leader')S.main+=`<p class="hint">${T('clan_leader_hint')}</p>`;
  if(csub==='chat'){if($('chatRoot')&&CH.clan===C.clan.id){chPaint();renderSub();if(!CH.t&&!CH.busy)chPoll(1);return}S.chat=chShell()} // 14.11: чат клану — сам оновлюється, введене не губиться
  if(!S[csub])csub='main';h+=csub==='chat'?S[csub]:cDecor(S[csub]);
- {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]})}renderSub(); // 13.11: не губимо введене при автооновленні клану
+ {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]});if(csub!=='chat')iconize(el)} /* 18.11 (Влад): у клані ті самі намальовані значки ресурсів, що й у Кузні */renderSub(); // 13.11: не губимо введене при автооновленні клану
  if(csub==='chat')chMount(C);else chStop();
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ct,q=el.querySelector(`[data-ktq="${t}"]`),n=Math.floor(+(q&&q.value)||1);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanTake',{t,n})});
  const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{if(!$('kgP').value){toast(T('key_pick_err'));return}const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
