@@ -521,7 +521,7 @@ function mktHist(){api('marketHist').then(r=>{const o=r.out||{},d=x=>{if(!x)retu
  modal(`<h3>📜 ${T('mkt_hist')}</h3><div class="mhist"><h4>💰 ${T('mkt_h_sold',{n:S.length})}</h4>${S.length?`<p class="hint">${T('mkt_h_got')}: ${sum(S,'net')}</p>`+S.map(l=>row(l,`${d(l.sold)} · ${curIc(l.cur)} ${fmt(l.price)} → ${T('mkt_h_net')} ${fmt(l.net)}`)).join(''):`<p class="hint">${T('mkt_h_none')}</p>`}
   <h4>🛒 ${T('mkt_h_bought',{n:B.length})}</h4>${B.length?`<p class="hint">${T('mkt_h_spent')}: ${sum(B,'price')}</p>`+B.map(l=>row(l,`${d(l.sold)} · ${curIc(l.cur)} ${fmt(l.price)}${l.from?' · '+esc(l.from):''}`)).join(''):`<p class="hint">${T('mkt_h_none')}</p>`}</div>`,null,null,null,'mhist')}).catch(e=>toast(errT(e)))} // 18.11 (гравець Хасан): своя історія ринку — продане (з виручкою після комісії) і куплене, останні 50
 function lotView(l){const it=l.item||{};
- if(it.kind==='mat')return {c:'#8a7a5a',ic:'⛏️',nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
+ if(it.kind==='mat')return {c:'#8a7a5a',ic:RIC('m'+((it.m|0)+1)),nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
  return {c:RAR[it.r].c,ic:gearIc(it),nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il})+powTag(it),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
 let mktMatOpen=false;
@@ -717,7 +717,7 @@ function renderForge(){
   <p class="hint">${T('ast_keep')}</p><p class="hint">📜 ${T('ast_scroll_src',{n:aScr})}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
  if(fsub==='gem')h+=gemPane();
- setH($('p-forge'),h);iconize($('p-forge')); // 15.11 (Влад): емодзі ресурсів у Кузні → намальовані значки
+ setH($('p-forge'),h);iconize($('p-forge'),1); // 15.11 (Влад): емодзі ресурсів у Кузні → намальовані значки
  if(fsub==='gem')bindGem();
  $('p-forge').querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{G.dismode=b.dataset.dm;renderForge();dirty.bag=1});
  if($('smelt')){$('smelt').onclick=()=>act('smelt',{n:1},r=>toast(T('smelted',{n:r.out.n})));$('smeltAll').onclick=()=>act('smelt',{n:20},r=>toast(T('smelted',{n:r.out.n})))}
@@ -755,9 +755,20 @@ let swF=0; // вибраний поверх (0 — найвищий доступ
 // 15.11 (Влад, варіант А «Банери»): Підземелля й Болото — своя сцена, підвкладки зі значками (як у Клані), тири — картини-банери, нагороди плитками, смуга Сили.
 const dngD={}; // вибрана складність для кожного тиру
 let dsub='dng';
-const ICZ={'🔩':'shards','🧰':'chest1','⛏️':'m1','⛏':'m1','⚒️':'dis','⚒':'dis','💰':'gold','💎':'cat','✦':'ess','📜':'scroll','⚱️':'ash','⚱':'ash','🗝️':'key','🗝':'key'},ICZ_RE=/(⛏️?\s?(?:IV|III|II|I)(?![A-Za-zА-Яа-яІі])|⛏️?|⚒️?|⚱️?|🗝️?|🔩|🧰|💰|💎|✦|📜|🟧)/u;
-function iconize(root){if(!root)return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),L=[];let n;while(n=w.nextNode())if(ICZ_RE.test(n.nodeValue)&&!n.parentNode.closest('textarea,input,.chimg'))L.push(n);
- L.forEach(t=>{const f=document.createDocumentFragment();t.nodeValue.split(new RegExp(ICZ_RE.source,'gu')).forEach(p=>{if(!p)return;let k=ICZ[p],tail='';if(p[0]==='⛏'){const r=p.replace(/^⛏️?\s?/,'');k='m'+(['I','II','III','IV'].indexOf(r)+1||1);tail=r}if(p==='🟧'){const i=document.createElement('img');i.className='hic s ico leg';i.src='assets/items/weapon0_4.webp';i.alt='';f.appendChild(i)}else if(k){const i=document.createElement('img');i.className='hic s ico';i.src='assets/res/'+k+'.webp?v=1';i.alt='';f.appendChild(i);if(tail)f.appendChild(document.createTextNode(tail))}else f.appendChild(document.createTextNode(p))});t.parentNode.replaceChild(f,t)})}
+const ICZ={'🔩':'shards','🧰':'chest1','⛏️':'m1','⛏':'m1','⚒️':'dis','⚒':'dis','💰':'gold','💎':'cat','✦':'ess','📜':'scroll','⚱️':'ash','⚱':'ash','🗝️':'key','🗝':'key','🔥':'souls'},ICZ_RE=/(⛏️?\s?(?:IV|III|II|I)(?![A-Za-zА-Яа-яІі])|⛏️?|⚒️?|⚱️?|🗝️?|🔩|🧰|💰|💎|✦|📜|🟧|🔥)/u;
+// 18.11 (Влад): намальовані значки ресурсів усюди в грі. full — Кузня (усі значки); звичайний режим пропускає те, що в інших місцях означає інше:
+// 📜 (журнал / правила), ✦ (властивості), 🟧, 💎 поруч із GRAM / TON (спосіб оплати), 🔥 без числа поруч (настрій у текстах, а не Іскри)
+function iconize(root,full){if(!root)return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),L=[];let n;while(n=w.nextNode())if(ICZ_RE.test(n.nodeValue)&&n.parentNode&&!n.parentNode.closest('textarea,input,.chimg,.noi,#chatRoot'))L.push(n);
+ const RE=new RegExp(ICZ_RE.source,'gu');
+ L.forEach(t=>{const v=t.nodeValue,pay=/GRAM|TON/.test(v);let m,last=0,hit=0;const f=document.createDocumentFragment(),txt=x=>{if(x)f.appendChild(document.createTextNode(x))};RE.lastIndex=0;
+  while(m=RE.exec(v)){const p=m[0],rest=v.slice(m.index+p.length);let k=ICZ[p],tail='';
+   if(!full&&(p==='📜'||p==='✦'||p==='🟧'||(p==='💎'&&pay)||(p==='🔥'&&!/^\s?[\d+×]/.test(rest))))continue;
+   if(p[0]==='⛏'){const r=p.replace(/^⛏️?\s?/,'');k='m'+(['I','II','III','IV'].indexOf(r)+1||1);tail=r}
+   txt(v.slice(last,m.index));last=m.index+p.length;hit=1;
+   if(p==='🟧'){const i=document.createElement('img');i.className='hic s ico leg';i.src='assets/items/weapon0_4.webp';i.alt='';f.appendChild(i)}
+   else if(k){const i=document.createElement('img');i.className='hic s ico';i.src='assets/res/'+k+'.webp?v=1';i.alt='';f.appendChild(i);txt(tail)}else txt(p)}
+  if(!hit)return;txt(v.slice(last));t.parentNode.replaceChild(f,t)})}
+{const Q=new Set();let R=0;const go=()=>new MutationObserver(ms=>{for(const m of ms)m.addedNodes.forEach(x=>{const e=x.nodeType===3?x.parentNode:x;if(e&&e.nodeType===1)Q.add(e)});if(!R&&Q.size)R=requestAnimationFrame(()=>{R=0;const A=[...Q];Q.clear();A.forEach(e=>{if(e.isConnected&&!e.closest('.noi,#chatRoot'))iconize(e)})})}).observe(document.body,{childList:true,subtree:true});if(document.body)go();else addEventListener('DOMContentLoaded',go)} // будь-які нові елементи (вкладки, вікна, сповіщення) — без ручних викликів
 const RIS=k=>`<img class="hic s" src="assets/res/${k}.webp?v=1" alt="">`;const RIC=k=>`<img class="ric" src="assets/res/${k}.webp?v=1" alt="" decoding="async">`; // 15.11: намальовані значки ресурсів (Higgsfield, стиль значків клану)
 const DIC=k=>`<img class="cic" src="assets/dng/${k}.webp?v=1" alt="" loading="lazy" decoding="async">`;
 function dPow(need){const my=V.hero.power,ok=my>=need,p=Math.max(4,Math.min(100,my/need*100));
