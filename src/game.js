@@ -1387,6 +1387,22 @@ function pjoinShow(o){clanData=null;profData=null;dirty.clan=1;modal(`<div class
 function kbAsk(t,n,k1){if(!(n>=1))return;const c=Math.round(n*k1),a=G.ash||0;if(c>a){toast(ERR.no_ash+': ⚱️'+fmt(a));return}
  modal(`<div class="big">🗝️</div><h3>${T('kb_q',{n,t})}</h3><div class="kbsum"><div><span class="hint">${T('kb_price')}</span><b>⚱️ ${fmt(c)}</b></div><div><span class="hint">${T('kb_left')}</span><b>⚱️ ${fmt(a-c)}</b></div></div><p class="hint">${T('kb_note')}</p>`,
   T('kb_buy'),()=>act('clanKeyBuy',{t,n,max:c},r=>{const o=r.out&&r.out.kbuy;haptic('medium');toast(T('kb_ok',{n:o?o.n:n,t,a:fmt(o?o.ash:c)}));clanAt=0;dirty.clan=1}),null,'kbuy')}
+let cgData=null,cgP='w',cgS='a';
+function cgCard(C){ // 18.11 (Влад): внески в казну по гравцях — сьогодні / тиждень / увесь час
+ if(!cgData)return `<div class="card cgift"><h4>📊 ${T('cg_t')}</h4><p class="hint">${T('cg_hint')}</p><button class="btn pri" id="cgOpen">📊 ${T('cg_show')}</button></div>`;
+ const z={g:0,a:0,sh:0,m:[0,0,0,0]},by=new Map(cgData.list.map(x=>[x.id,x]));
+ (C.members||[]).forEach(m=>{if(!by.has(m.id))by.set(m.id,{id:m.id,name:m.name,in:true,d:z,w:z,a:z})});
+ const myId=((C.members||[]).find(m=>m.me)||{}).id,ms=x=>x.m.reduce((q,v)=>q+v,0),key=x=>cgS==='g'?x.g:cgS==='sh'?x.sh:cgS==='m'?ms(x):x.a,emp=x=>!x.g&&!x.a&&!x.sh&&!ms(x);
+ const L=[...by.values()].map(r=>({...r,v:r[cgP]})).filter(r=>r.in||!emp(r.v)).sort((p,q)=>key(q.v)-key(p.v)||q.v.a-p.v.a||q.v.g-p.v.g||(q.in-p.in));
+ const T0=L.reduce((t,r)=>({g:t.g+r.v.g,a:t.a+r.v.a,sh:t.sh+r.v.sh,m:t.m.map((v,i)=>v+r.v.m[i])}),{g:0,a:0,sh:0,m:[0,0,0,0]});
+ const chips=x=>{const o=[];if(x.a)o.push(`<span class="cgv">⚱️ ${fmt(x.a)}</span>`);if(x.g)o.push(`<span class="cgv">💰 ${fmt(x.g)}</span>`);if(x.sh)o.push(`<span class="cgv">🔩 ${fmt(x.sh)}</span>`);x.m.forEach((v,i)=>{if(v)o.push(`<span class="cgv">⛏️ ${MATN[i]} ${fmt(v)}</span>`)});return o.join('')};
+ let rk=0;
+ return `<div class="card cgift"><h4>📊 ${T('cg_t')}</h4>
+  <div class="chips">${['d','w','a'].map(k=>`<button data-cgp="${k}" class="${cgP===k?'act':''}">${T('cg_p_'+k)}</button>`).join('')}</div>
+  <div class="chips cgs"><span class="hint">${T('cg_sort')}</span>${[['a','⚱️'],['g','💰'],['sh','🔩'],['m','⛏️']].map(([k,ic])=>`<button data-cgs="${k}" class="${cgS===k?'act':''}">${ic}</button>`).join('')}</div>
+  <div class="cgtot"><b>${T('cg_total')}</b> ${emp(T0)?'—':chips(T0)}</div>
+  ${L.map(r=>{const e=emp(r.v);if(!e)rk++;return `<div class="cgrow${e?' cg0':''}${r.in?'':' cgout'}"><span class="cgrk">${e?'·':rk}</span><div class="cgnm">${esc(r.name)}${r.id===myId?' ('+T('you')+')':''}${r.in?'':` <small>${T('cg_left')}</small>`}</div><div class="cgvs">${e?`<span class="hint">${T('cg_none')}</span>`:chips(r.v)}</div></div>`}).join('')}
+ </div>`}
 function renderClan(){
  const el=$('p-clan');
  if(G.maxStage<(V.clanStage||5)){const P=V.pclan;el.innerHTML=(P?`<div class="card cinvm pclan"><div class="ic">🏰</div><h3>${esc(P.n)}</h3><p>${T('pclan_h',{n:P.st||5,s:G.maxStage})}</p></div>`:'')+`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
@@ -1424,6 +1440,7 @@ function renderClan(){
   <h4 style="margin-top:12px">📦 ${T('clan_res')}</h4><div class="mats">${[0,1,2,3].map(i=>`<div><b>⛏️ ${MATN[i]}</b><span>${fmt((C.clan.res||{m:[]}).m[i]||0)}</span></div>`).join('')}<div><b>🔩</b><span>${fmt((C.clan.res||{}).sh||0)}</span></div></div>
   <div class="chips" style="margin-top:8px">${['m0','m1','m2','m3','sh'].map(k=>`<button data-rk="${k}" class="${resK===k?'act':''}">${k==='sh'?'🔩 '+fmt(G.shards||0):'⛏️'+MATN[+k[1]]+' '+fmt((G.mats||[])[+k[1]]||0)}</button>`).join('')}</div>
   <div class="row" style="align-items:center"><input id="cRes" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cResAll">${T('give_all')}</button><button class="btn pri" id="cResGo">${T('give')}</button></div></div>`;
+ S.main+=cgCard(C); // 18.11 (Влад): хто скільки й чого вніс у казну
  const tiers=Object.keys(K).filter(t=>K[t]>0).sort((a,b)=>a-b);
  const stor=`<div class="card"><h4>🗝️ ${T('clan_keys')}</h4><p class="hint">${T('clan_keys_hint')}</p>`+(tiers.length?tiers.map(t=>`<div class="row" style="margin-top:6px;align-items:center"><span style="flex:1.4">${T('tier',{n:t})}: <b>${K[t]}</b></span>${lead?`<input class="inp" data-ktq="${t}" type="number" min="1" max="${K[t]}" value="1" inputmode="numeric" style="width:64px;flex:0 0 64px"><button class="btn pri" data-ct="${t}">${T('take')}</button>${K[t]>1?`<button class="btn" data-cta="${t}">${T('take_all',{n:K[t]})}</button>`:''}`:''}</div>`).join('')+(lead?'':`<p class="hint" style="margin-top:8px">🔒 ${T('clan_take_lead')}</p>`):`<p class="hint">${T('clan_keys_empty')}</p>`)
   +(lead&&tiers.length?`<h4 style="margin-top:12px">🤝 ${T('key_give_t')}</h4><div class="row" style="align-items:center"><select id="kgP" class="inp"><option value="" disabled selected>${T('key_pick')}</option>${(C.members||[]).map(m=>`<option value="${m.id}">${esc(m.name)}${m.me?' ('+T('you')+')':''}</option>`).join('')}</select><select id="kgT" class="inp" style="flex:0 0 120px">${tiers.map(t=>`<option value="${t}">${T('tier',{n:t})} (${K[t]})</option>`).join('')}</select></div><div class="row" style="align-items:center"><input id="kgN" class="inp" type="number" min="1" value="1" inputmode="numeric" placeholder="${T('key_qty')}"><button class="btn pri" id="kgGo">${T('key_give')}</button></div>`:'')+'</div>';
@@ -1501,6 +1518,8 @@ function renderClan(){
  if($('cResAll'))$('cResAll').onclick=()=>{$('cRes').value=haveRes(resK)};
  if($('cResGo'))$('cResGo').onclick=()=>{const n=Math.floor(+$('cRes').value||0);if(n<1)return;if(n>haveRes(resK)){toast(ERR.no_mats);return}clanAct('clanGiveRes',{k:resK,n},()=>toast(T('res_given')))};
  if($('cAshAll'))$('cAshAll').onclick=()=>{$('cAsh').value=Math.floor(G.ash||0)};
+ if($('cgOpen'))$('cgOpen').onclick=()=>api('clanGifts').then(r=>{cgData=r.out;renderClan()}).catch(e=>toast(errT(e)));
+ el.querySelectorAll('[data-cgp]').forEach(b=>b.onclick=()=>{cgP=b.dataset.cgp;renderClan()});el.querySelectorAll('[data-cgs]').forEach(b=>b.onclick=()=>{cgS=b.dataset.cgs;renderClan()});
  if($('cAshGo'))$('cAshGo').onclick=()=>{const a=Math.floor(+$('cAsh').value||0);if(a<1)return;if(a>(G.ash||0)){toast(ERR.no_ash+': ⚱️'+fmtX(G.ash));return}clanAct('clanGiveAsh',{amt:a})};
  if($('cGiveGo'))$('cGiveGo').onclick=()=>{const a=Math.floor(+$('cGive').value||0);if(a<1)return;if(a>G.gold){toast(ERR.no_gold);return}clanAct('clanGive',{amt:a})};
  el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{craftT=+b.dataset.cc;renderClan()});
