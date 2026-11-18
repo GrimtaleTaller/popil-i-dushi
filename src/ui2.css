@@ -867,3 +867,13 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 
 /* 18.11: історія ринку */
 .mhist{max-height:62vh;overflow:auto;text-align:left}.mhist h4{margin:10px 0 4px}
+
+/* 18.11: внески в казну клану */
+.cgift .cgs{align-items:center;margin-top:4px}.cgift .cgs .hint{margin-right:4px}
+.cgtot{margin:8px 0 6px;padding:6px 8px;border-radius:10px;background:#ffffff0d;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:13px}
+.cgrow{display:flex;gap:8px;align-items:flex-start;padding:7px 2px;border-top:1px solid #ffffff12}
+.cgrk{width:22px;flex:none;text-align:center;font-weight:700;color:var(--gold,#e8c36a)}
+.cgnm{flex:0 0 34%;font-weight:600;overflow:hidden;text-overflow:ellipsis}.cgnm small{color:#999;font-weight:400}
+.cgvs{flex:1;display:flex;flex-wrap:wrap;gap:4px}
+.cgv{font-size:12px;padding:2px 6px;border-radius:8px;background:#ffffff14;white-space:nowrap}
+.cg0{opacity:.55}.cgout .cgnm{color:#aaa}
