@@ -1868,15 +1868,15 @@ function renderWb(){
  if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
  if(wbData&&Date.now()-wbAt>6e4)wbData=null;
  if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
- const D=wbData,B0=D.boss,kind=W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price;
+ const D=wbData,B0=D.boss,rest=!!(B0.back&&B0.back>Date.now()),kind=rest?'':W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price; // 18.11 (Влад «А»): rest — бос повалений, відпочиває 30 хв
  if(D.ready===false){el.innerHTML=`<div class="empty">${(ERR&&ERR.wb_soon)||T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
  let h=`<div class="sbx"><video class="sbx-v" src="assets/boss/upyr_idle.mp4?v=1" poster="assets/boss/upyr_poster.jpg?v=1" autoplay muted loop playsinline></video>
   <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>
-  <div class="sbx-hp"><i style="width:${Math.max(2,B0.hp/B0.hp_max*100)}%"></i><span>❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)}</span></div></div></div>
+  ${rest?`<div class="sbx-rest"><b>☠️ ${T('sbx_down')}</b><span>${T('sbx_down_by',{n:esc(B0.by||'')})}</span><span>${T('sbx_back')} <b class="wbcd">${mmss(B0.back-Date.now())}</b> · ❤️ ${fmt(B0.hp_max)}</span></div>`:`<div class="sbx-hp"><i style="width:${Math.max(2,B0.hp/B0.hp_max*100)}%"></i><span>❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)}</span></div>`}</div></div>
   ${D.champ?`<div class="sbx-champ">${T('sbx_champ',{n:esc(D.champ.name)})}</div>`:''}
   <div class="dstat sbst"><div><span>🎟️</span><b>${W.left}/${W.free}</b><small>${T('sbx_free')}</small></div>${W.packLeft?`<div><span>📦</span><b>${W.packLeft}</b><small>${T('sbx_pack')}</small></div>`:`<div><span>${RIC('ash')}</span><b>${W.paidLeft?fmt(W.price):'—'}</b><small>${T('sbx_next')}</small></div>`}<div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div></div>
-  <button class="btn pri dgo sbx-go" id="wbHit" ${busy||!kind||!canAsh?'disabled':''}>${kind==='free'?T('sbx_go_free',{n:W.left,m:W.free}):kind==='pack'?T('sbx_go_pack',{n:W.packLeft}):kind==='ash'?T('sbx_go_ash',{p:fmt(W.price)}):T('sbx_out')}</button>
+  <button class="btn pri dgo sbx-go" id="wbHit" ${busy||!kind||!canAsh?'disabled':''}>${rest?`⏳ ${T('sbx_back_btn')} <span class="wbcd">${mmss(B0.back-Date.now())}</span>`:kind==='free'?T('sbx_go_free',{n:W.left,m:W.free}):kind==='pack'?T('sbx_go_pack',{n:W.packLeft}):kind==='ash'?T('sbx_go_ash',{p:fmt(W.price)}):T('sbx_out')}</button>
   ${kind==='ash'&&!canAsh?`<p class="hint" style="text-align:center;color:#ff8a7a;margin:6px 0 0">${T('sbx_noash')}</p>`:''}
   <div class="sbx-chest">${chestIc(nextG)}<span>${T('sbx_chest')}</span><button class="btn" id="wbRef" style="margin-left:auto;flex:none">🔄</button></div>
   <div class="chips sbx-tabs">${['week','cash','clan'].map(k=>`<button data-wbt="${k}" class="${wbTab===k?'act':''}">${T('sbx_tab_'+k)}</button>`).join('')}</div>`;
@@ -1888,14 +1888,16 @@ function renderWb(){
  setH(el,h);iconize(el); // без зайвої перемальовки (відео не перезапускається); iconize — повторно безпечно
  el.querySelectorAll('[data-wbt]').forEach(b=>b.onclick=()=>{wbTab=b.dataset.wbt;renderWb()});
  $('wbRef').onclick=()=>{wbData=null;dirty.wboss=1;flush()};
+ clearInterval(wbCdT);if(rest)wbCdT=setInterval(()=>{const l=B0.back-Date.now();document.querySelectorAll('.wbcd').forEach(x=>x.textContent=mmss(l));if(l<=0){clearInterval(wbCdT);wbData=null;dirty.wboss=1;flush()}},1000); // таймер повернення боса
  live('wboss',()=>api('wbInfo').then(r=>r.out),o=>{if(!o||same(o,wbData))return false;wbData=o;return true},6e4); // 15.11 (критик): рейтинг і здоров'я оновлюються раз на хвилину, поки вкладка відкрита
  const go=()=>act('wbAttack',{pay:kind==='ash',...(kind==='ash'?{p:W.price}:{})},r=>{const o=r.out;wbResult(o);setTimeout(()=>{wbData=null;dirty.wboss=1;flush()},1800)});
  $('wbHit').onclick=()=>kind==='ash'?modal(`<div class="big">${RIC('ash')}</div><p>${T('sbx_ash_ask',{p:fmt(W.price),n:W.paidLeft})}</p>`,T('sbx_go_ash',{p:fmt(W.price)}),go):go();
 }
+let wbCdT=0;const mmss=ms=>{ms=Math.max(0,Math.ceil(ms/1e3));return Math.floor(ms/60)+':'+String(ms%60).padStart(2,'0')};
 function wbResult(o){
  const hits=o.ev.filter(e=>e[1]===0||e[1]===2);
  modal(`<div class="sbr"><img class="sbr-b" src="assets/boss/upyr_poster.jpg?v=1" alt=""><div class="sbr-h">${hits.map((e,i)=>`<i class="sbr-n ${e[3]?'cr':''} ${e[1]===2?'bt':''}" style="animation-delay:${0.15+i*0.35}s">${e[1]===2?T('sbx_bite')+' ':''}${e[3]?T('sbx_crit')+' ':''}${fmt(e[2])}</i>`).join('')}</div></div>
-  <h3>${T('sbx_res',{d:fmt(o.dmg)})}</h3><p class="sbr-c">${chestIc(o.chest&&o.chest.g)} ${T('chest_'+((o.chest&&o.chest.g)||2))} · ${T('lvl',{n:o.chest?o.chest.il:G.lvl})}</p>${o.paid?`<p class="hint">${RIS('ash')}−${o.paid}</p>`:''}`,T('ok'));
+  <h3>${T('sbx_res',{d:fmt(o.dmg)})}</h3>${o.boss&&o.boss.killed?`<p class="sbr-k">☠️ ${T('sbx_kill_me')}</p>`:''}<p class="sbr-c">${chestIc(o.chest&&o.chest.g)} ${T('chest_'+((o.chest&&o.chest.g)||2))} · ${T('lvl',{n:o.chest?o.chest.il:G.lvl})}</p>${o.paid?`<p class="hint">${RIS('ash')}−${o.paid}</p>`:''}`,T('ok'));
  haptic('heavy');
 }
 // головні вкладки й підвкладки
@@ -1954,7 +1956,7 @@ const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
 function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
- if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
+ if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
  const l=sbLeft();
  $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
 function sbOpen(){haptic('medium');if(V&&V.wb&&!V.wb.off){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
