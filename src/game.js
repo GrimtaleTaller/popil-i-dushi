@@ -781,7 +781,8 @@ function swampCard(){
 }
 function dTierBody(Tt,DF,cd,left){const tr=T,rw=cd.rw,e=cd.est;
  const tiles=`<div class="rtiles sm">${rTile(chestIc(rw.chestG),'×'+rw.chests)}${rTile(RIC('m'+(rw.mat+1)),'×'+rw.matN+' '+MATN[rw.mat])}${rTile(RIC('souls'),rw.souls)}${rw.catChance?rTile(RIC('cat'),Math.round(rw.catChance*100)+'%'):''}${rw.essChance?rTile(RIC('ess'),Math.round(rw.essChance*100)+'%',RAR[6].c):''}</div>`;
- return `${tiles}<div class="sub dil">${chestIc(rw.chestG)} ${tr('lvl',{n:G.lvl+'–'+(G.lvl+3)})}</div>${cd.need?dPow(cd.need):''}
+ const fa=cd.d>(Tt.best||0)?15*Tt.t*cd.d:0; // 18.11 (Влад): Попіл за перше проходження складності — видно на картці (сервер: ASH.first 15 × тир × складність, один раз; серія ×10 не множить)
+ return `${tiles}${fa?`<div class="sub dfa">${RIC('ash')} ${tr('dng_first',{n:fa})}</div>`:''}<div class="sub dil">${chestIc(rw.chestG)} ${tr('lvl',{n:G.lvl+'–'+(G.lvl+3)})}</div>${cd.need?dPow(cd.need):''}
   ${DF.length>1?`<div class="dseg">${DF.map(x=>`<button data-dt="${Tt.t}" data-dd="${x.d}" class="${x.d===cd.d?'act':''} ${x.open?'':'lockd'}">${x.open?'':'🔒 '}${tr('diff_'+x.d)}</button>`).join('')}</div>`:''}
   <div class="dbtns"><button class="btn pri dgo" data-dng="${Tt.t}" data-d="${cd.d}" data-e="${e}" ${busy||(!left&&!Tt.keys&&(G.ash||0)<Tt.pay)?'disabled':''}>${left?tr('enter_free'):Tt.keys?tr('enter_key',{n:Tt.keys}):tr('enter',{p:fmt(Tt.pay)})}</button>${(left+Tt.keys)>1?`<button class="btn" data-dngn="${Tt.t}" data-d="${cd.d}" data-e="${e}" ${busy?'disabled':''}>⚡ ${tr('batch',{n:Math.min(10,left+Tt.keys)})}</button>`:''}</div>`}
 function dngList(){
@@ -1989,12 +1990,12 @@ function mpAuto(n){setTimeout(()=>{if(!MP||MP.prem||!(MP.until>Date.now()))retur
 function mpTick(){const c=$('mpCd');if(c&&MP)c.textContent=sbHms(Math.max(0,MP.until-Date.now()));document.querySelectorAll('[data-mpcd]').forEach(e=>{e.textContent=MP?sbHms(Math.max(0,MP.until-Date.now())):''})}
 function mpPaint(){const b=$('mpOf');if(!b)return;const on=MP&&!MP.prem&&MP.until>Date.now();b.style.display=on?'':'none';b.classList.toggle('dual',!!(NB&&NB.until>Date.now()));if(on){$('mpOfT').textContent='−'+mpOff(MP)+'%';$('mpOfC').textContent=sbHms(MP.until-Date.now())}}
 setInterval(()=>{mpTick();mpPaint()},1e3);if($('mpOf'))$('mpOf').onclick=()=>mpOpen();window.__mpOpen=mpOpen; // __mpOpen — для тестів
-function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw);
+function mpShopCard(o){const promo=o.until>Date.now(),S=mpSum(o.rw),gr=((shopData&&shopData.items||[]).find(x=>x.k==='mpass')||{}).gram||0; // 18.11 (Влад): у картці стежки — і оплата GRAM, як в інших товарах
  return `<div class="card shopc mpcard"><div class="mpthumb" data-mpopen><img src="assets/offer/mpass.webp?v=1" alt="">${promo?`<div class="mpbadge">−${mpOff(o)}%</div><div class="mpcdp">⏳ <span data-mpcd>${sbHms(o.until-Date.now())}</span></div>`:''}<span class="mptag2">🌙 ${T(promo?'mp_tag':'mp_tag_new')}</span></div>
   <h4 class="shh"><span>${T('mp_t')}</span></h4><p class="hint">${T('mp_d_shop',{l:o.max,d:30})}</p>
   <div class="mpchips"><span>${RIC('ash')} ${n3(S.a)}+</span><span>${RIC('scroll')} ×${S.scroll}</span><span>${eggIc('r')} ×${S.egg}</span><span>${RIC('key')} ×${S.key}</span><span>👑 VIP ${S.vip} ${T('mp_d')}</span></div>
   <p class="shash">${promo?`<s>$${o.old}</s> `:''}<b>$${(promo?o.usd:o.old).toFixed(2)}</b></p>
-  <div class="row shopb"><button class="btn pri" data-buy="mpass" data-m="stars">⭐ ${promo?o.stars:o.ostars}</button><button class="btn" data-buy="mpass" data-m="usdt">💵 ${(promo?o.usd:o.old).toFixed(2)} USDT</button></div>
+  <div class="row shopb"><button class="btn pri" data-buy="mpass" data-m="stars">⭐ ${promo?o.stars:o.ostars}</button>${gr?`<button class="btn" data-buy="mpass" data-m="gram">💎 ${gr} GRAM</button>`:''}<button class="btn" data-buy="mpass" data-m="usdt">💵 ${(promo?o.usd:o.old).toFixed(2)} USDT</button></div>
   <button class="btn shoth" data-other="mpass">${T('shop_other_link')} ›</button><button class="btn shoth" data-mpopen>${T('mp_more')} ›</button></div>`}
 const mpCan=o=>o&&o.prem?Math.max(0,o.lv-(o.got||[]).filter(l=>l<=o.lv).length):0;
 const FRM_MOON='<img class="frmm" src="assets/offer/moon_frame.webp?v=1" alt="🌙">'; // 16.11: рамка «Місячна» (45-й рівень Місячної стежки) — біля ніка в рейтингах і біля рівня в шапці
