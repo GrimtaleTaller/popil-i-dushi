@@ -508,11 +508,12 @@ const mktShowSet=a=>{mktShow=a;mktF.hide=a.length?[2,3,4,5,6].filter(r=>!a.inclu
 const curIc=c=>c==='gold'?'💰':'⚱️',curHave=c=>c==='gold'?G.gold:(G.ash||0);
 let mktErrN=0;
 function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',{...mktF},r=>{mktData=r.out;const g=r.out.got;if(g&&g.n){const x=[g.ash?'⚱️'+fmt(g.ash):'',g.gold?'💰'+fmt(g.gold):''].filter(Boolean).join(' + ');modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,x,p:Math.round(r.out.fee*100)})}</p>`,T('ok'))}dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData){mktErrN=Math.min(6,mktErrN+1);setTimeout(()=>{dirty.market=1;flush()},800*Math.pow(2,mktErrN))}else mktErrN=0})} // 15.11 (критик): після помилки — наростаюча пауза 1,6…51 с, не шторм запитів
+const MKT_MAX={ash:1e6,gold:1e13}; // 18.11: межа ціни лота, як на сервері (MARKET.maxPrice) — гравець бачить, у чому помилка
 function mktAct(a,args,cb){act(a,{...mktF,...args},r=>{if(r.out)mktData=r.out;dirty.market=1;cb&&cb(r)})}
 function curChips(id,sel,lockAsh){return `<div class="chips" id="${id}">${['ash','gold'].map(c=>`<button data-cur="${c}" class="${sel===c?'act':''}" ${lockAsh&&c==='gold'?'disabled':''}>${T('cur_'+c)}</button>`).join('')}</div>`}
 function bindCur(id,set){const w=$(id);if(!w)return;w.querySelectorAll('[data-cur]').forEach(b=>b.onclick=()=>{if(b.disabled)return;set(b.dataset.cur);w.querySelectorAll('[data-cur]').forEach(x=>x.classList.toggle('act',x===b))})}
 function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const lock=it.r>=((mktData&&mktData.ashOnlyR)||4);let cur='ash';
- modal(`<div class="big">⚱️</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="hint">${T('mkt_sell_hint',{p:10})}</p>${it.gm&&it.gm.length?`<p class="hint">${sockView(it)} ${T('gem_mkt_warn')}</p>`:''}${curChips('mCur','ash',lock)}${lock?`<p class="hint">${T('mkt_ash_only')}</p>`:''}<input id="mPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}" style="width:100%"><div class="row"><button class="btn" id="mNo">${T('cancel')}</button></div>`,T('mkt_put'),()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{id,price:p,cur},()=>toast(T('mkt_listed')))});
+ modal(`<div class="big">⚱️</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="hint">${T('mkt_sell_hint',{p:10})}</p>${it.gm&&it.gm.length?`<p class="hint">${sockView(it)} ${T('gem_mkt_warn')}</p>`:''}${curChips('mCur','ash',lock)}${lock?`<p class="hint">${T('mkt_ash_only')}</p>`:''}<input id="mPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}" style="width:100%"><div class="row"><button class="btn" id="mNo">${T('cancel')}</button></div>`,T('mkt_put'),()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1){toast(T('mkt_price_bad'));return}if(p>MKT_MAX[cur]){toast(T('mkt_price_max',{n:fmt(MKT_MAX[cur]),c:curIc(cur)}));return}mktAct('marketSell',{id,price:p,cur},()=>toast(T('mkt_listed')))});
  setTimeout(()=>{bindCur('mCur',c=>cur=c);const n=$('mNo');if(n)n.onclick=()=>{queue.shift();showModal()};const i=$('mPrice');if(i)i.focus()},0)}
 let mkMineF='all';
 function mktMine(){ // 18.11 (Влад «А»): «📦 Мої лоти» — кнопка в панелі ринку, усі свої лоти (речі й матеріали) з фільтром і «Зняти»
@@ -558,7 +559,7 @@ function renderMarket(){
  {const d=el.querySelector('.mmat');if(d)d.ontoggle=()=>{mktMatOpen=d.open}}
  el.querySelectorAll('[data-mm]').forEach(b=>b.onclick=()=>{mktMat=+b.dataset.mm;renderMarket()});
  bindCur('mmCur',c=>mktCur=c);
- $('mmGo').onclick=()=>{const q=Math.floor(+$('mmQty').value||0),p=Math.floor(+$('mmPrice').value||0);if(q<1||q>((G.mats||[])[mktMat]||0)){toast(ERR.no_mats);return}if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{kind:'mat',m:mktMat,n:q,price:p,cur:mktCur},()=>toast(T('mkt_listed')))};
+ $('mmGo').onclick=()=>{const q=Math.floor(+$('mmQty').value||0),p=Math.floor(+$('mmPrice').value||0);if(q<1||q>((G.mats||[])[mktMat]||0)){toast(ERR.no_mats);return}if(p<1){toast(T('mkt_price_bad'));return}if(p>MKT_MAX[mktCur]){toast(T('mkt_price_max',{n:fmt(MKT_MAX[mktCur]),c:curIc(mktCur)}));return}mktAct('marketSell',{kind:'mat',m:mktMat,n:q,price:p,cur:mktCur},()=>toast(T('mkt_listed')))};
  el.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>mktAct('marketBuy',{lot:+b.dataset.mb},r=>{toast(T('mkt_bought'));haptic('medium')}));
  el.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>mktAct('marketCancel',{lot:+b.dataset.mc},()=>toast(T('mkt_cancelled'))));
 }
