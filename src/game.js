@@ -514,6 +514,15 @@ function bindCur(id,set){const w=$(id);if(!w)return;w.querySelectorAll('[data-cu
 function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const lock=it.r>=((mktData&&mktData.ashOnlyR)||4);let cur='ash';
  modal(`<div class="big">⚱️</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="hint">${T('mkt_sell_hint',{p:10})}</p>${it.gm&&it.gm.length?`<p class="hint">${sockView(it)} ${T('gem_mkt_warn')}</p>`:''}${curChips('mCur','ash',lock)}${lock?`<p class="hint">${T('mkt_ash_only')}</p>`:''}<input id="mPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}" style="width:100%"><div class="row"><button class="btn" id="mNo">${T('cancel')}</button></div>`,T('mkt_put'),()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{id,price:p,cur},()=>toast(T('mkt_listed')))});
  setTimeout(()=>{bindCur('mCur',c=>cur=c);const n=$('mNo');if(n)n.onclick=()=>{queue.shift();showModal()};const i=$('mPrice');if(i)i.focus()},0)}
+let mkMineF='all';
+function mktMine(){ // 18.11 (Влад «А»): «📦 Мої лоти» — кнопка в панелі ринку, усі свої лоти (речі й матеріали) з фільтром і «Зняти»
+ const M=mktData||{mine:[],maxLots:10},isM=l=>l.item&&l.item.kind==='mat',L=M.mine.filter(l=>mkMineF==='all'||(mkMineF==='mat'?isM(l):!isM(l)));
+ const row=l=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${curIc(l.cur)} ${fmt(l.price)}</div></div><div class="acts"><button class="btn" data-mmc="${l.id}">${T('mkt_cancel')}</button></div></div>`};
+ const nI=M.mine.filter(l=>!isM(l)).length,nM=M.mine.length-nI;
+ modal(`<h3>📦 ${T('mkt_mine',{n:M.mine.length,m:M.maxLots})}</h3><div class="chips">${[['all',T('mkt_f_all')+' · '+M.mine.length],['it',T('mkt_f_items')+' · '+nI],['mat',T('mkt_f_mats')+' · '+nM]].map(([k,t])=>`<button data-mmf="${k}" class="${mkMineF===k?'act':''}">${t}</button>`).join('')}</div>
+  <div class="mhist">${L.length?L.map(row).join(''):`<p class="hint">${T(M.mine.length?'mkt_f_none':'mkt_mine_none')}</p>`}</div>`,null,null,()=>{
+  document.querySelectorAll('#mbox [data-mmf]').forEach(b=>b.onclick=()=>{mkMineF=b.dataset.mmf;queue.shift();showModal();mktMine()});
+  document.querySelectorAll('#mbox [data-mmc]').forEach(b=>b.onclick=()=>{b.disabled=true;mktAct('marketCancel',{lot:+b.dataset.mmc},()=>{toast(T('mkt_cancelled'));queue.shift();showModal();mktMine()})})},'mmine')}
 function mktHist(){api('marketHist').then(r=>{const o=r.out||{},d=x=>{if(!x)return '';const t=new Date(x);return String(t.getDate()).padStart(2,'0')+'.'+String(t.getMonth()+1).padStart(2,'0')+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')};
  const sum=(a,k)=>['ash','gold'].map(c=>{const v=a.filter(l=>(l.cur||'ash')===c).reduce((z,l)=>z+(l[k]||0),0);return v?curIc(c)+' '+fmt(v):''}).filter(Boolean).join(' · ')||'—';
  const row=(l,sub)=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${sub}</div></div></div>`};
@@ -530,8 +539,7 @@ function renderMarket(){
  if(!mktData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;mktLoad();return}
  const M=mktData;
  live('mkt',()=>api('market',{...mktF}).then(r=>r.out),o=>{if(same(o,mktData))return false;mktData=o;return true},3e4);
- let h=`<div class="chestbar" style="background:var(--panel);border-color:var(--line)">⚱️<span>${fmt(G.ash||0)} · 💰${fmt(G.gold)}</span><button class="btn" id="mHist">📜 ${T('mkt_hist')}</button><button class="btn" id="mRef">🔄</button></div><p class="hint">${T('mkt_hint',{p:Math.round(M.fee*100),r:RAR[M.minR].n})}</p>`;
- if(M.mine.length)h+=`<div class="card"><h4>📦 ${T('mkt_mine',{n:M.mine.length,m:M.maxLots})}</h4>`+M.mine.map(l=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${curIc(l.cur)} ${fmt(l.price)}</div></div><div class="acts"><button class="btn" data-mc="${l.id}">${T('mkt_cancel')}</button></div></div>`}).join('')+'</div>';
+ let h=`<div class="chestbar" style="background:var(--panel);border-color:var(--line)">⚱️<span>${fmt(G.ash||0)} · 💰${fmt(G.gold)}</span><button class="btn" id="mMine">📦 ${M.mine.length}/${M.maxLots}</button><button class="btn" id="mHist">📜 ${T('mkt_hist')}</button><button class="btn" id="mRef">🔄</button></div><p class="hint">${T('mkt_hint',{p:Math.round(M.fee*100),r:RAR[M.minR].n})}</p>`;
  const have=(G.mats||[])[mktMat]||0;
  h+=`<details class="card mmat" ${mktMatOpen?'open':''}><summary><h4>⛏️ ${T('mkt_sell_mats')}</h4></summary><div class="chips">${[0,1,2,3].map(m=>`<button data-mm="${m}" class="${mktMat===m?'act':''}">${MATN[m]} · ${fmt((G.mats||[])[m]||0)}</button>`).join('')}</div>${curChips('mmCur',mktCur,false)}
   <div class="row" style="align-items:center"><input id="mmQty" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_qty')} (${fmt(have)})"><input id="mmPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}"><button class="btn pri" id="mmGo" ${have?'':'disabled'}>${T('mkt_put')}</button></div></details>`;
@@ -544,7 +552,7 @@ function renderMarket(){
   h+=`<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${esc(l.seller||'')}</div>${v.st?`<div class="st">${v.st}</div>`:''}</div><div class="acts"><button class="btn pri" data-mb="${l.id}" ${curHave(l.cur)>=l.price?'':'disabled'}>${curIc(l.cur)} ${fmt(l.price)}</button></div></div>`}
  if(!n)h+=`<div class="empty">${T('mkt_empty')}</div>`;
  el.innerHTML=h;
- $('mRef').onclick=()=>{mktData=null;renderMarket()};$('mHist').onclick=mktHist;
+ $('mRef').onclick=()=>{mktData=null;renderMarket()};$('mHist').onclick=mktHist;$('mMine').onclick=()=>mktMine();
  el.querySelectorAll('[data-mh]').forEach(b=>b.onclick=()=>{const r=+b.dataset.mh;mktShowSet(mktShow.includes(r)?mktShow.filter(x=>x!==r):[...mktShow,r]);haptic('light');mktData=null;renderMarket()});{const rb=$('mRst');if(rb)rb.onclick=()=>{Object.assign(mktF,{slot:'',r:0,cur:'',sort:'price'});mktShowSet([]);haptic('light');mktData=null;renderMarket()}}
  el.querySelectorAll('[data-msel]').forEach(sel=>sel.onchange=()=>{const k=sel.dataset.msel;mktF[k]=k==='r'?+sel.value:sel.value;mktData=null;renderMarket()});
  {const d=el.querySelector('.mmat');if(d)d.ontoggle=()=>{mktMatOpen=d.open}}
