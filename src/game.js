@@ -514,6 +514,12 @@ function bindCur(id,set){const w=$(id);if(!w)return;w.querySelectorAll('[data-cu
 function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const lock=it.r>=((mktData&&mktData.ashOnlyR)||4);let cur='ash';
  modal(`<div class="big">⚱️</div><h3 style="color:${RAR[it.r].c}">${itemName(it)}</h3><p class="hint">${T('mkt_sell_hint',{p:10})}</p>${it.gm&&it.gm.length?`<p class="hint">${sockView(it)} ${T('gem_mkt_warn')}</p>`:''}${curChips('mCur','ash',lock)}${lock?`<p class="hint">${T('mkt_ash_only')}</p>`:''}<input id="mPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}" style="width:100%"><div class="row"><button class="btn" id="mNo">${T('cancel')}</button></div>`,T('mkt_put'),()=>{const p=Math.floor(+$('mPrice').value||0);if(p<1){toast(T('mkt_price_bad'));return}mktAct('marketSell',{id,price:p,cur},()=>toast(T('mkt_listed')))});
  setTimeout(()=>{bindCur('mCur',c=>cur=c);const n=$('mNo');if(n)n.onclick=()=>{queue.shift();showModal()};const i=$('mPrice');if(i)i.focus()},0)}
+function mktHist(){api('marketHist').then(r=>{const o=r.out||{},d=x=>{if(!x)return '';const t=new Date(x);return String(t.getDate()).padStart(2,'0')+'.'+String(t.getMonth()+1).padStart(2,'0')+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')};
+ const sum=(a,k)=>['ash','gold'].map(c=>{const v=a.filter(l=>(l.cur||'ash')===c).reduce((z,l)=>z+(l[k]||0),0);return v?curIc(c)+' '+fmt(v):''}).filter(Boolean).join(' · ')||'—';
+ const row=(l,sub)=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${sub}</div></div></div>`};
+ const S=o.sold||[],B=o.bought||[];
+ modal(`<h3>📜 ${T('mkt_hist')}</h3><div class="mhist"><h4>💰 ${T('mkt_h_sold',{n:S.length})}</h4>${S.length?`<p class="hint">${T('mkt_h_got')}: ${sum(S,'net')}</p>`+S.map(l=>row(l,`${d(l.sold)} · ${curIc(l.cur)} ${fmt(l.price)} → ${T('mkt_h_net')} ${fmt(l.net)}`)).join(''):`<p class="hint">${T('mkt_h_none')}</p>`}
+  <h4>🛒 ${T('mkt_h_bought',{n:B.length})}</h4>${B.length?`<p class="hint">${T('mkt_h_spent')}: ${sum(B,'price')}</p>`+B.map(l=>row(l,`${d(l.sold)} · ${curIc(l.cur)} ${fmt(l.price)}${l.from?' · '+esc(l.from):''}`)).join(''):`<p class="hint">${T('mkt_h_none')}</p>`}</div>`,null,null,null,'mhist')}).catch(e=>toast(errT(e)))} // 18.11 (гравець Хасан): своя історія ринку — продане (з виручкою після комісії) і куплене, останні 50
 function lotView(l){const it=l.item||{};
  if(it.kind==='mat')return {c:'#8a7a5a',ic:'⛏️',nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
@@ -524,7 +530,7 @@ function renderMarket(){
  if(!mktData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;mktLoad();return}
  const M=mktData;
  live('mkt',()=>api('market',{...mktF}).then(r=>r.out),o=>{if(same(o,mktData))return false;mktData=o;return true},3e4);
- let h=`<div class="chestbar" style="background:var(--panel);border-color:var(--line)">⚱️<span>${fmt(G.ash||0)} · 💰${fmt(G.gold)}</span><button class="btn" id="mRef">🔄</button></div><p class="hint">${T('mkt_hint',{p:Math.round(M.fee*100),r:RAR[M.minR].n})}</p>`;
+ let h=`<div class="chestbar" style="background:var(--panel);border-color:var(--line)">⚱️<span>${fmt(G.ash||0)} · 💰${fmt(G.gold)}</span><button class="btn" id="mHist">📜 ${T('mkt_hist')}</button><button class="btn" id="mRef">🔄</button></div><p class="hint">${T('mkt_hint',{p:Math.round(M.fee*100),r:RAR[M.minR].n})}</p>`;
  if(M.mine.length)h+=`<div class="card"><h4>📦 ${T('mkt_mine',{n:M.mine.length,m:M.maxLots})}</h4>`+M.mine.map(l=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${curIc(l.cur)} ${fmt(l.price)}</div></div><div class="acts"><button class="btn" data-mc="${l.id}">${T('mkt_cancel')}</button></div></div>`}).join('')+'</div>';
  const have=(G.mats||[])[mktMat]||0;
  h+=`<details class="card mmat" ${mktMatOpen?'open':''}><summary><h4>⛏️ ${T('mkt_sell_mats')}</h4></summary><div class="chips">${[0,1,2,3].map(m=>`<button data-mm="${m}" class="${mktMat===m?'act':''}">${MATN[m]} · ${fmt((G.mats||[])[m]||0)}</button>`).join('')}</div>${curChips('mmCur',mktCur,false)}
@@ -538,7 +544,7 @@ function renderMarket(){
   h+=`<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${esc(l.seller||'')}</div>${v.st?`<div class="st">${v.st}</div>`:''}</div><div class="acts"><button class="btn pri" data-mb="${l.id}" ${curHave(l.cur)>=l.price?'':'disabled'}>${curIc(l.cur)} ${fmt(l.price)}</button></div></div>`}
  if(!n)h+=`<div class="empty">${T('mkt_empty')}</div>`;
  el.innerHTML=h;
- $('mRef').onclick=()=>{mktData=null;renderMarket()};
+ $('mRef').onclick=()=>{mktData=null;renderMarket()};$('mHist').onclick=mktHist;
  el.querySelectorAll('[data-mh]').forEach(b=>b.onclick=()=>{const r=+b.dataset.mh;mktShowSet(mktShow.includes(r)?mktShow.filter(x=>x!==r):[...mktShow,r]);haptic('light');mktData=null;renderMarket()});{const rb=$('mRst');if(rb)rb.onclick=()=>{Object.assign(mktF,{slot:'',r:0,cur:'',sort:'price'});mktShowSet([]);haptic('light');mktData=null;renderMarket()}}
  el.querySelectorAll('[data-msel]').forEach(sel=>sel.onchange=()=>{const k=sel.dataset.msel;mktF[k]=k==='r'?+sel.value:sel.value;mktData=null;renderMarket()});
  {const d=el.querySelector('.mmat');if(d)d.ontoggle=()=>{mktMatOpen=d.open}}
@@ -1460,7 +1466,7 @@ function renderClan(){
  S.members+=`<div class="card"><h4>👥 ${T('members')}<span class="conl">🟢 ${T('m_onn',{n:onN})}</span></h4>`+MS.map(m=>{
   const canKick=!m.me&&(C.role==='leader'&&m.role!=='leader'||C.role==='officer'&&m.role==='member'),canRole=!m.me&&C.role==='leader';
   return `<div class="item${isOn(m.seen)?' mon':''}" style="border-left-color:${m.role==='leader'?'#f2a33a':m.role==='officer'?'#4f93f2':'#555'}"><div class="ic cav">${m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤'}${isOn(m.seen)?'<i class="ondot"></i>':''}</div><div class="info"><div class="nm">${esc(m.name)}${m.me?' ('+T('you')+')':''}</div><div class="sub">${roleT(m.role)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.stage})} · ${seenTxt(m.seen)}</div><div class="st">${T('power',{n:fmt(m.power)})} · ${T('given',{n:'💰'+fmt(m.given||0)+(m.givenAsh?' · ⚱️'+fmt(m.givenAsh):'')})}</div></div>
-   <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}">✖</button>`:''}</div></div>`}).join('')+'</div>';
+   <div class="acts">${canRole?`<button class="btn" data-cr="${m.id}" data-r="${m.role==='member'?'officer':'member'}">${m.role==='member'?'⬆️':'⬇️'}</button>`:''}${canKick?`<button class="btn" data-ck="${m.id}" data-cn="${esc(m.name)}">✖</button>`:''}</div></div>`}).join('')+'</div>';
  // 14.11 (гравці): фільтри журналу клану за типом подій
  const LOGF={gold:['give'],ash:['giveash','rating'],keys:['craft','kbuy','take','givekey','keygift'],bld:['build','proj','giveres'],ppl:['igive','join','leave','kick','accept','apply','reject','role','create','settings','tg','desc','mute']};
  const LG=(C.log||[]).filter(x=>clogF==='all'||(LOGF[clogF]||[]).includes(x.kind));
@@ -1509,7 +1515,7 @@ function renderClan(){
   $('cKMax').onclick=()=>{inp.value=mx||'';upd();if(!mx)toast(ERR.clan_no_ash||T('err',{e:'clan_no_ash'}))};
   go.onclick=()=>{const n=Math.floor(+inp.value||0),t=craftT;if(go.disabled||n<1)return;go.disabled=true;go.textContent='⏳';haptic('light');clanAct('clanCraft',{t,n},()=>toast(T('craft_ok',{n,t,k:((clanData&&clanData.clan&&clanData.clan.keys)||{})[t]||n})))?.finally?.(()=>{dirty.clan=1;flush()})}}
  el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const n=+b.dataset.cn,t=craftT,bs=el.querySelectorAll('[data-cn]');bs.forEach(x=>x.disabled=true);b.textContent='⏳';haptic('light');clanAct('clanCraft',{t,n},()=>toast(T('craft_ok',{n,t,k:((clanData&&clanData.clan&&clanData.clan.keys)||{})[t]||n})))?.finally?.(()=>{dirty.clan=1;flush()})}); // 09.11 (відео Влада): відповідь ~1–2 с без жодного відгуку — тепер ⏳, кнопки блокуються, підтвердження
- el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>clanAct('clanKick',{pid:+b.dataset.ck}));
+ el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>modal(`<div class="big">✖</div><h3>${T('kick_q',{n:esc(b.dataset.cn||'')})}</h3><p class="hint">${T('kick_note')}</p>`,T('kick_yes'),()=>clanAct('clanKick',{pid:+b.dataset.ck}),null,'kick')); // 18.11 (гравець Хасан): підтвердження, щоб не виключити випадково
  el.querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>clanAct('clanRole',{pid:+b.dataset.cr,role:b.dataset.r}));
  if($('cRef'))$('cRef').onclick=()=>{clanData=null;renderClan()};
  if($('cLeave'))$('cLeave').onclick=()=>modal(`<div class="big">🚪</div><h3>${T('leave_q')}</h3><p class="hint">${T(C.role==='leader'?'leave_leader':'leave_hint')}</p>`,T('leave'),()=>clanAct('clanLeave',{}));
