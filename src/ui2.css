@@ -877,3 +877,7 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .cgvs{flex:1;display:flex;flex-wrap:wrap;gap:4px}
 .cgv{font-size:12px;padding:2px 6px;border-radius:8px;background:#ffffff14;white-space:nowrap}
 .cg0{opacity:.55}.cgout .cgnm{color:#aaa}
+
+/* 18.11: намальовані значки замість емодзі у великих місцях */
+.big>img.ico{width:56px;height:56px;vertical-align:middle;margin:0}
+.ic>img.ico{width:28px;height:28px;margin:0;vertical-align:middle}
