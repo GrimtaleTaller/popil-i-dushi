@@ -1417,7 +1417,7 @@ function cgCard(C){ // 18.11 (Влад): внески в казну по гра�
  const z={g:0,a:0,sh:0,m:[0,0,0,0]},by=new Map(cgData.list.map(x=>[x.id,x]));
  (C.members||[]).forEach(m=>{if(!by.has(m.id))by.set(m.id,{id:m.id,name:m.name,in:true,d:z,w:z,a:z})});
  const myId=((C.members||[]).find(m=>m.me)||{}).id,ms=x=>x.m.reduce((q,v)=>q+v,0),key=x=>cgS==='g'?x.g:cgS==='sh'?x.sh:cgS==='m'?ms(x):x.a,emp=x=>!x.g&&!x.a&&!x.sh&&!ms(x);
- const L=[...by.values()].map(r=>({...r,v:r[cgP]})).filter(r=>r.in||!emp(r.v)).sort((p,q)=>key(q.v)-key(p.v)||q.v.a-p.v.a||q.v.g-p.v.g||(q.in-p.in));
+ const L=[...by.values()].map(r=>({...r,v:r[cgP]})).filter(r=>r.in).sort((p,q)=>key(q.v)-key(p.v)||q.v.a-p.v.a||q.v.g-p.v.g||(q.in-p.in)); // 19.11 (Влад): у складі й підсумку — лише поточні учасники, хто вийшов з клану, не показується
  const T0=L.reduce((t,r)=>({g:t.g+r.v.g,a:t.a+r.v.a,sh:t.sh+r.v.sh,m:t.m.map((v,i)=>v+r.v.m[i])}),{g:0,a:0,sh:0,m:[0,0,0,0]});
  const chips=x=>{const o=[];if(x.a)o.push(`<span class="cgv">⚱️ ${fmt(x.a)}</span>`);if(x.g)o.push(`<span class="cgv">💰 ${fmt(x.g)}</span>`);if(x.sh)o.push(`<span class="cgv">🔩 ${fmt(x.sh)}</span>`);x.m.forEach((v,i)=>{if(v)o.push(`<span class="cgv">⛏️ ${MATN[i]} ${fmt(v)}</span>`)});return o.join('')};
  let rk=0;
