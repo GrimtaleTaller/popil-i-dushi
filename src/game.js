@@ -507,9 +507,10 @@ let mktShow=(()=>{try{return JSON.parse(localStorage.getItem('gt_mkt_show')||'[]
 const mktShowSet=a=>{mktShow=a;mktF.hide=a.length?[2,3,4,5,6].filter(r=>!a.includes(r)):[];try{localStorage.setItem('gt_mkt_show',JSON.stringify(a))}catch(e){}};mktShowSet(mktShow);
 const curIc=c=>c==='gold'?'💰':'⚱️',curHave=c=>c==='gold'?G.gold:(G.ash||0);
 let mktErrN=0;
-function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',{...mktF},r=>{mktData=r.out;const g=r.out.got;if(g&&g.n){const x=[g.ash?'⚱️'+fmt(g.ash):'',g.gold?'💰'+fmt(g.gold):''].filter(Boolean).join(' + ');modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,x,p:Math.round(r.out.fee*100)})}</p>`,T('ok'))}dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData){mktErrN=Math.min(6,mktErrN+1);setTimeout(()=>{dirty.market=1;flush()},800*Math.pow(2,mktErrN))}else mktErrN=0})} // 15.11 (критик): після помилки — наростаюча пауза 1,6…51 с, не шторм запитів
+const mkQ=()=>({...mktF,slot:mktF.slot||(mktTab==='mat'?'mat':'items')}); // 19.11: «Речі» — сервер віддає лоти без матеріалів
+function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',mkQ(),r=>{mktData=r.out;const g=r.out.got;if(g&&g.n){const x=[g.ash?'⚱️'+fmt(g.ash):'',g.gold?'💰'+fmt(g.gold):''].filter(Boolean).join(' + ');modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,x,p:Math.round(r.out.fee*100)})}</p>`,T('ok'))}dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData){mktErrN=Math.min(6,mktErrN+1);setTimeout(()=>{dirty.market=1;flush()},800*Math.pow(2,mktErrN))}else mktErrN=0})} // 15.11 (критик): після помилки — наростаюча пауза 1,6…51 с, не шторм запитів
 const MKT_MAX={ash:1e6,gold:1e13}; // 18.11: межа ціни лота, як на сервері (MARKET.maxPrice) — гравець бачить, у чому помилка
-function mktAct(a,args,cb){act(a,{...mktF,...args},r=>{if(r.out)mktData=r.out;dirty.market=1;cb&&cb(r)})}
+function mktAct(a,args,cb){act(a,{...mkQ(),...args},r=>{if(r.out)mktData=r.out;dirty.market=1;cb&&cb(r)})}
 function curChips(id,sel,lockAsh){return `<div class="chips" id="${id}">${['ash','gold'].map(c=>`<button data-cur="${c}" class="${sel===c?'act':''}" ${lockAsh&&c==='gold'?'disabled':''}>${T('cur_'+c)}</button>`).join('')}</div>`}
 function bindCur(id,set){const w=$(id);if(!w)return;w.querySelectorAll('[data-cur]').forEach(b=>b.onclick=()=>{if(b.disabled)return;set(b.dataset.cur);w.querySelectorAll('[data-cur]').forEach(x=>x.classList.toggle('act',x===b))})}
 function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const lock=it.r>=((mktData&&mktData.ashOnlyR)||4);let cur='ash';
@@ -534,32 +535,34 @@ function lotView(l){const it=l.item||{};
  if(it.kind==='mat')return {c:'#8a7a5a',ic:RIC('m'+((it.m|0)+1)),nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
  return {c:RAR[it.r].c,ic:gearIc(it),nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il})+powTag(it),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
-let mktMatOpen=false;
+let mktMatOpen=false,mktTab=(()=>{try{return localStorage.getItem('gt_mkt_tab')==='mat'?'mat':'it'}catch(e){return 'it'}})(); // 19.11 (Влад): дві підвкладки ринку — речі й матеріали
+if(mktTab==='mat')mktF.slot='mat';
 function renderMarket(){
  const el=$('p-market');
  if(!mktData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;mktLoad();return}
  const M=mktData;
- live('mkt',()=>api('market',{...mktF}).then(r=>r.out),o=>{if(same(o,mktData))return false;mktData=o;return true},3e4);
+ live('mkt',()=>api('market',mkQ()).then(r=>r.out),o=>{if(same(o,mktData))return false;mktData=o;return true},3e4);
  let h=`<div class="chestbar" style="background:var(--panel);border-color:var(--line)">⚱️<span>${fmt(G.ash||0)} · 💰${fmt(G.gold)}</span><button class="btn" id="mMine">📦 ${M.mine.length}/${M.maxLots}</button><button class="btn" id="mHist">📜 ${T('mkt_hist')}</button><button class="btn" id="mRef">🔄</button></div><p class="hint">${T('mkt_hint',{p:Math.round(M.fee*100),r:RAR[M.minR].n})}</p>`;
- const have=(G.mats||[])[mktMat]||0;
- h+=`<details class="card mmat" ${mktMatOpen?'open':''}><summary><h4>⛏️ ${T('mkt_sell_mats')}</h4></summary><div class="chips">${[0,1,2,3].map(m=>`<button data-mm="${m}" class="${mktMat===m?'act':''}">${MATN[m]} · ${fmt((G.mats||[])[m]||0)}</button>`).join('')}</div>${curChips('mmCur',mktCur,false)}
-  <div class="row" style="align-items:center"><input id="mmQty" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_qty')} (${fmt(have)})"><input id="mmPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}"><button class="btn pri" id="mmGo" ${have?'':'disabled'}>${T('mkt_put')}</button></div></details>`;
- if(mktF.slot!=='mat')h+=`<div class="mhide bshow"><span>${T('bag_show')}</span>${[2,3,4,5,6].map(r=>`<button data-mh="${r}" class="${mktShow.includes(r)?'on':mktShow.length?'off':''}" style="--rc:${RAR[r].c}">${RAR[r].n}</button>`).join('')}</div>`; // 14.11 (гравці): сховати кілька рідкостей
- h+=`<div class="mbar"><label class="msel"><select data-msel="slot">${['',...SLOTS,'mat'].map(f=>`<option value="${f}" ${mktF.slot===f?'selected':''}>${f==='mat'?T('mkt_mats'):f?SLOT[f].n:T('mkt_all_slots')}</option>`).join('')}</select></label>
+ const have=(G.mats||[])[mktMat]||0,isMat=mktTab==='mat';
+ h+=`<div class="chips mtabs"><button data-mt="it" class="${isMat?'':'act'}">🗡️ ${T('mkt_items')}</button><button data-mt="mat" class="${isMat?'act':''}">${T('mkt_mats')}</button></div>`;
+ if(isMat)h+=`<div class="card mmat"><h4>⛏️ ${T('mkt_sell_mats')}</h4><div class="chips">${[0,1,2,3].map(m=>`<button data-mm="${m}" class="${mktMat===m?'act':''}">${MATN[m]} · ${fmt((G.mats||[])[m]||0)}</button>`).join('')}</div>${curChips('mmCur',mktCur,false)}
+  <div class="row" style="align-items:center"><input id="mmQty" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_qty')} (${fmt(have)})"><input id="mmPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}"><button class="btn pri" id="mmGo" ${have?'':'disabled'}>${T('mkt_put')}</button></div></div>`;
+ if(!isMat)h+=`<div class="mhide bshow"><span>${T('bag_show')}</span>${[2,3,4,5,6].map(r=>`<button data-mh="${r}" class="${mktShow.includes(r)?'on':mktShow.length?'off':''}" style="--rc:${RAR[r].c}">${RAR[r].n}</button>`).join('')}</div>`; // 14.11 (гравці): сховати кілька рідкостей
+ h+=`<div class="mbar">${isMat?'':`<label class="msel"><select data-msel="slot">${['',...SLOTS].map(f=>`<option value="${f}" ${mktF.slot===f?'selected':''}>${f==='mat'?T('mkt_mats'):f?SLOT[f].n:T('mkt_all_slots')}</option>`).join('')}</select></label>`}
   <label class="msel"><select data-msel="cur">${['','ash','gold'].map(c=>`<option value="${c}" ${mktF.cur===c?'selected':''}>${c?T('cur_'+c):T('mkt_all_cur')}</option>`).join('')}</select></label>
-  <label class="msel"><select data-msel="sort">${['price','lvl','new'].map(k=>`<option value="${k}" ${mktF.sort===k?'selected':''}>↕ ${T('mkt_sort_'+k)}</option>`).join('')}</select></label><button class="btn bfreset" id="mRst" ${mktShow.length||mktF.slot||mktF.cur||mktF.sort!=='price'?'':'disabled'}>✕ ${T('bag_reset')}</button></div>`;
+  <label class="msel"><select data-msel="sort">${['price','lvl','new'].map(k=>`<option value="${k}" ${mktF.sort===k?'selected':''}>↕ ${T('mkt_sort_'+k)}</option>`).join('')}</select></label><button class="btn bfreset" id="mRst" ${mktShow.length||(mktF.slot&&!isMat)||mktF.cur||mktF.sort!=='price'?'':'disabled'}>✕ ${T('bag_reset')}</button></div>`;
  let n=0;
- for(const l of M.lots){const v=lotView(l);if(!v)continue;n++;
+ for(const l of M.lots){if((l.slot==='mat')!==isMat)continue;const v=lotView(l);if(!v)continue;n++;
   h+=`<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${esc(l.seller||'')}</div>${v.st?`<div class="st">${v.st}</div>`:''}</div><div class="acts"><button class="btn pri" data-mb="${l.id}" ${curHave(l.cur)>=l.price?'':'disabled'}>${curIc(l.cur)} ${fmt(l.price)}</button></div></div>`}
  if(!n)h+=`<div class="empty">${T('mkt_empty')}</div>`;
  el.innerHTML=h;
  $('mRef').onclick=()=>{mktData=null;renderMarket()};$('mHist').onclick=mktHist;$('mMine').onclick=()=>mktMine();
- el.querySelectorAll('[data-mh]').forEach(b=>b.onclick=()=>{const r=+b.dataset.mh;mktShowSet(mktShow.includes(r)?mktShow.filter(x=>x!==r):[...mktShow,r]);haptic('light');mktData=null;renderMarket()});{const rb=$('mRst');if(rb)rb.onclick=()=>{Object.assign(mktF,{slot:'',r:0,cur:'',sort:'price'});mktShowSet([]);haptic('light');mktData=null;renderMarket()}}
+ el.querySelectorAll('[data-mh]').forEach(b=>b.onclick=()=>{const r=+b.dataset.mh;mktShowSet(mktShow.includes(r)?mktShow.filter(x=>x!==r):[...mktShow,r]);haptic('light');mktData=null;renderMarket()});{const rb=$('mRst');if(rb)rb.onclick=()=>{Object.assign(mktF,{slot:isMat?'mat':'',r:0,cur:'',sort:'price'});mktShowSet([]);haptic('light');mktData=null;renderMarket()}}
  el.querySelectorAll('[data-msel]').forEach(sel=>sel.onchange=()=>{const k=sel.dataset.msel;mktF[k]=k==='r'?+sel.value:sel.value;mktData=null;renderMarket()});
- {const d=el.querySelector('.mmat');if(d)d.ontoggle=()=>{mktMatOpen=d.open}}
+ el.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{const t=b.dataset.mt;if(t===mktTab)return;mktTab=t;try{localStorage.setItem('gt_mkt_tab',t)}catch(e){}mktF.slot=t==='mat'?'mat':'';haptic('light');mktData=null;renderMarket()});
  el.querySelectorAll('[data-mm]').forEach(b=>b.onclick=()=>{mktMat=+b.dataset.mm;renderMarket()});
  bindCur('mmCur',c=>mktCur=c);
- $('mmGo').onclick=()=>{const q=Math.floor(+$('mmQty').value||0),p=Math.floor(+$('mmPrice').value||0);if(q<1||q>((G.mats||[])[mktMat]||0)){toast(ERR.no_mats);return}if(p<1){toast(T('mkt_price_bad'));return}if(p>MKT_MAX[mktCur]){toast(T('mkt_price_max',{n:fmt(MKT_MAX[mktCur]),c:curIc(mktCur)}));return}mktAct('marketSell',{kind:'mat',m:mktMat,n:q,price:p,cur:mktCur},()=>toast(T('mkt_listed')))};
+ if($('mmGo'))$('mmGo').onclick=()=>{const q=Math.floor(+$('mmQty').value||0),p=Math.floor(+$('mmPrice').value||0);if(q<1||q>((G.mats||[])[mktMat]||0)){toast(ERR.no_mats);return}if(p<1){toast(T('mkt_price_bad'));return}if(p>MKT_MAX[mktCur]){toast(T('mkt_price_max',{n:fmt(MKT_MAX[mktCur]),c:curIc(mktCur)}));return}mktAct('marketSell',{kind:'mat',m:mktMat,n:q,price:p,cur:mktCur},()=>toast(T('mkt_listed')))};
  el.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>mktAct('marketBuy',{lot:+b.dataset.mb},r=>{toast(T('mkt_bought'));haptic('medium')}));
  el.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>mktAct('marketCancel',{lot:+b.dataset.mc},()=>toast(T('mkt_cancelled'))));
 }
