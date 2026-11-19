@@ -501,13 +501,13 @@ function renderBag(){
  $('autoS').onclick=()=>act('settings',{autoSell:!G.autoSell});
 }
 // ---------- ринок: за Попіл або Золото, речі й матеріали ----------
-let mktData=null,mktBusy=false,mktMat=0,mktCur='ash';const mktF={slot:'',r:0,sort:'price',cur:'',hide:[]};
+let mktData=null,mktBusy=false,mktMat=0,mktCur='ash';const mktF={slot:'',r:0,t:0,sort:'price',cur:'',hide:[]};
 // 14.11 (Влад): «Показати лише» як у Сумці — сервер і далі отримує hide (решта рідкостей), show живе лише в клієнті
 let mktShow=(()=>{try{return JSON.parse(localStorage.getItem('gt_mkt_show')||'[]').filter(x=>x>=2&&x<=6)}catch(e){return[]}})();
 const mktShowSet=a=>{mktShow=a;mktF.hide=a.length?[2,3,4,5,6].filter(r=>!a.includes(r)):[];try{localStorage.setItem('gt_mkt_show',JSON.stringify(a))}catch(e){}};mktShowSet(mktShow);
 const curIc=c=>c==='gold'?'💰':'⚱️',curHave=c=>c==='gold'?G.gold:(G.ash||0);
 let mktErrN=0;
-const mkQ=()=>({...mktF,slot:mktF.slot||(mktTab==='mat'?'mat':'items')}); // 19.11: «Речі» — сервер віддає лоти без матеріалів
+const mkQ=()=>({...mktF,slot:mktF.slot||(mktTab==='mat'?'mat':'items'),t:mktTab==='mat'?mktF.t:0}); // 19.11: «Речі» — сервер віддає лоти без матеріалів
 function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',mkQ(),r=>{mktData=r.out;const g=r.out.got;if(g&&g.n){const x=[g.ash?'⚱️'+fmt(g.ash):'',g.gold?'💰'+fmt(g.gold):''].filter(Boolean).join(' + ');modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,x,p:Math.round(r.out.fee*100)})}</p>`,T('ok'))}dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData){mktErrN=Math.min(6,mktErrN+1);setTimeout(()=>{dirty.market=1;flush()},800*Math.pow(2,mktErrN))}else mktErrN=0})} // 15.11 (критик): після помилки — наростаюча пауза 1,6…51 с, не шторм запитів
 const MKT_MAX={ash:1e6,gold:1e13}; // 18.11: межа ціни лота, як на сервері (MARKET.maxPrice) — гравець бачить, у чому помилка
 function mktAct(a,args,cb){act(a,{...mkQ(),...args},r=>{if(r.out)mktData=r.out;dirty.market=1;cb&&cb(r)})}
@@ -532,7 +532,7 @@ function mktHist(){api('marketHist').then(r=>{const o=r.out||{},d=x=>{if(!x)retu
  modal(`<h3>📜 ${T('mkt_hist')}</h3><div class="mhist"><h4>💰 ${T('mkt_h_sold',{n:S.length})}</h4>${S.length?`<p class="hint">${T('mkt_h_got')}: ${sum(S,'net')}</p>`+S.map(l=>row(l,`${d(l.sold)} · ${curIc(l.cur)} ${fmt(l.price)} → ${T('mkt_h_net')} ${fmt(l.net)}`)).join(''):`<p class="hint">${T('mkt_h_none')}</p>`}
   <h4>🛒 ${T('mkt_h_bought',{n:B.length})}</h4>${B.length?`<p class="hint">${T('mkt_h_spent')}: ${sum(B,'price')}</p>`+B.map(l=>row(l,`${d(l.sold)} · ${curIc(l.cur)} ${fmt(l.price)}${l.from?' · '+esc(l.from):''}`)).join(''):`<p class="hint">${T('mkt_h_none')}</p>`}</div>`,null,null,null,'mhist')}).catch(e=>toast(errT(e)))} // 18.11 (гравець Хасан): своя історія ринку — продане (з виручкою після комісії) і куплене, останні 50
 function lotView(l){const it=l.item||{};
- if(it.kind==='mat')return {c:'#8a7a5a',ic:RIC('m'+((it.m|0)+1)),nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:'',st:''};
+ if(it.kind==='mat'){const u=l.price/Math.max(1,it.n|0);return {c:'#8a7a5a',ic:RIC('m'+((it.m|0)+1)),nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:T('mkt_unit',{p:curIc(l.cur)+' '+(u>=100?fmt(Math.round(u)):String(Math.round(u*100)/100).replace('.',LANG==='en'?'.':','))}),st:''}} // 19.11: ціна за 1 шт
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
  return {c:RAR[it.r].c,ic:gearIc(it),nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il})+powTag(it),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
 let mktMatOpen=false,mktTab=(()=>{try{return localStorage.getItem('gt_mkt_tab')==='mat'?'mat':'it'}catch(e){return 'it'}})(); // 19.11 (Влад): дві підвкладки ринку — речі й матеріали
@@ -547,10 +547,11 @@ function renderMarket(){
  h+=`<div class="chips mtabs"><button data-mt="it" class="${isMat?'':'act'}">🗡️ ${T('mkt_items')}</button><button data-mt="mat" class="${isMat?'act':''}">${T('mkt_mats')}</button></div>`;
  if(isMat)h+=`<div class="card mmat"><h4>⛏️ ${T('mkt_sell_mats')}</h4><div class="chips">${[0,1,2,3].map(m=>`<button data-mm="${m}" class="${mktMat===m?'act':''}">${MATN[m]} · ${fmt((G.mats||[])[m]||0)}</button>`).join('')}</div>${curChips('mmCur',mktCur,false)}
   <div class="row" style="align-items:center"><input id="mmQty" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_qty')} (${fmt(have)})"><input id="mmPrice" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('mkt_price')}"><button class="btn pri" id="mmGo" ${have?'':'disabled'}>${T('mkt_put')}</button></div></div>`;
+ if(isMat)h+=`<div class="chips mtier">${[0,1,2,3,4].map(t=>`<button data-mtt="${t}" class="${(mktF.t||0)===t?'act':''}">${t?RIS('m'+t)+' '+MATN[t-1]:T('mkt_all_tiers')}</button>`).join('')}</div>`; // 19.11 (Влад): матеріали — фільтр за тиром
  if(!isMat)h+=`<div class="mhide bshow"><span>${T('bag_show')}</span>${[2,3,4,5,6].map(r=>`<button data-mh="${r}" class="${mktShow.includes(r)?'on':mktShow.length?'off':''}" style="--rc:${RAR[r].c}">${RAR[r].n}</button>`).join('')}</div>`; // 14.11 (гравці): сховати кілька рідкостей
  h+=`<div class="mbar">${isMat?'':`<label class="msel"><select data-msel="slot">${['',...SLOTS].map(f=>`<option value="${f}" ${mktF.slot===f?'selected':''}>${f==='mat'?T('mkt_mats'):f?SLOT[f].n:T('mkt_all_slots')}</option>`).join('')}</select></label>`}
   <label class="msel"><select data-msel="cur">${['','ash','gold'].map(c=>`<option value="${c}" ${mktF.cur===c?'selected':''}>${c?T('cur_'+c):T('mkt_all_cur')}</option>`).join('')}</select></label>
-  <label class="msel"><select data-msel="sort">${['price','lvl','new'].map(k=>`<option value="${k}" ${mktF.sort===k?'selected':''}>↕ ${T('mkt_sort_'+k)}</option>`).join('')}</select></label><button class="btn bfreset" id="mRst" ${mktShow.length||(mktF.slot&&!isMat)||mktF.cur||mktF.sort!=='price'?'':'disabled'}>✕ ${T('bag_reset')}</button></div>`;
+  <label class="msel"><select data-msel="sort">${['price','lvl','new'].map(k=>`<option value="${k}" ${mktF.sort===k?'selected':''}>↕ ${T((isMat?({price:'mkt_sort_unit',lvl:'mkt_sort_qty'})[k]:0)||'mkt_sort_'+k)}</option>`).join('')}</select></label><button class="btn bfreset" id="mRst" ${mktShow.length||(mktF.slot&&!isMat)||(isMat&&mktF.t)||mktF.cur||mktF.sort!=='price'?'':'disabled'}>✕ ${T('bag_reset')}</button></div>`;
  let n=0;
  for(const l of M.lots){if(((l.item||{}).kind==='mat')!==isMat)continue; // 19.11: сервер не віддає slot у лоті — матеріал видно з item.kind
 const v=lotView(l);if(!v)continue;n++;
@@ -558,7 +559,7 @@ const v=lotView(l);if(!v)continue;n++;
  if(!n)h+=`<div class="empty">${T('mkt_empty')}</div>`;
  el.innerHTML=h;
  $('mRef').onclick=()=>{mktData=null;renderMarket()};$('mHist').onclick=mktHist;$('mMine').onclick=()=>mktMine();
- el.querySelectorAll('[data-mh]').forEach(b=>b.onclick=()=>{const r=+b.dataset.mh;mktShowSet(mktShow.includes(r)?mktShow.filter(x=>x!==r):[...mktShow,r]);haptic('light');mktData=null;renderMarket()});{const rb=$('mRst');if(rb)rb.onclick=()=>{Object.assign(mktF,{slot:isMat?'mat':'',r:0,cur:'',sort:'price'});mktShowSet([]);haptic('light');mktData=null;renderMarket()}}
+ el.querySelectorAll('[data-mtt]').forEach(b=>b.onclick=()=>{mktF.t=+b.dataset.mtt;haptic('light');mktData=null;renderMarket()});el.querySelectorAll('[data-mh]').forEach(b=>b.onclick=()=>{const r=+b.dataset.mh;mktShowSet(mktShow.includes(r)?mktShow.filter(x=>x!==r):[...mktShow,r]);haptic('light');mktData=null;renderMarket()});{const rb=$('mRst');if(rb)rb.onclick=()=>{Object.assign(mktF,{slot:isMat?'mat':'',r:0,t:0,cur:'',sort:'price'});mktShowSet([]);haptic('light');mktData=null;renderMarket()}}
  el.querySelectorAll('[data-msel]').forEach(sel=>sel.onchange=()=>{const k=sel.dataset.msel;mktF[k]=k==='r'?+sel.value:sel.value;mktData=null;renderMarket()});
  el.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{const t=b.dataset.mt;if(t===mktTab)return;mktTab=t;try{localStorage.setItem('gt_mkt_tab',t)}catch(e){}mktF.slot=t==='mat'?'mat':'';haptic('light');mktData=null;renderMarket()});
  el.querySelectorAll('[data-mm]').forEach(b=>b.onclick=()=>{mktMat=+b.dataset.mm;renderMarket()});
