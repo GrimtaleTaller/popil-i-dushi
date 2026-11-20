@@ -881,3 +881,8 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 /* 18.11: намальовані значки замість емодзі у великих місцях */
 .big>img.ico{width:56px;height:56px;vertical-align:middle;margin:0}
 .ic>img.ico{width:28px;height:28px;margin:0;vertical-align:middle}
+
+/* 20.11 (гравець): учасник клану — уся ліва частина картки веде в чат (подалі від ✖) */
+.cmrow{display:flex;flex:1;min-width:0;gap:10px;align-items:center;cursor:pointer;border-radius:10px}
+.cmrow[data-cmsg]:active{background:rgba(242,193,78,.08)}
+.cmw{color:#f2c14e;font-size:13px;font-weight:600;margin-top:3px}
