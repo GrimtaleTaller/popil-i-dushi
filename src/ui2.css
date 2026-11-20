@@ -886,3 +886,6 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .cmrow{display:flex;flex:1;min-width:0;gap:10px;align-items:center;cursor:pointer;border-radius:10px}
 .cmrow[data-cmsg]:active{background:rgba(242,193,78,.08)}
 .cmw{color:#f2c14e;font-size:13px;font-weight:600;margin-top:3px}
+
+/* 20.11: довгі ніки без пробілів не виходять за картку */
+.item .nm,.chpick b,.rank span{overflow-wrap:anywhere;word-break:break-word}
