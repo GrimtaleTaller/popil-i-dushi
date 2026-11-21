@@ -599,7 +599,7 @@ function disAsk(ids,mode,key,go){if(!ids.length){toast(ERR.no_junk);return}const
 const relicOf=i=>((V.forge&&V.forge.relicAsh)||{})[i.r]||0;
 function relicAsk(ids,key){const its=G.inv.filter(i=>ids.includes(i.id));if(!its.length)return;
  askOnce(key,askBox(its,relicOf,{cls:'ask-a',ic:'⚱️',title:T('ask_relic_t'),q:T('relic_q',{n:its.length}),cur:'⚱️',have:G.ash}),T('relic_btn'),()=>act('relicAsh',{ids},r=>{toast('⚱️ +'+r.out.ash);haptic('medium')}))}
-let mSlot=null,mN=3,fsub='res',gemSel=null,aSlot=null,aSel=null;
+let mSlot=null,mN=3,mPick=null,aPick=null,fsub='res',gemSel=null,aSlot=null,aSel=null;
 // ── Камені: злиття (картка 2, макет A «компактна таблиця», 08.11) ──
 // Правило й ціни — із сервера (V.gem.merge): need однакових каменів рівня l → 1 рівня l+1 (до V);
 // ціна — матеріал рівня каменів (лише свій, з 12.11) × matN, уламки sh і золото gold. all — розрахунок «злити все» від сервера.
@@ -681,8 +681,11 @@ function renderForge(){
  if(!mSlot||!legs(mSlot).length)mSlot=SLOTS.find(s=>legs(s).length>=3)||SLOTS.find(s=>legs(s).length)||'weapon';
  const LG=legs(mSlot),maxN=Math.min(12,LG.length),need=F.myth.need;
  mN=Math.max(need,Math.min(mN,Math.max(need,maxN)));
- const extra=Math.max(0,mN-need),fails=G.mythFails||0,chance=Math.min(F.myth.cap,F.myth.base+F.myth.extra*extra+F.myth.fail*fails);
- const il=LG.length?Math.max(...LG.slice(0,mN).map(i=>i.il)):0,souls=Math.round(150+il*5);
+ const capN=Math.min(12,need+Math.max(0,Math.ceil((F.myth.cap-F.myth.base-F.myth.fail*(G.mythFails||0))/F.myth.extra)));
+ if(mPick){mPick=mPick.filter(id=>LG.some(i=>i.id===id)).slice(0,capN);if(!mPick.length)mPick=null}
+ if(mPick)mN=Math.max(need,mPick.length); // 21.11 (гравець): свій вибір речей — шанс і рівень рахуються з вибраних
+ const extra=Math.max(0,(mPick?mPick.length:mN)-need),fails=G.mythFails||0,chance=Math.min(F.myth.cap,F.myth.base+F.myth.extra*extra+F.myth.fail*fails);
+ const il=LG.length?Math.max(...(mPick?LG.filter(i=>mPick.includes(i.id)):LG.slice(0,mN)).map(i=>i.il)):0,souls=Math.round(150+il*5);
  const ec=F.ench,eLegs=enchLegs(),legAll=eLegs.length,eMax=G.ench>=F.enchMax,eIt=enchPicked(eLegs);
  let h='';if(fsub==='res')h+=`<div class="card"><h4>${T('res')}</h4><div class="resg2">${[['souls','souls',fmt(G.souls)],['ash','ash',fmt(G.ash)],['shards','shards',fmt(G.shards)],['cat','cats',fmt(G.cat||0)],['ess','ess',fmt(G.ess||0)],['key','res_keys',fmt(Object.values(G.keys||{}).reduce((s,x)=>s+(+x||0),0))]].map(([k,l,v])=>`<div>${RIC(k)}<b>${v}</b><span>${T(l).replace(/^\S+\s+/,'')}</span></div>`).join('')}</div><h4 style="margin:12px 0 6px">${T('mats')}</h4><div class="resg2 m4">${MATN.map((x,i)=>`<div>${RIC('m'+(i+1))}<b>${fmt((G.mats||[])[i]||0)}</b><span>${T('mat_n',{n:x})}</span></div>`).join('')}</div><p class="hint">${T('mats_hint')}</p>
   <p class="hint">${T('forge_hint',{r:fmt(F.soulsPerHour)})}</p></div>`;
@@ -703,23 +706,25 @@ function renderForge(){
  const tile=(it)=>`<div class="atile" style="border-color:${RAR[it.r].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div>`;
  const resC=(have,need,ic)=>`<span style="color:${have>=need?'inherit':'var(--red)'}">${ic}${fmt(have)}/${fmt(need)}</span>`;
  const maxExtra=Math.max(0,Math.ceil((F.myth.cap-F.myth.base-F.myth.fail*fails)/F.myth.extra));
- const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?rarEst(onA[0],5):0;
+ const LGs=[...LG].sort((a,b)=>itemScore(b)-itemScore(a)),onA=mPick?LGs.filter(i=>mPick.includes(i.id)):LGs.slice(0,mN),ilA=onA.length?Math.max(...onA.map(i=>i.il)):0,soA=Math.round(150+ilA*5),eqM=G.eq[mSlot],estM=onA.length?rarEst(onA[0],5):0;
  if(fsub==='myth')h+=`<div class="card">${setBan('anc',RAR[5].c,'◆')}
   ${slotG(s=>legs(s).length,mSlot,'data-ms',need)}
-  <div class="anrow"><span>${T('anvil',{a:Math.min(mN,LG.length),b:need})}${extra?' <b style="color:var(--gold)">+'+extra+'</b>':''}</span><button class="btn" id="mMinB">${T('btn_min')}</button><button class="btn" id="mMaxB" ${maxN>need?'':'disabled'}>${T('btn_max')}</button></div>
-  <div class="anvil">${onA.map(tile).join('')}${Array.from({length:Math.max(0,need-onA.length)},()=>'<div class="atile empty">+</div>').join('')}</div>
+  <div class="anrow"><span>${T('anvil',{a:onA.length,b:need})}${extra?' <b style="color:var(--gold)">+'+extra+'</b>':''}</span><button class="btn" id="mMinB">${T('btn_min')}</button><button class="btn" id="mMaxB" ${maxN>need?'':'disabled'}>${T('btn_max')}</button></div>
+  <p class="hint" style="margin:4px 0">${T('anvil_pick')}</p><div class="anvil">${LGs.map(it=>{const on=onA.includes(it);return `<div class="apick${on?' on':''}" data-mp="${it.id}">${tile(it)}<small>${T('lvl',{n:it.il})}</small>${on?'<i>✓</i>':''}</div>`}).join('')}${Array.from({length:Math.max(0,need-LGs.length)},()=>'<div class="atile empty">+</div>').join('')}</div>
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${fmtN(chance)}%</b></div><div class="cbar"><i style="width:${chance}%"></i></div>
    <p class="sub">${T('chance_parts',{b:F.myth.base,f:F.myth.fail*fails,e:F.myth.extra*extra,m:F.myth.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[5].c}">${RAR[5].n} · ${T('lvl',{n:ilA||'—'})}</b>${estM?`<span class="sub">≈ ${T('power',{n:fmt(estM)})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqM?T('power',{n:fmt(itemVal(eqM))}):'—'}</b></div></div>
    </div>${needRows([[RIS('cat'),T('cats').replace(/^\S+\s+/,''),1,G.cat||0],[RIS('souls'),T('souls').replace(/^\S+\s+/,''),soA,G.souls||0]])}
   <p class="hint">${T('myth_keep',{need})}</p>
-  <div class="row"><button class="btn pri big" id="myth" ${LG.length>=need&&G.cat>=1&&G.souls>=soA?'':'disabled'}>${LG.length<need?T('put_more',{n:need-LG.length}):'◆ '+T('forge_btn',{c:chance})}</button></div></div>`;
+  <div class="row"><button class="btn pri big" id="myth" ${onA.length>=need&&G.cat>=1&&G.souls>=soA?'':'disabled'}>${onA.length<need?T('put_more',{n:need-onA.length}):'◆ '+T('forge_btn',{c:chance})}</button></div></div>`;
  const myths=[...SLOTS.map(s=>G.eq[s]).filter(i=>i&&i.r===5),...G.inv.filter(i=>i.r===5)],A=F.ast;
  const mOf=s=>myths.filter(i=>i.slot===s);
  if(!aSlot||!mOf(aSlot).length)aSlot=SLOTS.find(s=>mOf(s).length)||aSlot||'weapon';
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aEx=aIt?astExtra(aIt):{gold:0,shards:0},eqA=G.eq[aSlot];
  // 08.11 (варіант Ж): 2 прадавні з сумки в жертву (найслабші, спершу без зірок і перекидань, без каменів) + 📜 Сувій
- const aNeed=A.sac||2,aScr=G.scroll||0,aSac=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b)).slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
+ const aNeed=A.sac||2,aScr=G.scroll||0,aCand=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b));
+ if(aPick){aPick=aPick.filter(id=>aCand.some(i=>i.id===id));if(!aPick.length)aPick=null} // 21.11 (Влад): свій вибір жертв для вічного, як у прадавнього
+ const aSac=aPick?aPick.map(id=>aCand.find(i=>i.id===id)):aCand.slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
  const aEs=A.ess||0,aOk=aIt&&aScr>=1&&(G.ess||0)>=aEs&&aSac.length>=aNeed&&G.souls>=aSo&&G.gold>=aEx.gold&&G.shards>=aEx.shards;
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
@@ -727,7 +732,7 @@ function renderForge(){
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${fmtN(F.astChance)}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(rarEst(aIt,6))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
-   ${needRows([[RIS('souls'),T('souls').replace(/^\S+\s+/,''),aSo,G.souls||0],[RIS('scroll'),T('r_scroll'),1,aScr],...(aEs?[[RIS('ess'),T('ess').replace(/^\S+\s+/,''),aEs,G.ess||0]]:[]),[`<img class="hic s" src="assets/items/weapon0_5.webp" alt="">`,T('ast_sac',{n:aNeed}),aNeed,aSac.length]])}${aSac.length>=aNeed?`<div class="chrow"><span class="sub">${T('ast_sac',{n:aNeed})}</span><span>${aSac.map((i,k)=>`<span class="gic r5" style="width:30px;height:30px;position:relative" title="${k?'':T('ast_burn1')}">${gearArt(i.slot,i.r,i.nm)}${k?'':'<i style="position:absolute;right:-4px;bottom:-4px;font-style:normal;font-size:12px">🔥</i>'}</span>`).join(' ')}</span></div>`:''}${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
+   ${needRows([[RIS('souls'),T('souls').replace(/^\S+\s+/,''),aSo,G.souls||0],[RIS('scroll'),T('r_scroll'),1,aScr],...(aEs?[[RIS('ess'),T('ess').replace(/^\S+\s+/,''),aEs,G.ess||0]]:[]),[`<img class="hic s" src="assets/items/weapon0_5.webp" alt="">`,T('ast_sac',{n:aNeed}),aNeed,aSac.length]])}${aIt&&aCand.length?`<p class="hint" style="margin:8px 0 4px">${T('ast_sac_pick',{n:aNeed})}</p><div class="anvil">${aCand.map(it=>{const k=aSac.indexOf(it);return `<div class="apick${k>=0?' on':''}" data-sp="${it.id}"><div class="atile" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div><small>${T('lvl',{n:it.il})}${it.sr||it.rr?' ★':''}</small>${k>=0?`<i>${k?'✓':'💀'}</i>`:''}</div>`}).join('')}</div>`:''}${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
   <p class="hint">${T('ast_keep')}</p><p class="hint">📜 ${T('ast_scroll_src',{n:aScr})}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
  if(fsub==='gem')h+=gemPane();
@@ -739,14 +744,16 @@ function renderForge(){
  $('p-forge').querySelectorAll('[data-disr]').forEach(b=>b.onclick=()=>disRar(+b.dataset.disr));
  const eb=$('ench');if(eb)eb.onclick=()=>{const it=enchPicked(enchLegs());if(!it)return;act('enchant',{id:it.id},r=>{enchSel=null;toast(T('ench_done',{n:r.out.ench}));haptic('heavy')})};
  if($('enchPick'))$('enchPick').onclick=enchPickModal;
- $('p-forge').querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mSlot=b.dataset.ms;mN=need;renderForge()});
- if($('mMinB'))$('mMinB').onclick=()=>{mN=need;renderForge()};
- if($('mMaxB'))$('mMaxB').onclick=()=>{mN=Math.min(Math.max(need,maxN),need+maxExtra);renderForge()};
- $('p-forge').querySelectorAll('[data-as]').forEach(b=>b.onclick=()=>{aSlot=b.dataset.as;aSel=null;renderForge()});
- $('p-forge').querySelectorAll('[data-asel]').forEach(b=>b.onclick=()=>{aSel=+b.dataset.asel;renderForge()});
- if($('astGo'))$('astGo').onclick=()=>{if(!aIt)return;const go=()=>act('astral',{id:aIt.id,sac:aSac.map(i=>i.id)},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else{const b=(r.out.burned||[])[0];toast(T('ast_fail2',{c:r.out.chance,s:b&&SLOT[b.slot]?SLOT[b.slot].n:''}))}});
+ $('p-forge').querySelectorAll('[data-ms]').forEach(b=>b.onclick=()=>{mSlot=b.dataset.ms;mN=need;mPick=null;renderForge()});
+ $('p-forge').querySelectorAll('[data-mp]').forEach(b=>b.onclick=()=>{const id=+b.dataset.mp;let P=mPick||LGs.slice(0,mN).map(i=>i.id);if(P.includes(id))P=P.filter(x=>x!==id);else if(P.length<capN)P=[...P,id];else{toast(T('anvil_full',{n:capN}));return}mPick=P;haptic('light');renderForge()}); // 21.11 (гравець): тап по речі — додати/прибрати з ковадла
+ if($('mMinB'))$('mMinB').onclick=()=>{mN=need;mPick=null;renderForge()};
+ if($('mMaxB'))$('mMaxB').onclick=()=>{mN=Math.min(Math.max(need,maxN),need+maxExtra);mPick=null;renderForge()};
+ $('p-forge').querySelectorAll('[data-as]').forEach(b=>b.onclick=()=>{aSlot=b.dataset.as;aSel=null;aPick=null;renderForge()});
+ $('p-forge').querySelectorAll('[data-asel]').forEach(b=>b.onclick=()=>{aSel=+b.dataset.asel;aPick=null;renderForge()});
+ $('p-forge').querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{const id=+b.dataset.sp;let P=aPick||aSac.map(i=>i.id);if(P.includes(id))P=P.filter(x=>x!==id);else if(P.length<aNeed)P=[...P,id];else{toast(T('ast_sac_full',{n:aNeed}));return}aPick=P;haptic('light');renderForge()}); // 21.11 (Влад): тап — у жертви / прибрати; перша вибрана згорить при невдачі
+ if($('astGo'))$('astGo').onclick=()=>{if(!aIt)return;const go=()=>act('astral',{id:aIt.id,sac:aSac.map(i=>i.id)},r=>{aPick=null;if(r.out.win){toast(T('ast_win'));haptic('heavy')}else{const b=(r.out.burned||[])[0];toast(T('ast_fail2',{c:r.out.chance,s:b&&SLOT[b.slot]?SLOT[b.slot].n:''}))}});
   if(aSacUp)modal(`<h3>${T('ast_up_t')}</h3><p>${T('ast_up_d')}</p>`,T('ast_up_ok'),()=>{go()});else go()}; // 08.11 (критик): річ із зірками чи перекиданнями в жертву — лише після підтвердження
- if($('myth'))$('myth').onclick=()=>{const ids=LGs.slice(0,mN).map(i=>i.id);act('mythic',{ids},r=>{const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
+ if($('myth'))$('myth').onclick=()=>{const ids=onA.map(i=>i.id);act('mythic',{ids},r=>{mPick=null;const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
 }
 const DNG=[{n:'Нора щурів',bg:'dbg1',reg:1},{n:'Вовче лігво',bg:'dbg2',reg:1},{n:'Склеп короля',bg:'dbg3',reg:2},{n:'Болотне капище',bg:'dbg4',reg:3},{n:'Вогняна кузня',bg:'dbg5',reg:4},{n:'Крижана печера',bg:'dbg6',reg:5},{n:'Затонулий храм',bg:'dbg7',reg:6},{n:'Зала дзеркал',bg:'dbg8',reg:7},{n:'Серце безодні',bg:'dbg9',reg:8},{n:'Трон попелу',bg:'dbg10',reg:8}]; // власні фони підземель (31.10)
 const MATN=['I','II','III','IV'];
@@ -1700,7 +1707,7 @@ function renderRank(){
 // дія на сервері: блокує кнопки, показує помилки
 async function act(a,args,ok){
  if(busy)return;busy=true;renderBoss();
- try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/ad_gap|ad_limit|inc2_paused|inc2_rent_end|no_egg|pet_ready/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
+ try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/wb_fled/.test(String(e&&e.message||e))){wbData=null;setTimeout(()=>sync(true),50)}if(/ad_gap|ad_limit|inc2_paused|inc2_rent_end|no_egg|pet_ready/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
 }
 
 // ---------- модалки ----------
@@ -1999,13 +2006,13 @@ function renderWb(){
  if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return}
  const W=V.wb,el=$('p-wboss');
  if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
- if(wbData&&Date.now()-wbAt>6e4)wbData=null;
- if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(wbData&&Date.now()-wbAt>(wbData.flee?8e3:6e4))wbData=null; // під час втечі Графа — частіше, щоб здоров'я й таймер рухались
+ if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{if(/wb_fled/.test(String(e&&e.message||e))){if(V&&V.wb){V.wb.off=1;V.wb.gone=1}tab='arena';lastSub.arena='arena';setTimeout(()=>sync(true),50)}toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
  const D=wbData,B0=D.boss,rest=!!(B0.back&&B0.back>Date.now()),kind=rest?'':W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price; // 18.11 (Влад «А»): rest — бос повалений, відпочиває 30 хв
  if(D.ready===false){el.innerHTML=`<div class="empty">${(ERR&&ERR.wb_soon)||T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
  let h=`<div class="sbx"><video class="sbx-v" src="assets/boss/upyr_idle.mp4?v=1" poster="assets/boss/upyr_poster.jpg?v=1" autoplay muted loop playsinline></video>
-  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>
+  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>${D.flee&&D.flee>Date.now()?`<div class="sbx-flee">🦇 ${T('sbx_flee',{t:mmss(D.flee-Date.now())})}</div>`:''}
   ${rest?`<div class="sbx-rest"><b>☠️ ${T('sbx_down')}</b><span>${T('sbx_down_by',{n:esc(B0.by||'')})}</span><span>${T('sbx_back')} <b class="wbcd">${mmss(B0.back-Date.now())}</b> · ❤️ ${fmt(B0.hp_max)}</span></div>`:`<div class="sbx-hp"><i style="width:${Math.max(2,B0.hp/B0.hp_max*100)}%"></i><span>❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)}</span></div>`}</div></div>
   ${D.champ?`<div class="sbx-champ">${T('sbx_champ',{n:esc(D.champ.name)})}</div>`:''}
   <div class="dstat sbst"><div><span>🎟️</span><b>${W.left}/${W.free}</b><small>${T('sbx_free')}</small></div>${W.packLeft?`<div><span>📦</span><b>${W.packLeft}</b><small>${T('sbx_pack')}</small></div>`:`<div><span>${RIC('ash')}</span><b>${W.paidLeft?fmt(W.price):'—'}</b><small>${T('sbx_next')}</small></div>`}<div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div></div>
@@ -2088,8 +2095,8 @@ setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
 const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
-function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
- if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
+function sbPaint(){const b=$('sBos');if(!b)return;if(!G||V&&V.wb&&V.wb.gone){b.style.display='none';return}b.style.display=''; // нд 22.11 12:00: Граф утік — кнопки боса більше немає
+ if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):V.wb.flee&&V.wb.flee>Date.now()?'🦇 '+mmss(V.wb.flee-Date.now()):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
  const l=sbLeft();
  $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
 function sbOpen(){haptic('medium');if(V&&V.wb&&!V.wb.off){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
