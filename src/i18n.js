@@ -460,6 +460,6 @@ Object.assign(window.I18N.en.err,{wb_fled:'The Count has fled to his castle — 
 Object.assign(window.I18N.ru.err,{wb_fled:'Граф сбежал в свой замок — босс сервера исчез'});
 
 // 21.11 (Влад «А»): злиття — донор дає 1 + половину своїх зірок
-Object.assign(window.I18N.uk.t,{star_gain:'Донор дає +1★ і ще половину своїх зірок (★2 → +2, ★4 → +3). Вище ★5 не буває — зайве згорає.',star_burn:'Після злиття згорить ★{n}: вище ★5 річ не росте. Злити все одно?'});
-Object.assign(window.I18N.en.t,{star_gain:'The donor gives +1★ plus half of its own stars (★2 → +2, ★4 → +3). Nothing goes above ★5 — the excess burns.',star_burn:'This merge will burn ★{n}: the item can’t go above ★5. Merge anyway?'});
-Object.assign(window.I18N.ru.t,{star_gain:'Донор даёт +1★ и ещё половину своих звёзд (★2 → +2, ★4 → +3). Выше ★5 не бывает — лишнее сгорает.',star_burn:'После слияния сгорит ★{n}: выше ★5 вещь не растёт. Слить всё равно?'});
+Object.assign(window.I18N.uk.t,{star_gain:'Донор дає +1★ і ще половину своїх зірок (★2 → +2, ★4 → +3). Вище ★5 не буває — зайве згорає.',star_burn:'Після злиття згорять {n}★: вище ★5 річ не росте. Злити все одно?'});
+Object.assign(window.I18N.en.t,{star_gain:'The donor gives +1★ plus half of its own stars (★2 → +2, ★4 → +3). Nothing goes above ★5 — the excess burns.',star_burn:'This merge will burn {n}★: the item can’t go above ★5. Merge anyway?'});
+Object.assign(window.I18N.ru.t,{star_gain:'Донор даёт +1★ и ещё половину своих звёзд (★2 → +2, ★4 → +3). Выше ★5 не бывает — лишнее сгорает.',star_burn:'После слияния сгорят {n}★: выше ★5 вещь не растёт. Слить всё равно?'});
