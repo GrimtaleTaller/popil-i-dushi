@@ -73,12 +73,70 @@ function banner(name,tier=0,w=120){
  <path d="${sh}" fill="none" stroke="${T.m}" stroke-width="${tier>=2?3.2:2.4}"/>
  ${sm?'':`<path d="${sh}" fill="none" stroke="${T.m2}" stroke-width="1" stroke-dasharray="3 3" transform="translate(60 88) scale(.9) translate(-60 -88)" opacity=".9"/>`}
  <rect x="2" y="7" width="116" height="7" rx="3.5" fill="url(#${u}p)"/>${fin}
- <circle cx="60" cy="72" r="${sm?38:31}" fill="url(#${u}m)" stroke="${T.m}" stroke-width="${sm?4:2.6}"/>
- <circle cx="60" cy="72" r="27" fill="none" stroke="${T.m2}" stroke-width="1"/>
- <g transform="${sm?'translate(31 43) scale(.58)':'translate(39 51) scale(.42)'}">${symbol(g.sym,L,A)}</g>
+ <circle cx="60" cy="72" r="${sm?40:35}" fill="url(#${u}m)" stroke="${T.m}" stroke-width="${sm?4:2.6}"/>
+ <circle cx="60" cy="72" r="31" fill="none" stroke="${T.m2}" stroke-width="1"/>
+ <g transform="${sm?'translate(28 40) scale(.64)':'translate(34.5 46.5) scale(.51)'}">${symbol(g.sym,L,A)}</g>
  ${stars}${tass}</g></svg>`;
 }
 const CACHE=new Map();
 window.penSvg=function(name,tier,w){name=String(name||'');if(!name)return '';tier=Math.max(0,Math.min(3,Number(tier)||0));const k=name+'|'+tier+'|'+w;let s=CACHE.get(k);if(!s){s=banner(name,tier,w).replace(/\n\s*/g,' ');if(CACHE.size>300)CACHE.clear();CACHE.set(k,s)}return s};
 window.penSym=n=>gen(String(n||'')).sym;
+})();
+// 21.11 (Влад): відзнаки топ-5 гонки кланів — корона / вінець на вимпелі клану. Геометрія вимпела: центр x=60, древко y 7–14, медальйон (60,72) r31.
+(function(){
+const C={
+ 1:{n:'gold',  hi:'#fff6cf',m:'#f4c542',lo:'#a8701a',ln:'#3b2405',gem:'#d8203a',gem2:'#ff8a9a',glow:'#ffcf4a'},
+ 2:{n:'silver',hi:'#ffffff',m:'#c9d2dd',lo:'#6f7a88',ln:'#1d2430',gem:'#2f6fd6',gem2:'#9cc4ff',glow:'#b9d4ff'},
+ 3:{n:'bronze',hi:'#ffe0bd',m:'#cf8a4c',lo:'#6e3d17',ln:'#2b1406',gem:'#1f9e66',gem2:'#8ff0c2',glow:'#ff9d57'},
+ 4:{n:'ember', hi:'#ffe1b0',m:'#ff8a3d',lo:'#a3330c',ln:'#3a1004',glow:'#ff6a2a',txt:'#fff1dc'},
+ 5:{n:'ash',   hi:'#f4f1fa',m:'#b9b2cc',lo:'#5d566e',ln:'#1f1b28',glow:'#a99be0',txt:'#ffffff'}};
+const f=n=>+n.toFixed(2);
+function grad(id,c){return `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.hi}"/><stop offset=".45" stop-color="${c.m}"/><stop offset="1" stop-color="${c.lo}"/></linearGradient>`}
+// корона: локальні координати, основа на y=0, центр x=0
+function crown(c,u){
+ const body='M-29 -9 L-33 -31 L-21 -19 L-13 -36 L-6 -22 L0 -42 L6 -22 L13 -36 L21 -19 L33 -31 L29 -9 Z';
+ const tips=[[-33,-31,3.4],[-13,-36,3.4],[0,-42,4],[13,-36,3.4],[33,-31,3.4]];
+ return `<path d="${body}" fill="url(#${u}g)" stroke="${c.ln}" stroke-width="2.2" stroke-linejoin="round"/>
+ <path d="M-26 -12 L-29 -27 M26 -12 L29 -27" stroke="${c.hi}" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>
+ ${tips.map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="url(#${u}g)" stroke="${c.ln}" stroke-width="1.8"/>`).join('')}
+ <path d="M0 -29 L6 -20 L0 -11 L-6 -20 Z" fill="${c.gem}" stroke="${c.ln}" stroke-width="1.4" stroke-linejoin="round"/><path d="M0 -27 L3 -21 L0 -20 Z" fill="${c.gem2}" opacity=".9"/>
+ <rect x="-31" y="-10" width="62" height="11" rx="2.5" fill="url(#${u}g)" stroke="${c.ln}" stroke-width="2.2"/>
+ <path d="M-28 -7.5 H28" stroke="${c.hi}" stroke-width="1.3" opacity=".7" stroke-linecap="round"/>
+ ${[-18,0,18].map(x=>`<rect x="${x-3}" y="-7.5" width="6" height="6" rx="1.4" transform="rotate(45 ${x} -4.5)" fill="${c.gem}" stroke="${c.ln}" stroke-width="1"/>`).join('')}`}
+// лавровий вінок навколо медальйона (60,72): дві гілки від бантика внизу вгору, на кожному вузлі пара листків (зовні/всередині)
+function leaf(x,y,ang,L,W,c,u){return `<path d="M0 0 Q${f(L*.5)} ${f(-W)} ${f(L)} 0 Q${f(L*.5)} ${f(W)} 0 0 Z" transform="translate(${f(x)} ${f(y)}) rotate(${f(ang)})" fill="url(#${u}g)" stroke="${c.ln}" stroke-width="1.2" stroke-linejoin="round"/>`}
+function wreath(c,u){
+ const cx=60,cy=72,R=43;let g='';
+ for(const s of [-1,1]){
+  const P=t=>{const r=t*Math.PI/180;return [cx+s*R*Math.sin(r),cy-R*Math.cos(r)]};
+  const [x0,y0]=P(168),[x1,y1]=P(30);
+  g+=`<path d="M${f(x0)} ${f(y0)} A${R} ${R} 0 0 ${s>0?0:1} ${f(x1)} ${f(y1)}" fill="none" stroke="${c.lo}" stroke-width="2.4" stroke-linecap="round"/>`;
+  const nodes=[160,139,118,97,76,55];
+  nodes.forEach((t,i)=>{const r=t*Math.PI/180,[x,y]=P(t);
+   const dir=Math.atan2(-Math.sin(r),-s*Math.cos(r))*180/Math.PI; // напрям уздовж гілки вгору
+   const k=1-i*.07,L=13*k,W=5*k;
+   g+=leaf(x,y,dir-28*s,L,W,c,u)+leaf(x,y,dir+28*s,L,W,c,u)});
+  const [tx,ty]=P(30),rt=30*Math.PI/180;g+=leaf(tx,ty,Math.atan2(-Math.sin(rt),-s*Math.cos(rt))*180/Math.PI,10,3.6,c,u);
+ }
+ g+=`<path d="M60 111 C53 104 45 105 46 112 C47 118 55 116 60 111 Z M60 111 C67 104 75 105 74 112 C73 118 65 116 60 111 Z" fill="url(#${u}g)" stroke="${c.ln}" stroke-width="1.3" stroke-linejoin="round"/>
+ <path d="M58 113 L53 124 L57 122 L59 125 Z M62 113 L67 124 L63 122 L61 125 Z" fill="url(#${u}g)" stroke="${c.ln}" stroke-width="1.1" stroke-linejoin="round"/><circle cx="60" cy="111.5" r="3.4" fill="url(#${u}g)" stroke="${c.ln}" stroke-width="1.3"/>`;
+ return g}
+// табличка з номером над древком (4–5)
+function plaque(c,u,t){return `<path d="M-25 -21 H25 L19 -10.5 L25 0 H-25 L-19 -10.5 Z" fill="url(#${u}g)" stroke="${c.ln}" stroke-width="2.2" stroke-linejoin="round"/>
+ <text x="0" y="-10.5" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="15" letter-spacing=".5" fill="${c.ln}">${t}</text>`}
+function spark(x,y,r,o){return `<path d="M${x} ${y-r} Q${x+r*.18} ${y-r*.18} ${x+r} ${y} Q${x+r*.18} ${y+r*.18} ${x} ${y+r} Q${x-r*.18} ${y+r*.18} ${x-r} ${y} Q${x-r*.18} ${y-r*.18} ${x} ${y-r} Z" fill="#fff4c8" opacity="${o}"/>`}
+// svg вимпела → вимпел з відзнакою; вимпел того самого розміру, відзнака додається зверху (висота більша)
+window.raceIns=function(svg,place,w){const c=C[place];if(!c)return svg;const u='rz'+place+'w'+w,sm=w<34;
+ const top=place<=3?44:23;const s=place<=3?(sm?1.6:1.35):(sm?1.55:1);const ext=Math.ceil(top*s)+4;  // наскільки розширити вгору
+ const vb=[-6,-6-ext,132,186+ext];
+ const defs=`<defs>${grad(u+'g',c)}<radialGradient id="${u}r" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="${c.glow}" stop-opacity="${place===1?.55:.4}"/><stop offset=".6" stop-color="${c.glow}" stop-opacity="${place===1?.18:.12}"/><stop offset="1" stop-color="${c.glow}" stop-opacity="0"/></radialGradient></defs>`;
+ const cyG=(vb[1]+vb[1]+vb[3])/2;
+ const glow=`<ellipse cx="60" cy="${f(cyG+6)}" rx="70" ry="${f(vb[3]/2)}" fill="url(#${u}r)"/>`;
+ const head=`<g transform="translate(60 8) scale(${s})">${place<=3?crown(c,u):plaque(c,u,place===4?'IV':'V')}</g>`;
+ const sp=place===1&&!sm?[spark(2,-40,6,.95),spark(118,-40,6,.95),spark(0,38,4.5,.75),spark(120,38,4.5,.75)].join(''):'';
+ const wr=place>=4?wreath(c,u):'';
+ return svg.replace(/viewBox="-6 -6 132 186"/,`viewBox="${vb.join(' ')}"`)
+  .replace(/width="([\d.]+)" height="([\d.]+)"/,(m,a,h)=>`width="${a}" height="${f(a*vb[3]/132)}"`)
+  .replace(/(<svg[^>]*>)/,`$1${defs}${glow}`)
+  .replace(/<\/svg>$/,`${wr}${head}${sp}</svg>`)};
 })();
