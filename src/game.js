@@ -599,7 +599,7 @@ function disAsk(ids,mode,key,go){if(!ids.length){toast(ERR.no_junk);return}const
 const relicOf=i=>((V.forge&&V.forge.relicAsh)||{})[i.r]||0;
 function relicAsk(ids,key){const its=G.inv.filter(i=>ids.includes(i.id));if(!its.length)return;
  askOnce(key,askBox(its,relicOf,{cls:'ask-a',ic:'⚱️',title:T('ask_relic_t'),q:T('relic_q',{n:its.length}),cur:'⚱️',have:G.ash}),T('relic_btn'),()=>act('relicAsh',{ids},r=>{toast('⚱️ +'+r.out.ash);haptic('medium')}))}
-let mSlot=null,mN=3,mPick=null,fsub='res',gemSel=null,aSlot=null,aSel=null;
+let mSlot=null,mN=3,mPick=null,aPick=null,fsub='res',gemSel=null,aSlot=null,aSel=null;
 // ── Камені: злиття (картка 2, макет A «компактна таблиця», 08.11) ──
 // Правило й ціни — із сервера (V.gem.merge): need однакових каменів рівня l → 1 рівня l+1 (до V);
 // ціна — матеріал рівня каменів (лише свій, з 12.11) × matN, уламки sh і золото gold. all — розрахунок «злити все» від сервера.
@@ -722,7 +722,9 @@ function renderForge(){
  if(!aSlot||!mOf(aSlot).length)aSlot=SLOTS.find(s=>mOf(s).length)||aSlot||'weapon';
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aEx=aIt?astExtra(aIt):{gold:0,shards:0},eqA=G.eq[aSlot];
  // 08.11 (варіант Ж): 2 прадавні з сумки в жертву (найслабші, спершу без зірок і перекидань, без каменів) + 📜 Сувій
- const aNeed=A.sac||2,aScr=G.scroll||0,aSac=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b)).slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
+ const aNeed=A.sac||2,aScr=G.scroll||0,aCand=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b));
+ if(aPick){aPick=aPick.filter(id=>aCand.some(i=>i.id===id));if(!aPick.length)aPick=null} // 21.11 (Влад): свій вибір жертв для вічного, як у прадавнього
+ const aSac=aPick?aPick.map(id=>aCand.find(i=>i.id===id)):aCand.slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
  const aEs=A.ess||0,aOk=aIt&&aScr>=1&&(G.ess||0)>=aEs&&aSac.length>=aNeed&&G.souls>=aSo&&G.gold>=aEx.gold&&G.shards>=aEx.shards;
  if(fsub==='ast')h+=`<div class="card">${setBan('eter',RAR[6].c,'✦')}
   ${slotG(s=>mOf(s).length,aSlot,'data-as',1)}
@@ -730,7 +732,7 @@ function renderForge(){
   <div class="chbox"><div class="chrow"><span>${T('chance_t')}</span><b>${fmtN(F.astChance)}%</b></div><div class="cbar"><i style="width:${F.astChance}%"></i></div>
    <p class="sub">${T('chance_ast',{b:A.base,f:F.astChance-A.base,m:A.cap})}</p>
    <div class="getrow"><div><span class="sub">${T('you_get')}</span><b style="color:${RAR[6].c}">${RAR[6].n} · ${T('lvl',{n:aIt?aIt.il:'—'})}</b>${aIt?`<span class="sub">≈ ${T('power',{n:fmt(rarEst(aIt,6))})}</span>`:''}</div><div style="text-align:right"><span class="sub">${T('now_eq')}</span><b>${eqA?T('power',{n:fmt(itemVal(eqA))}):'—'}</b></div></div>
-   ${needRows([[RIS('souls'),T('souls').replace(/^\S+\s+/,''),aSo,G.souls||0],[RIS('scroll'),T('r_scroll'),1,aScr],...(aEs?[[RIS('ess'),T('ess').replace(/^\S+\s+/,''),aEs,G.ess||0]]:[]),[`<img class="hic s" src="assets/items/weapon0_5.webp" alt="">`,T('ast_sac',{n:aNeed}),aNeed,aSac.length]])}${aSac.length>=aNeed?`<div class="chrow"><span class="sub">${T('ast_sac',{n:aNeed})}</span><span>${aSac.map((i,k)=>`<span class="gic r5" style="width:30px;height:30px;position:relative" title="${k?'':T('ast_burn1')}">${gearArt(i.slot,i.r,i.nm)}${k?'':'<i style="position:absolute;right:-4px;bottom:-4px;font-style:normal;font-size:12px">🔥</i>'}</span>`).join(' ')}</span></div>`:''}${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
+   ${needRows([[RIS('souls'),T('souls').replace(/^\S+\s+/,''),aSo,G.souls||0],[RIS('scroll'),T('r_scroll'),1,aScr],...(aEs?[[RIS('ess'),T('ess').replace(/^\S+\s+/,''),aEs,G.ess||0]]:[]),[`<img class="hic s" src="assets/items/weapon0_5.webp" alt="">`,T('ast_sac',{n:aNeed}),aNeed,aSac.length]])}${aIt&&aCand.length?`<p class="hint" style="margin:8px 0 4px">${T('ast_sac_pick',{n:aNeed})}</p><div class="anvil">${aCand.map(it=>{const k=aSac.indexOf(it);return `<div class="apick${k>=0?' on':''}" data-sp="${it.id}"><div class="atile" style="border-color:${RAR[5].c}">${gearArt(it.slot,it.r,it.nm)}<b>${fmt(itemVal(it))}</b></div><small>${T('lvl',{n:it.il})}${it.sr||it.rr?' ★':''}</small>${k>=0?`<i>${k?'✓':'💀'}</i>`:''}</div>`}).join('')}</div>`:''}${aEx.gold?`<div class="chrow"><span class="sub">${T('ast_extra')}</span><span>${resC(G.gold,aEx.gold,'💰')} · ${resC(G.shards,aEx.shards,'🔩')}</span></div>`:''}</div>
   <p class="hint">${T('ast_keep')}</p><p class="hint">📜 ${T('ast_scroll_src',{n:aScr})}</p>
   <div class="row"><button class="btn pri big" id="astGo" ${aOk?'':'disabled'}>${aIt?'✦ '+T('ast_btn',{c:F.astChance}):T('ast_pick')}</button></div></div>`;
  if(fsub==='gem')h+=gemPane();
@@ -746,9 +748,10 @@ function renderForge(){
  $('p-forge').querySelectorAll('[data-mp]').forEach(b=>b.onclick=()=>{const id=+b.dataset.mp;let P=mPick||LGs.slice(0,mN).map(i=>i.id);if(P.includes(id))P=P.filter(x=>x!==id);else if(P.length<capN)P=[...P,id];else{toast(T('anvil_full',{n:capN}));return}mPick=P;haptic('light');renderForge()}); // 21.11 (гравець): тап по речі — додати/прибрати з ковадла
  if($('mMinB'))$('mMinB').onclick=()=>{mN=need;mPick=null;renderForge()};
  if($('mMaxB'))$('mMaxB').onclick=()=>{mN=Math.min(Math.max(need,maxN),need+maxExtra);mPick=null;renderForge()};
- $('p-forge').querySelectorAll('[data-as]').forEach(b=>b.onclick=()=>{aSlot=b.dataset.as;aSel=null;renderForge()});
- $('p-forge').querySelectorAll('[data-asel]').forEach(b=>b.onclick=()=>{aSel=+b.dataset.asel;renderForge()});
- if($('astGo'))$('astGo').onclick=()=>{if(!aIt)return;const go=()=>act('astral',{id:aIt.id,sac:aSac.map(i=>i.id)},r=>{if(r.out.win){toast(T('ast_win'));haptic('heavy')}else{const b=(r.out.burned||[])[0];toast(T('ast_fail2',{c:r.out.chance,s:b&&SLOT[b.slot]?SLOT[b.slot].n:''}))}});
+ $('p-forge').querySelectorAll('[data-as]').forEach(b=>b.onclick=()=>{aSlot=b.dataset.as;aSel=null;aPick=null;renderForge()});
+ $('p-forge').querySelectorAll('[data-asel]').forEach(b=>b.onclick=()=>{aSel=+b.dataset.asel;aPick=null;renderForge()});
+ $('p-forge').querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{const id=+b.dataset.sp;let P=aPick||aSac.map(i=>i.id);if(P.includes(id))P=P.filter(x=>x!==id);else if(P.length<aNeed)P=[...P,id];else{toast(T('ast_sac_full',{n:aNeed}));return}aPick=P;haptic('light');renderForge()}); // 21.11 (Влад): тап — у жертви / прибрати; перша вибрана згорить при невдачі
+ if($('astGo'))$('astGo').onclick=()=>{if(!aIt)return;const go=()=>act('astral',{id:aIt.id,sac:aSac.map(i=>i.id)},r=>{aPick=null;if(r.out.win){toast(T('ast_win'));haptic('heavy')}else{const b=(r.out.burned||[])[0];toast(T('ast_fail2',{c:r.out.chance,s:b&&SLOT[b.slot]?SLOT[b.slot].n:''}))}});
   if(aSacUp)modal(`<h3>${T('ast_up_t')}</h3><p>${T('ast_up_d')}</p>`,T('ast_up_ok'),()=>{go()});else go()}; // 08.11 (критик): річ із зірками чи перекиданнями в жертву — лише після підтвердження
  if($('myth'))$('myth').onclick=()=>{const ids=onA.map(i=>i.id);act('mythic',{ids},r=>{mPick=null;const o=r.out;if(o.win){toast(T('myth_win'));haptic('heavy')}else toast(T('myth_fail',{c:o.chance}))})};
 }
