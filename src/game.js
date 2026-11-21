@@ -237,7 +237,7 @@ function replayTick(dt){
  }
  if(R.i>=R.res.ev.length&&R.t>=(R.res.ev.length?R.res.ev[R.res.ev.length-1][0]:0)+0.4){
   const res=R.res;B.rep=null;B.boss=false;
-  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:'')+(res.gems?' '+res.gems.map(k=>gemIc(k)).join(''):'')+(res.egg?' +'+eggIc(res.egg):''));B.m=null;B.resp=0.8}
+  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:'')+(res.gems?' '+res.gems.map(k=>gemIc(k)).join(''):'')+(res.egg?' +'+eggIc(res.egg)+' '+T(res.egg==='r'?'egg_r':'egg_c'):''));B.m=null;B.resp=0.8}
   else{B.dead=2.5;$('dead').style.display='grid';toast(T(res.timeout?'boss_timeout':'boss_lose')+(res.auto?' '+T('auto_off'):''));B.m=null}
   R.after&&R.after();renderBoss();paintArena();
  }
@@ -892,11 +892,13 @@ function dngPlay(o){
  at(t+400,fin);
 }
 
+// 21.11 (Влад): нагорода пише тип яйця — звичайне чи рідкісне (раніше лише «Яйце вихованця +1», Макс шукав рідкісне в Сумці)
+function eggRw(g){if(g.egg)return [`${eggIc(g.egg)} ${T(g.egg==='r'?'egg_r':'egg_c')}: <b>+1</b>`];if(!g.eggs)return [];if(g.eggR==null)return [`${T('r_egg')} <b>+${g.eggs}</b>`];const c=g.eggs-g.eggR;return [c>0?`${eggIc('c')} ${T('egg_c')}: <b>+${c}</b>`:'',g.eggR>0?`${eggIc('r')} ${T('egg_r')}: <b>+${g.eggR}</b>`:'']}
 // підсумок серії заходів
 function dngBatch(o){
  const d=DNG[o.t-1],g=o.gain;
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+${g.scroll}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+${g.scroll}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',...eggRw(g)].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  haptic('heavy');
 }
 // 15.11: повернуто — випадково видалено разом зі старою карткою Болота (f6cb938), через це після бою в Болоті була помилка
@@ -904,15 +906,15 @@ function swResult(o){
  const g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?'👑 '+T(SWB[0]):T('sw_wave',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
  const rw=[g.scroll?`<span style="color:${RAR[6].c}"><b>📜 ${T('r_scroll')} +1!</b></span>`:'',g.gold?`🪙 <b>+${fmt(g.gold)}</b>`:'',g.xp?`✨ XP <b>+${fmt(g.xp)}</b>`:'',g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T('sw_floor',{n:o.f})}: ${T(o.win?'sw_win':'sw_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.win&&!g.scroll?`<p class="hint">${T(g.noSc?'sw_sc_low':'sw_noscroll')}</p>`:''}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T('sw_floor',{n:o.f})}: ${T(o.win?'sw_win':'sw_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.win&&!g.scroll?`<p class="hint">${T(g.noSc?'sw_sc_low':'sw_noscroll')}</p>`:''}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*300));
  haptic(o.win?'heavy':'medium');
 }
 function dngResult(o){
  const d=DNG[o.t-1],g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?T('boss'):T('room',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',...eggRw(g)].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
  haptic(o.full?'heavy':'medium');
 }
@@ -1836,7 +1838,7 @@ function renderQuest(){
  
  h+=`<p class="hint">${T('pass_hint')}</p>`;
  el.innerHTML=pvT+h;passBuyBind(el);el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});if($('peAll'))$('peAll').onclick=()=>{passAll=!passAll;renderQuest()};
- $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
+ $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?(o.eggs-(o.eggR||0)>0?' '+eggIc('c')+'×'+(o.eggs-(o.eggR||0)):'')+(o.eggR?' '+eggIc('r')+' '+T('egg_r')+' ×'+o.eggR:''):''));haptic('medium')});
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
 let adCtl=null,adLoading=false,adQ=[];
