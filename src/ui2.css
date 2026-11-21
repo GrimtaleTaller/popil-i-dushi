@@ -889,3 +889,9 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 
 /* 20.11: довгі ніки без пробілів не виходять за картку */
 .item .nm,.chpick b,.rank span{overflow-wrap:anywhere;word-break:break-word}
+
+/* 21.11 (гравець): ковадло прадавніх — вибір речей тапом */
+.apick{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.45;cursor:pointer}
+.apick.on{opacity:1}
+.apick small{font-size:11px;color:var(--muted,#9a9aa2)}
+.apick i{position:absolute;top:-4px;right:-4px;background:var(--green,#3bb273);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:18px;text-align:center;font-style:normal}
