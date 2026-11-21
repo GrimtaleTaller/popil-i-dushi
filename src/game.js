@@ -1453,6 +1453,27 @@ function cgCard(C){ // 18.11 (Влад): внески в казну по гра�
   <div class="cgtot"><b>${T('cg_total')}</b> ${emp(T0)?'—':chips(T0)}</div>
   ${L.map(r=>{const e=emp(r.v);if(!e)rk++;return `<div class="cgrow${e?' cg0':''}${r.in?'':' cgout'}"><span class="cgrk">${e?'·':rk}</span><div class="cgnm">${esc(r.name)}${r.id===myId?' ('+T('you')+')':''}${r.in?'':` <small>${T('cg_left')}</small>`}</div><div class="cgvs">${e?`<span class="hint">${T('cg_none')}</span>`:chips(r.v)}</div></div>`}).join('')}
  </div>`}
+// ===== Печера Циклопа (з 23.11): загони клану, гонка кланів =====
+let cycData=null,cycBusy=0;
+const PETE={wolf:'🐺',golem:'🗿',raven:'🐦‍⬛',owl:'🦉',ghost:'👻',phoenix:'🔥'};
+function cycDo(a,args,cb){return act(a,args,r=>{if(r.out&&r.out.live!==undefined)cycData=r.out;else cycData=null;dirty.clan=1;if(cb)cb(r)})}
+function cycRes(f,mine){if(!f||!f.res)return;
+ const rows=f.res.map(x=>`<div><span>${PETE[x.pet]||'👤'} ${esc(x.name)} <small style="opacity:.6">${T('stage',{n:x.st})}</small></span><b>${x.t>=60?'✓':'💀'} ${x.t} ${T('cyc_s')} · ${fmt(Math.round(x.pts))}</b></div>`).join('');
+ const m=mine?`<p>${T('cyc_mine',{n:mine.n,k:T('chest_'+mine.g),m:MATN[mine.mat],q:mine.matN})}${mine.ess?' · '+T('r_ess')+' +1':''}</p>`:'';
+ modal(`<div class="big">👁️</div><h3>${T('cyc_t')} · ${T('cyc_d'+f.d)}</h3><div class="rooms cyc-res">${rows}</div><p class="hint">${T('cyc_res_h')}</p>${m}`,T('ok'))}
+function cycHtml(){const D=cycData;
+ if(!D){if(!cycBusy){cycBusy=1;api('cycInfo').then(r=>{cycData=r.out;dirty.clan=1;flush()}).catch(e=>toast(errT(e))).finally(()=>{cycBusy=0})}return `<div class="empty">${T('loading')}</div>`}
+ if(!D.live)return `<div class="card"><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_soon')}</p></div>`;
+ let h=`<div class="card cyc"><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_lore')}</p><p class="sub">${T('cyc_me',{l:D.lead,lm:D.leadMax,n:D.dn,nm:D.dayMax,p:fmt(Math.round(D.pts))})}</p>`;
+ if(D.young)h+=`<p class="dn">${T('cyc_young')}</p>`;
+ const inP=(D.open||[]).some(p=>p.me),can=!D.young&&!inP&&D.lead<D.leadMax&&D.dn<D.dayMax;
+ h+=`<div class="cyc-d">${[1,2,3].map(d=>`<button class="btn${d===2?' pri':''}" data-cyo="${d}" ${can&&!busy?'':'disabled'}><b>${T('cyc_d'+d)}</b><small>${T('cyc_dh',{a:D.atk[d-1],p:D.ptsMul[d-1]})}</small><small>🧰${D.ch[d-1][0]} ${T('chest_'+D.ch[d-1][1])} · ⛏️${D.mat[d-1]} · ${T('r_ess')} ${Math.round(D.ess[d-1]*100)}%</small></button>`).join('')}</div>
+ <p class="hint">${T('cyc_how',{a:D.min,b:D.max,l:D.leadMax,m:Math.round(D.ttl/60),n:D.dayMax})}</p></div>`;
+ h+=`<div class="card"><h4>⚔️ ${T('cyc_open')}</h4>`+((D.open||[]).length?(D.open||[]).map(p=>{const left=Math.max(0,p.until-Date.now());
+  return `<div class="item cyc-p"><div class="info"><div class="nm">${T('cyc_d'+p.d)} · ${p.members.length}/${D.max} · ⏳${Math.ceil(left/6e4)} ${T('cyc_min')}</div>${p.members.map(m=>`<div class="sub">${m.id===p.leader?'👑':'👤'} ${PETE[m.pet]||''} ${esc(m.name)} · ${T('lvl',{n:m.lvl})} · ${T('stage',{n:m.st})}</div>`).join('')}</div><div class="acts">${p.me?(p.mine?`<button class="btn pri" data-cys="${p.id}" ${p.members.length>=D.min&&!busy?'':'disabled'}>⚔️ ${T('cyc_go')}</button>`:'')+`<button class="btn" data-cyl="${p.id}">✖</button>`:`<button class="btn pri" data-cyj="${p.id}" ${!D.young&&!inP&&D.dn<D.dayMax&&p.members.length<D.max&&!busy?'':'disabled'}>${T('cyc_join')}</button>`}</div></div>`}).join(''):`<p class="hint">${T('cyc_none')}</p>`)+'</div>';
+ if((D.done||[]).length)h+=`<div class="card"><h4>📜 ${T('cyc_last')}</h4>`+D.done.map(x=>`<div class="item"><div class="info"><div class="nm">${T('cyc_d'+x.d)}${x.me?' · '+T('you'):''}</div><div class="sub">${x.res?x.res.res.map(r=>esc(r.name)+' '+fmt(Math.round(r.pts))).join(' · '):''}</div></div><div class="acts"><button class="btn" data-cyr="${x.id}">👁️</button></div></div>`).join('')+'</div>';
+ h+=`<div class="card"><h4>🏆 ${T('cyc_race')}</h4><p class="hint">${T('cyc_race_h')}</p>`+((D.race||[]).length?'<div class="rank">'+D.race.map(r=>`<div class="${r.me?'me':''}"><b>${r.place<=3?['🥇','🥈','🥉'][r.place-1]:r.place}</b><span>${esc(r.name)} <small style="opacity:.6">👥${r.n}</small></span><i>${fmt(r.pts)}</i></div>`).join('')+'</div>':`<p class="hint">${T('cyc_race_none')}</p>`)+'</div>';
+ return h}
 function renderClan(){
  const el=$('p-clan');
  if(G.maxStage<(V.clanStage||5)){const P=V.pclan;el.innerHTML=(P?`<div class="card cinvm pclan"><div class="ic">🏰</div><h3>${esc(P.n)}</h3><p>${T('pclan_h',{n:P.st||5,s:G.maxStage})}</p></div>`:'')+`<div class="empty">${T('clan_unlock',{n:V.clanStage||5})}</div>`;return}
@@ -1541,12 +1562,19 @@ function renderClan(){
  S.main+=`<div class="row"><button class="btn" id="cRef">🔄 ${T('refresh')}</button><button class="btn" id="cLeave">🚪 ${T('leave')}</button></div>`;
  if(C.role==='leader')S.main+=`<p class="hint">${T('clan_leader_hint')}</p>`;
  if(csub==='chat'){if($('chatRoot')&&CH.clan===C.clan.id){chPaint();renderSub();if(!CH.t&&!CH.busy)chPoll(1);return}S.chat=chShell()} // 14.11: чат клану — сам оновлюється, введене не губиться
+ if(V&&V.cyc)S.cyc=cycHtml();
  if(!S[csub])csub='main';h+=csub==='chat'?S[csub]:cDecor(S[csub]);
  {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]});if(csub!=='chat')iconize(el)} /* 18.11 (Влад): у клані ті самі намальовані значки ресурсів, що й у Кузні */renderSub(); // 13.11: не губимо введене при автооновленні клану
  if(csub==='chat')chMount(C);else chStop();
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ct,q=el.querySelector(`[data-ktq="${t}"]`),n=Math.floor(+(q&&q.value)||1);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanTake',{t,n})});
  const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{if(!$('kgP').value){toast(T('key_pick_err'));return}const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
  el.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.cta,all:1}));
+ el.querySelectorAll('[data-cyo]').forEach(b=>b.onclick=()=>cycDo('cycOpen',{d:+b.dataset.cyo}));
+ el.querySelectorAll('[data-cyj]').forEach(b=>b.onclick=()=>cycDo('cycJoin',{id:+b.dataset.cyj}));
+ el.querySelectorAll('[data-cyl]').forEach(b=>b.onclick=()=>cycDo('cycLeave',{id:+b.dataset.cyl}));
+ el.querySelectorAll('[data-cys]').forEach(b=>b.onclick=()=>cycDo('cycStart',{id:+b.dataset.cys},r=>cycRes(r.out.fight,r.out.mine)));
+ el.querySelectorAll('[data-cyr]').forEach(b=>b.onclick=()=>{const x=(cycData.done||[]).find(q=>q.id===+b.dataset.cyr);if(x&&x.res)cycRes(x.res)});
+ if(csub==='cyc')live('cyc',()=>api('cycInfo').then(r=>r.out),o=>{if(same(o,cycData))return false;cycData=o;return true},8000);
  el.querySelectorAll('[data-clf]').forEach(b=>b.onclick=()=>{clogF=b.dataset.clf;haptic('light');dirty.clan=1;flush()});
  el.querySelectorAll('[data-pj]').forEach(b=>b.onclick=()=>{const P=clanData.proj,go=()=>clanAct('clanProj',{s:P.done,cost:P.cost},()=>{toast(T('pj_done'));haptic('medium')}).then(r=>{if(!r){clanData=null;dirty.clan=1}}); // 10.11: підтвердження; після помилки — свіжі дані клану
   modal(`<div class="big">🎯</div><p>${T('pj_ask',{p:fmt(P.cost),n:P.done+1})}</p>`,T('pj_pay'),go)});
@@ -2042,7 +2070,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки

@@ -911,3 +911,7 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .dd-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #2a241c}
 .dd-row>div{display:flex;flex-direction:column;gap:2px;min-width:0}.dd-row span{font-size:12px;opacity:.85}
 .dd-row.lock{opacity:.5}.dd-row .btn{flex:0 0 auto}
+/* Печера Циклопа (з 23.11) */
+.cyc-d{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.cyc-d .btn{display:flex;flex-direction:column;gap:2px;padding:8px 4px;text-align:center;border-radius:12px;min-height:0}.cyc-d small{font-size:10px;opacity:.8;font-weight:400}
+.cyc-p .sub{font-size:12px}.cyc-res>div{display:flex;justify-content:space-between;gap:8px;padding:4px 0;opacity:1}
