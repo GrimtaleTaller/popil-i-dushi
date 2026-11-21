@@ -1600,9 +1600,31 @@ function pvpResult(o){
  haptic(o.win?'heavy':'medium');
 }
 const usdF=x=>'$'+(LANG==='en'?Number(x).toFixed(2):Number(x).toFixed(2).replace('.',',')); // 16.11: сума призу з пулу
+// ===== Жнива (з 23.11): тижневий рейтинг активності — очки за дії, пороги для всіх, гроші топ-10 у 3 дивізіонах =====
+const ZH_K=['dng','dq','arena','sw','chest','find','ad','clan'],ZH_I={dng:'🕳️',dq:'📜',arena:'⚔️',sw:'🐸',chest:'🧰',find:'🐾',ad:'📺',clan:'🏰'},ZH_DV=['I','II','III'];let zhDv=0;
+function zhRew(r){return ['⚱️'+r.ash,r.ch?'🧰'+r.ch[1]+' '+T(r.ch[0]>=3?'zh_ch_e':'zh_ch_r'):'',r.egg?'🥚 '+T('egg_'+r.egg):''].filter(Boolean).join(' · ')}
+function zhCard(d){const Z=V&&V.zh;if(!Z||!Z.live)return'';
+ const nx=Z.th.find(v=>Z.pts<v),can=Z.th.some((v,i)=>Z.pts>=v&&!(Z.got&(1<<i)));
+ let h=`<div class="card zh"><h4>🌾 ${T('zh_t')}</h4><p class="hint">${T('zh_hint')}</p>
+ <div class="zh-pts"><b>${fmt(Math.floor(Z.pts))}</b><span>${T('zh_week_pts')}</span></div>
+ <p class="sub">${T('zh_today',{d:Z.day,c:Z.cap})}${Z.x2?' · '+T('zh_x2',{a:ZH_I[Z.x2]+' '+T('zh_k_'+Z.x2)}):''}</p>
+ <div class="zh-th">${Z.th.map((v,i)=>{const got=Z.got&(1<<i),ok=Z.pts>=v;return `<div class="${got?'got':ok?'ok':''}"><b>${got?'✅':ok?'🎁':'🔒'} ${v}</b><span>${zhRew(Z.thR[i])}</span></div>`}).join('')}</div>
+ ${can?`<div class="row"><button class="btn pri glow" id="zhClaim" ${busy?'disabled':''}>🎁 ${T('claim_all')}</button></div>`:nx?`<p class="sub">${T('zh_next',{n:fmt(Math.ceil(nx-Z.pts))})}</p>`:''}
+ <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>`<div class="zh-k"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k)}</i><small>${(Z.c&&Z.c[k])||0}/${Z.norm[k][0]}</small></div>`).join('')}</details>
+ <p class="hint">${Z.ok?T('zh_cash_ok',{l:Z.lv}):T('zh_cash_no')}</p></div>`;
+ return h}
+function zhList(d){
+ let h='';const dv=(d.div||[]),pot=d.dpot||0;
+ if(dv.length){if(!zhDv)zhDv=(d.me&&d.me.dv)||1;
+  h+=`<div class="card"><h4>💵 ${T('zh_div_t')}</h4><p class="hint">${T('zh_div_hint',{s:usdF(pot)})}</p><div class="chips">${dv.map(x=>`<button data-zdv="${x.dv}" class="${x.dv===zhDv?'act':''}">${ZH_DV[x.dv-1]} · ${T('zh_lv_r',{a:x.lo,b:x.hi})}</button>`).join('')}</div>`;
+  const t=(d.top||[]).filter(r=>r.dv===zhDv);
+  h+=t.length?'<div class="rank">'+t.map(r=>`<div class="${r.me?'me':''}"><b>${r.place<=3?['🥇','🥈','🥉'][r.place-1]:r.place}</b><span>${penI(r.pn)}${esc(r.name)} <small style="opacity:.6">${T('lvl',{n:r.lvl})}</small>${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${fmt(Math.floor(r.v))}</i></div>`).join('')+'</div>':`<p class="hint">${T('zh_div_empty')}</p>`;
+  if(d.me&&d.me.dv)h+=`<p class="sub">${T('zh_me_dv',{d:ZH_DV[d.me.dv-1],p:d.me.drn})}</p>`;
+  h+='</div>'}
+ return h}
 function renderRank(){
- const el=$('p-top'),d=topData[topKind],aw=topKind==='rating'&&d&&d.week,val=r=>topKind==='power'||topKind==='clan'?fmt(r.v):aw?(Number(r.v)>0?'+':'')+Number(r.v)+`<small style="opacity:.6"> · ${Number(r.r)}</small>`:r.v; // 16.11: арена — приріст за тиждень · рейтинг
- let h=`<div class="chips">${['stage','power','rating','clan','lvl'].map(k=>`<button data-tk="${k}" class="${k===topKind?'act':''}">${T('top_'+k)}</button>`).join('')}</div>`;
+ const el=$('p-top'),d=topData[topKind],aw=topKind==='rating'&&d&&d.week,val=r=>topKind==='power'||topKind==='clan'||topKind==='zh'?fmt(Math.floor(r.v)):aw?(Number(r.v)>0?'+':'')+Number(r.v)+`<small style="opacity:.6"> · ${Number(r.r)}</small>`:r.v; // 16.11: арена — приріст за тиждень · рейтинг
+ let h=`<div class="chips">${(V&&V.zh&&V.zh.live?['zh']:[]).concat(['stage','power','rating','clan','lvl']).map(k=>`<button data-tk="${k}" class="${k===topKind?'act':''}">${T('top_'+k)}</button>`).join('')}</div>`;
  if(!d){h+=`<div class="empty">${T('loading')}</div>`;
   if(!topBusy){topBusy=true;api('top',{kind:topKind}).then(r=>{topData[r.out.kind]=r.out}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{topBusy=false;dirty.top=1})}}
  else{
@@ -1611,13 +1633,16 @@ function renderRank(){
   const prizeOf=pl=>{const x=P.find(q=>pl>=q.from&&pl<=q.to);return x?x.ash:0};
   if(d.prizes){const ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
    h+=`<div class="card"><h4>🏆 ${T('prize_t')}</h4><p class="hint">${T('prize_hint')}</p>${hasPrize?`<div class="chips">${P.map(q=>`<span class="chip">${q.from===q.to?q.from:q.from+'–'+q.to}: ⚱️${q.ash}</span>`).join('')}</div>`:`<p class="hint">${T('prize_none')}</p>`}
-   ${aw?`<p class="hint">${T('top_rating_w',{n:d.arenaMin||20})}</p><p class="hint">${T('top_rating_f',{f:d.me?Number(d.me.f)||0:0,n:d.arenaMin||20})}</p>`:''}${d.pot>0?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
-  const row=r=>{const pl=aw?(r.cp||0):r.place;return `<div class="${r.me?'me':''}"${aw&&!r.cp?' style="opacity:.55"':''}><b>${!pl?'—':pl<=3?['🥇','🥈','🥉'][pl-1]:pl}</b><span>${penI(r.pn)}${r.frm==='moon'?FRM_MOON:''}${esc(r.name)}${hasPrize&&(aw?r.cp&&prizeOf(r.cp):prizeOf(r.place))?` <small style="color:var(--gold)">⚱️${prizeOf(aw?r.cp:r.place)}</small>`:''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`};
-  h+='<div class="rank">'+d.rows.map(row).join('')+'</div>';
+   ${aw?`<p class="hint">${T('top_rating_w',{n:d.arenaMin||20})}</p><p class="hint">${T('top_rating_f',{f:d.me?Number(d.me.f)||0:0,n:d.arenaMin||20})}</p>`:''}${d.pot>0&&topKind!=='zh'?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
+  const row=r=>{const pl=aw?(r.cp||0):r.place;return `<div class="${r.me?'me':''}"${aw&&!r.cp?' style="opacity:.55"':''}><b>${!pl?'—':pl<=3?['🥇','🥈','🥉'][pl-1]:pl}</b><span>${penI(r.pn)}${r.frm==='moon'?FRM_MOON:''}${esc(r.name)}${hasPrize&&(aw?r.cp&&prizeOf(r.cp):prizeOf(r.place))?` <small style="color:var(--gold)">⚱️${prizeOf(aw?r.cp:r.place)}</small>`:''}${topKind==='zh'&&r.dv?` <small style="opacity:.6">· ${ZH_DV[r.dv-1]}</small>`:''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`};
+  if(topKind==='zh')h=h.replace('<div class="card">',zhCard(d)+'<div class="card">')+zhList(d);
+  h+=(topKind==='zh'?`<h4 class="zh-all">🏆 ${T('zh_all')}</h4>`:'')+'<div class="rank">'+(d.rows.length?d.rows.map(row).join(''):`<div class="empty">${T('zh_empty')}</div>`)+'</div>';
   if(d.me&&!d.rows.some(r=>r.me))h+='<div class="rank" style="margin-top:8px">'+row(d.me)+'</div>';
   h+=`<p class="hint">${T('top_total',{n:d.total})}</p><div class="row"><button class="btn" id="tRef">🔄 ${T('refresh')}</button></div>`}
  el.innerHTML=h;
  el.querySelectorAll('[data-tk]').forEach(b=>b.onclick=()=>{topKind=b.dataset.tk;renderRank()});
+ el.querySelectorAll('[data-zdv]').forEach(b=>b.onclick=()=>{zhDv=+b.dataset.zdv;renderRank()});
+ if($('zhClaim'))$('zhClaim').onclick=()=>act('zhClaim',{},r=>{haptic('heavy');toast(T('zh_got',{a:((r.out||{}).got||[]).reduce((a,x)=>a+x.ash,0)}));delete topData.zh;dirty.top=1});
  const tr=$('tRef');if(tr)tr.onclick=()=>{delete topData[topKind];renderRank()};
 }
 

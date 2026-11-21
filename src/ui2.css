@@ -889,3 +889,18 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 
 /* 20.11: довгі ніки без пробілів не виходять за картку */
 .item .nm,.chpick b,.rank span{overflow-wrap:anywhere;word-break:break-word}
+/* Жнива (з 23.11) */
+.card.zh{border-color:#7a5a26}
+.zh-pts{display:flex;align-items:baseline;gap:8px;margin:6px 0}
+.zh-pts b{font-size:28px;color:var(--gold)}
+.zh-pts span{opacity:.7;font-size:13px}
+.zh-th{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.zh-th>div{border:1px solid #3a3226;border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;opacity:.75}
+.zh-th>div b{font-size:13px}.zh-th>div span{font-size:11px;opacity:.85}
+.zh-th>div.ok{opacity:1;border-color:var(--gold);box-shadow:0 0 0 1px rgba(242,163,58,.25) inset}
+.zh-th>div.got{opacity:.55}
+.zh-how{margin:6px 0}.zh-how summary{cursor:pointer;color:var(--gold);font-size:13px;padding:4px 0}
+.zh-k{display:grid;grid-template-columns:1fr auto;gap:0 8px;padding:5px 0;border-bottom:1px solid #2a241c;font-size:13px}
+.zh-k i{grid-column:1/2;font-style:normal;opacity:.7;font-size:12px}
+.zh-k small{grid-column:2/3;grid-row:1/3;align-self:center;opacity:.8}
+.zh-all{margin:12px 0 6px}
