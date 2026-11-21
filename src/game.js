@@ -290,10 +290,10 @@ function itemVal(it){const x=V&&V.sc;if(!x)return itemScore(it);return itemScore
 // 13.11 (Влад): вимпел клану біля ніку (src/pen.js малює з назви; p = [назва клану, ступінь рамки])
 function penI(p,w=24){if(!(p&&p[0]&&window.penSvg))return '';let s=window.penSvg(p[0],p[1],w);if(p[2]>=1&&p[2]<=5&&window.raceIns)s=window.raceIns(s,p[2],w);return `<span class="pen">${s}</span>`}
 // 21.11 (Влад): відзнака гонки кланів (топ-5 тижня) — корона / вінець на вимпелі; у рядках рейтингу вимпел — окремим елементом, щоб не обрізався
-function raceWinChk(){const p=V&&V.pen;if(!(p&&p[2]>=1&&p[2]<=5))return;const wk=Math.floor((Date.now()+5*36e5+3*864e5)/(7*864e5)),k=wk+'|'+p[0]+'|'+p[2];let seen='';try{seen=localStorage.getItem('raceWin')||''}catch(e){}if(seen===k)return;try{localStorage.setItem('raceWin',k)}catch(e){}
+var raceWinK='';function raceWinChk(){const p=V&&V.pen;if(!(p&&p[2]>=1&&p[2]<=5))return;const wk=Math.floor((Date.now()+5*36e5+3*864e5)/(7*864e5)),k=wk+'|'+p[0]+'|'+p[2];if(raceWinK===k)return;raceWinK=k;let seen='';try{seen=localStorage.getItem('raceWin')||''}catch(e){}if(seen===k)return;try{localStorage.setItem('raceWin',k)}catch(e){}
   modal(`<div class="rwin"><div class="rwin-crest rc${p[2]}">${penI(p,64)}</div><h3>${T('race_win_t',{p:T('race_pl_'+p[2])})}</h3><p>${T('race_win',{c:esc(p[0]),i:'«<b>'+T('race_ins_'+p[2])+'</b>»'})}</p></div>`,T('ok'),null,null,'racewin')}
 function rpenI(p){return p&&p[0]?`<em class="rpen">${penI(p,20)}</em>`:''}function rcrC(p){return p&&p[2]>=1&&p[2]<=5?' rcr':''}
-function raceTill(ms){const d=new Date(ms),z=n=>String(n).padStart(2,'0');return `${T('race_sun')} ${z(d.getDate())}.${z(d.getMonth()+1)}, ${z(d.getHours())}:${z(d.getMinutes())}`}
+function raceTill(ms){const d=new Date(ms),z=n=>String(n).padStart(2,'0');return `${T('race_dow').split(',')[d.getDay()]} ${z(d.getDate())}.${z(d.getMonth()+1)}, ${z(d.getHours())}:${z(d.getMinutes())}`}
 function raceWk(wk){const t=Date.parse(wk+'T00:00:00Z'),a=new Date(t-7*864e5),b=new Date(t-864e5),z=n=>String(n).padStart(2,'0');return `${z(a.getUTCDate())}${a.getUTCMonth()===b.getUTCMonth()?'':'.'+z(a.getUTCMonth()+1)}–${z(b.getUTCDate())}.${z(b.getUTCMonth()+1)}`}
 // 13.11 (Влад «А»): зелена плашка балансу виводу в шапці — видно на всіх екранах; тап → Герой → 💸 Вивід
 var wdUsd=null;function wdChip(u){if(u!=null)wdUsd=Number(u)||0;const c=$('wdChip');if(!c||wdUsd==null)return;c.hidden=false;const t='$'+wdUsd.toFixed(2);if($('wdChipV').textContent!==t)$('wdChipV').textContent=t;
@@ -314,7 +314,7 @@ var MYV=+((([...document.scripts].find(x=>/game\.js\?v=/.test(x.src))||{}).src||
 function verCheck(){if(!MYV||updShown||document.visibilityState!=='visible')return;fetch('index.html?t='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/game\.js\?v=(\d+)/);if(m&&+m[1]>MYV)showUpd(+m[1])}).catch(()=>{})}
 function showUpd(nv){if(updShown)return;updShown=1;const b=document.createElement('div');b.className='updbar';b.innerHTML=`<span>🔄 ${T('upd_t')}</span><button class="btn pri" id="updGo">${T('upd_go')}</button>`;document.body.appendChild(b);$('updGo').onclick=()=>{haptic('light');location.replace(location.pathname+'?u='+nv+location.hash)}}
 setTimeout(verCheck,3e4);setInterval(verCheck,3e5);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(verCheck,1500)});
-var heroPenK='';function heroPen(){const hn=document.querySelector('.f.hero .fname');if(!hn)return;const k=JSON.stringify(V&&V.pen||null)+T('hero_name');if(k===heroPenK)return;heroPenK=k;hn.innerHTML=penI(V&&V.pen,22)+esc(T('hero_name'))}
+var heroPenK='';function heroPen(){const hn=document.querySelector('.f.hero .fname');if(!hn)return;const k=JSON.stringify(V&&V.pen||null)+T('hero_name');if(k===heroPenK)return;heroPenK=k;hn.innerHTML=penI(V&&V.pen?[V.pen[0],V.pen[1]]:null,22)+esc(T('hero_name'))}
 let lvlSyncAt=0;
 function renderTop(){
  {const hs=$('hsSub');if(hs&&G&&document.body.classList.contains('hs-open'))hs.textContent=T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)})} // 13.11 (Влад): рівень і Сила в шапці «Герой» оновлюються разом із верхньою панеллю
