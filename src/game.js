@@ -845,19 +845,19 @@ function ddCostTxt(c){return [c.gold?'💰'+fmt(c.gold):'',c.matN?'⛏️'+MATN[
 function ddRewTxt(k,r){return k==='gold'?'💰'+fmt(r.gold):k==='mats'?'⛏️'+MATN[r.mat]+' ×'+r.matN:k==='gems'?T('dd_r_gems',{n:r.gems}):k==='leg'?T('dd_r_leg',{l:r.legIl}):k==='ash'?'⚱️'+r.ash:T('dd_r_scroll',{p:Math.round(r.scroll*100)})}
 function ddCard(){const D=V.dd;if(!D||!D.live)return'';
  const ms=Math.max(0,D.end-Date.now()),hh=Math.floor(ms/36e5),mm=Math.floor(ms%36e5/6e4);
- let h=`<div class="card dd"><div class="dd-hd"><span class="dd-ic">${DD_I[D.k]}</span><div><h4>${T('dd_n_'+D.k)}</h4><p class="hint">${T('dd_l_'+D.k)}</p></div></div>
+ let h=`<div class="card dd"><div class="dd-art" style="background-image:url(assets/dd/${D.k}.jpg?v=1)"></div><div class="dd-hd"><div><h4>${DD_I[D.k]} ${T('dd_n_'+D.k)}</h4><p class="hint">${T('dd_l_'+D.k)}</p></div></div>
  <p class="sub">${T('dd_tier',{t:D.t})} · ${T('dd_used',{n:D.used,b:D.base})} · ${T('dd_next',{k:DD_I[D.next]+' '+T('dd_n_'+D.next),t:T('t_hm',{h:hh,m:mm})})}</p>`;
  for(const x of D.ds){const lock=!x.open,weak=x.open&&!x.win;
-  h+=`<div class="dd-row${lock?' lock':''}"><div><b>${T('diff_'+x.d)}</b><span>${T('dd_pay')}: ${ddCostTxt(x.c)}</span><span>${T('dd_get')}: ${ddRewTxt(D.k,x.r)} · 🏅${x.r.marks}</span>${weak?`<span class="dn">💪 ${T('need_power',{n:fmt(x.need),m:fmt(V.hero?V.hero.power:0)})}</span>`:''}</div>
+  h+=`<div class="dd-row${lock?' lock':''}"><div><b>${T('diff_'+x.d)}</b><span>${T('dd_pay')}: ${ddCostTxt(x.c)}</span><span>${T('dd_get')}: ${ddRewTxt(D.k,x.r)} · ${RIS('tmk')}${x.r.marks}</span>${weak?`<span class="dn">💪 ${T('need_power',{n:fmt(x.need),m:fmt(V.hero?V.hero.power:0)})}</span>`:''}</div>
   <button class="btn${lock||weak?'':' pri'}" data-ddg="${x.d}" ${lock||weak||busy?'disabled':''}>${lock?'🔒':T('dd_go')}</button></div>`}
- h+=`<p class="hint">${T('dd_hint',{b:D.base})}</p><p class="sub">🏅 ${T('dd_marks',{n:D.tmk})}</p></div>`;
+ h+=`<p class="hint">${T('dd_hint',{b:D.base})}</p><p class="sub">${RIS('tmk')} ${T('dd_marks',{n:D.tmk})}</p></div>`;
  return h}
 function ddResult(o){const g=o.gain;
- const rw=[g.gold?`💰 <b>+${fmt(g.gold)}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',(g.gems||[]).length?`🔷 ${g.gems.map(gemName).join(', ')}`:'',g.item?`<span style="color:${RAR[4].c}">${itemName(g.item)} · ${T('lvl',{n:g.item.il})}</span>`:'',g.ash?`${T('r_ash')} <b>+${g.ash}</b>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('dd_scroll_got')}</span>`:'',g.marks?`🏅 ${T('dd_marks_got',{n:g.marks})}`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${T('dd_n_'+o.k)}: ${T(o.full?'dng_win':'dng_lose')}</h3>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.k==='scroll'&&o.full&&!g.scroll?`<p class="hint">${T('dd_scroll_no')}</p>`:''}`,T('ok'));haptic(o.full?'heavy':'medium')}
+ const rw=[g.gold?`💰 <b>+${fmt(g.gold)}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',(g.gems||[]).length?`🔷 ${g.gems.map(gemName).join(', ')}`:'',g.item?`<span style="color:${RAR[4].c}">${itemName(g.item)} · ${T('lvl',{n:g.item.il})}</span>`:'',g.ash?`${T('r_ash')} <b>+${g.ash}</b>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('dd_scroll_got')}</span>`:'',g.marks?`${RIS('tmk')} ${T('dd_marks_got',{n:g.marks})}`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="nimg" style="background-image:url(assets/dd/${o.k}.jpg?v=1)"></div><div class="big">${o.full?'🏆':'💀'}</div><h3>${T('dd_n_'+o.k)}: ${T(o.full?'dng_win':'dng_lose')}</h3>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.k==='scroll'&&o.full&&!g.scroll?`<p class="hint">${T('dd_scroll_no')}</p>`:''}`,T('ok'));haptic(o.full?'heavy':'medium')}
 // раз на день — коротка новина про сьогоднішнє підземелля (дзвінок 19.11)
 function ddNews(){const D=V&&V.dd;if(!D||!D.live||!G||G.maxStage<5)return;let k='';try{k=localStorage.getItem('gt_ddn')||''}catch(e){}const day=new Date().toISOString().slice(0,10);if(k===day)return;try{localStorage.setItem('gt_ddn',day)}catch(e){}
- modal(`<div class="big">${DD_I[D.k]}</div><h3>${T('dd_news_t')}: ${T('dd_n_'+D.k)}</h3><p>${T('dd_l_'+D.k)}</p><p class="hint">${T('dd_news_h')}</p>`,T('dd_news_go'),()=>{dsub='dd';dirty.dng=1;const b=document.querySelector('.tabs button[data-t="dng"]');if(b)b.click()},null,'ddnews')}
+ modal(`<div class="nimg" style="background-image:url(assets/dd/${D.k}.jpg?v=1)"></div><h3>${T('dd_news_t')}: ${T('dd_n_'+D.k)}</h3><p>${T('dd_l_'+D.k)}</p><p class="hint">${T('dd_news_h')}</p>`,T('dd_news_go'),()=>{dsub='dd';dirty.dng=1;const b=document.querySelector('.tabs button[data-t="dng"]');if(b)b.click()},null,'ddnews')}
 function renderDng(){
  if(dsub==='sw'&&!V.swamp||dsub==='dd'&&!(V.dd&&V.dd.live))dsub='dng';
  const h=`<div class="dwrap">${dsub==='sw'?swampCard():dsub==='dd'?ddCard():dngList()}</div>`;
@@ -1469,12 +1469,12 @@ function cycDo(a,args,cb){return act(a,args,r=>{if(r.out&&r.out.live!==undefined
 function cycRes(f,mine){if(!f||!f.res)return;
  const rows=f.res.map(x=>`<div><span>${PETE[x.pet]||'👤'} ${esc(x.name)} <small style="opacity:.6">${T('stage',{n:x.st})}</small></span><b>${x.t>=60?'✓':'💀'} ${x.t} ${T('cyc_s')} · ${fmt(Math.round(x.pts))}</b></div>`).join('');
  const m=mine?`<p>${T('cyc_mine',{n:mine.n,k:T('chest_'+mine.g),m:MATN[mine.mat],q:mine.matN})}${mine.ess?' · '+T('r_ess')+' +1':''}</p>`:'';
- modal(`<div class="big">👁️</div><h3>${T('cyc_t')} · ${T('cyc_d'+f.d)}</h3><div class="rooms cyc-res">${rows}</div><p class="hint">${T('cyc_res_h')}</p>${m}`,T('ok'))}
+ modal(`<div class="nimg" style="background-image:url(assets/cyc/cave.jpg?v=1)"></div><h3>${T('cyc_t')} · ${T('cyc_d'+f.d)}</h3><div class="rooms cyc-res">${rows}</div><p class="hint">${T('cyc_res_h')}</p>${m}`,T('ok'))}
 function cycHtml(){const D=cycData;
  if(!D){if(!cycBusy){cycBusy=1;api('cycInfo').then(r=>{cycData=r.out;dirty.clan=1;flush()}).catch(e=>toast(errT(e))).finally(()=>{cycBusy=0})}return `<div class="empty">${T('loading')}</div>`}
  if(!D.live)return `<div class="card"><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_soon')}</p></div>`;
  if(!D.clan||!D.atk)return `<div class="card"><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_noclan')}</p></div>`; // вийшов з клану при відкритій вкладці (критик 21.11)
- let h=`<div class="card cyc"><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_lore')}</p><p class="sub">${T('cyc_me',{l:D.lead,lm:D.leadMax,n:D.dn,nm:D.dayMax,p:fmt(Math.round(D.pts))})}</p>`;
+ let h=`<div class="card cyc"><div class="dd-art" style="background-image:url(assets/cyc/cave.jpg?v=1)"></div><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_lore')}</p><p class="sub">${T('cyc_me',{l:D.lead,lm:D.leadMax,n:D.dn,nm:D.dayMax,p:fmt(Math.round(D.pts))})}</p>`;
  if(D.young)h+=`<p class="dn">${T('cyc_young')}</p>`;
  const inP=(D.open||[]).some(p=>p.me),can=!D.young&&!inP&&D.lead<D.leadMax&&D.dn<D.dayMax;
  h+=`<div class="cyc-d">${[1,2,3].map(d=>`<button class="btn${d===2?' pri':''}" data-cyo="${d}" ${can&&!busy?'':'disabled'}><b>${T('cyc_d'+d)}</b><small>${T('cyc_dh',{a:D.atk[d-1],p:D.ptsMul[d-1]})}</small><small>🧰${D.ch[d-1][0]} ${T('chest_'+D.ch[d-1][1])} · ⛏️${D.mat[d-1]} · ${T('r_ess')} ${Math.round(D.ess[d-1]*100)}%</small></button>`).join('')}</div>
@@ -1663,7 +1663,7 @@ const ZH_K=['dng','ddng','cyc','dq','arena','sw','chest','find','ad','clan'],ZH_
 function zhRew(r){return ['⚱️'+r.ash,r.ch?'🧰'+r.ch[1]+' '+T(r.ch[0]>=3?'zh_ch_e':'zh_ch_r'):'',r.egg?'🥚 '+T('egg_'+r.egg):''].filter(Boolean).join(' · ')}
 function zhCard(d){const Z=V&&V.zh;if(!Z||!Z.live)return'';
  const nx=Z.th.find(v=>Z.pts<v),can=Z.th.some((v,i)=>Z.pts>=v&&!(Z.got&(1<<i)));
- let h=`<div class="card zh"><h4>🌾 ${T('zh_t')}</h4><p class="hint">${T('zh_hint')}</p>
+ let h=`<div class="card zh"><div class="dd-art" style="background-image:url(assets/news/n11.jpg?v=1)"></div><h4>${RIS('zh')} ${T('zh_t')}</h4><p class="hint">${T('zh_hint')}</p>
  <div class="zh-pts"><b>${fmt(Math.floor(Z.pts))}</b><span>${T('zh_week_pts')}</span></div>
  <p class="sub">${T('zh_today',{d:Z.day,c:Z.cap})}${Z.x2?' · '+T('zh_x2',{a:ZH_I[Z.x2]+' '+T('zh_k_'+Z.x2)}):''}</p>
  <div class="zh-th">${Z.th.map((v,i)=>{const got=Z.got&(1<<i),ok=Z.pts>=v;return `<div class="${got?'got':ok?'ok':''}"><b>${got?'✅':ok?'🎁':'🔒'} ${v}</b><span>${zhRew(Z.thR[i])}</span></div>`}).join('')}</div>

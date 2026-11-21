@@ -922,3 +922,7 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .apick small{font-size:11px;color:var(--muted,#9a9aa2)}
 .apick i{position:absolute;top:-4px;right:-4px;background:var(--green,#3bb273);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:18px;text-align:center;font-style:normal}
 .sbx-flee{margin-top:4px;color:#ff8a65;font-weight:700;font-size:13px;text-shadow:0 1px 3px #000}
+/* картинки нових активностей (21.11, Higgsfield) */
+.dd-art{height:96px;margin:-9px -10px 10px;border-radius:14px 14px 0 0;background-size:cover;background-position:center;box-shadow:inset 0 -30px 30px -10px rgba(0,0,0,.65)}
+.nimg{height:120px;margin:-6px -6px 10px;border-radius:12px;background-size:cover;background-position:center}
+.dd-hd h4 .hic,.card.zh h4 .hic{width:22px;height:22px;vertical-align:-5px}
