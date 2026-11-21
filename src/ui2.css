@@ -889,3 +889,4 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 
 /* 20.11: довгі ніки без пробілів не виходять за картку */
 .item .nm,.chpick b,.rank span{overflow-wrap:anywhere;word-break:break-word}
+.sbx-flee{margin-top:4px;color:#ff8a65;font-weight:700;font-size:13px;text-shadow:0 1px 3px #000}
