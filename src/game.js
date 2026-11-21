@@ -1464,6 +1464,7 @@ function cycRes(f,mine){if(!f||!f.res)return;
 function cycHtml(){const D=cycData;
  if(!D){if(!cycBusy){cycBusy=1;api('cycInfo').then(r=>{cycData=r.out;dirty.clan=1;flush()}).catch(e=>toast(errT(e))).finally(()=>{cycBusy=0})}return `<div class="empty">${T('loading')}</div>`}
  if(!D.live)return `<div class="card"><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_soon')}</p></div>`;
+ if(!D.clan||!D.atk)return `<div class="card"><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_noclan')}</p></div>`; // вийшов з клану при відкритій вкладці (критик 21.11)
  let h=`<div class="card cyc"><h4>👁️ ${T('cyc_t')}</h4><p class="hint">${T('cyc_lore')}</p><p class="sub">${T('cyc_me',{l:D.lead,lm:D.leadMax,n:D.dn,nm:D.dayMax,p:fmt(Math.round(D.pts))})}</p>`;
  if(D.young)h+=`<p class="dn">${T('cyc_young')}</p>`;
  const inP=(D.open||[]).some(p=>p.me),can=!D.young&&!inP&&D.lead<D.leadMax&&D.dn<D.dayMax;
@@ -1649,7 +1650,7 @@ function pvpResult(o){
 }
 const usdF=x=>'$'+(LANG==='en'?Number(x).toFixed(2):Number(x).toFixed(2).replace('.',',')); // 16.11: сума призу з пулу
 // ===== Жнива (з 23.11): тижневий рейтинг активності — очки за дії, пороги для всіх, гроші топ-10 у 3 дивізіонах =====
-const ZH_K=['dng','dq','arena','sw','chest','find','ad','clan'],ZH_I={dng:'🕳️',dq:'📜',arena:'⚔️',sw:'🐸',chest:'🧰',find:'🐾',ad:'📺',clan:'🏰'},ZH_DV=['I','II','III'];let zhDv=0;
+const ZH_K=['dng','ddng','cyc','dq','arena','sw','chest','find','ad','clan'],ZH_I={dng:'🕳️',ddng:'📅',cyc:'👁️',dq:'📜',arena:'⚔️',sw:'🐸',chest:'🧰',find:'🐾',ad:'📺',clan:'🏰'},ZH_DV=['I','II','III'];let zhDv=0;
 function zhRew(r){return ['⚱️'+r.ash,r.ch?'🧰'+r.ch[1]+' '+T(r.ch[0]>=3?'zh_ch_e':'zh_ch_r'):'',r.egg?'🥚 '+T('egg_'+r.egg):''].filter(Boolean).join(' · ')}
 function zhCard(d){const Z=V&&V.zh;if(!Z||!Z.live)return'';
  const nx=Z.th.find(v=>Z.pts<v),can=Z.th.some((v,i)=>Z.pts>=v&&!(Z.got&(1<<i)));
@@ -1683,7 +1684,7 @@ function renderRank(){
   const prizeOf=pl=>{const x=P.find(q=>pl>=q.from&&pl<=q.to);return x?x.ash:0};
   if(d.prizes){const ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
    h+=`<div class="card"><h4>🏆 ${T('prize_t')}</h4><p class="hint">${T('prize_hint')}</p>${hasPrize?`<div class="chips">${P.map(q=>`<span class="chip">${q.from===q.to?q.from:q.from+'–'+q.to}: ⚱️${q.ash}</span>`).join('')}</div>`:`<p class="hint">${T('prize_none')}</p>`}
-   ${aw?`<p class="hint">${T('top_rating_w',{n:d.arenaMin||20})}</p><p class="hint">${T('top_rating_f',{f:d.me?Number(d.me.f)||0:0,n:d.arenaMin||20})}</p>`:''}${d.pot>0&&topKind!=='zh'?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>/^zh\d$/.test(x.kind)?'🌾 '+T('zh_dv_n',{d:ZH_DV[+x.kind[2]-1]})+' #'+x.place:T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
+   ${aw?`<p class="hint">${T('top_rating_w',{n:d.arenaMin||20})}</p><p class="hint">${T('top_rating_f',{f:d.me?Number(d.me.f)||0:0,n:d.arenaMin||20})}</p>`:''}${d.pot>0&&topKind!=='zh'?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>x.kind==='racem'?'🏰 '+T('cyc_race')+' #'+x.place+' ⚱️'+x.ash:x.kind==='race'?'':/^zh\d$/.test(x.kind)?'🌾 '+T('zh_dv_n',{d:ZH_DV[+x.kind[2]-1]})+' #'+x.place:T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).filter(Boolean).join(', ')}</p>`:''}</div>`}
   const row=r=>{const pl=aw?(r.cp||0):r.place;return `<div class="${r.me?'me':''}"${aw&&!r.cp?' style="opacity:.55"':''}><b>${!pl?'—':pl<=3?['🥇','🥈','🥉'][pl-1]:pl}</b><span>${penI(r.pn)}${r.frm==='moon'?FRM_MOON:''}${esc(r.name)}${hasPrize&&(aw?r.cp&&prizeOf(r.cp):prizeOf(r.place))?` <small style="color:var(--gold)">⚱️${prizeOf(aw?r.cp:r.place)}</small>`:''}${topKind==='zh'&&r.dv?` <small style="opacity:.6">· ${ZH_DV[r.dv-1]}</small>`:''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`};
   if(topKind==='zh')h=h.replace('<div class="card">',zhCard(d)+'<div class="card">')+zhList(d);
   h+=(topKind==='zh'?`<h4 class="zh-all">🏆 ${T('zh_all')}</h4>`:'')+'<div class="rank">'+(d.rows.length?d.rows.map(row).join(''):`<div class="empty">${T('zh_empty')}</div>`)+'</div>';
