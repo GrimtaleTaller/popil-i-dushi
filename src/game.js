@@ -1929,8 +1929,8 @@ function renderWb(){
  if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return}
  const W=V.wb,el=$('p-wboss');
  if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
- if(wbData&&Date.now()-wbAt>6e4)wbData=null;
- if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(wbData&&Date.now()-wbAt>(wbData.flee?8e3:6e4))wbData=null; // під час втечі Графа — частіше, щоб здоров'я й таймер рухались
+ if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{if(/wb_fled/.test(String(e&&e.message||e))){if(V&&V.wb){V.wb.off=1;V.wb.gone=1}tab='arena';lastSub.arena='arena';setTimeout(()=>sync(true),50)}toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
  const D=wbData,B0=D.boss,rest=!!(B0.back&&B0.back>Date.now()),kind=rest?'':W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price; // 18.11 (Влад «А»): rest — бос повалений, відпочиває 30 хв
  if(D.ready===false){el.innerHTML=`<div class="empty">${(ERR&&ERR.wb_soon)||T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
@@ -2018,7 +2018,7 @@ setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
 const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
-function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
+function sbPaint(){const b=$('sBos');if(!b)return;if(!G||V&&V.wb&&V.wb.gone){b.style.display='none';return}b.style.display=''; // нд 22.11 12:00: Граф утік — кнопки боса більше немає
  if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):V.wb.flee&&V.wb.flee>Date.now()?'🦇 '+mmss(V.wb.flee-Date.now()):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
  const l=sbLeft();
  $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
