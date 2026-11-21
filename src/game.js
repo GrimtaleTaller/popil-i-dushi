@@ -1631,7 +1631,7 @@ function renderRank(){
 // дія на сервері: блокує кнопки, показує помилки
 async function act(a,args,ok){
  if(busy)return;busy=true;renderBoss();
- try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/ad_gap|ad_limit|inc2_paused|inc2_rent_end|no_egg|pet_ready/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
+ try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/wb_fled/.test(String(e&&e.message||e))){wbData=null;setTimeout(()=>sync(true),50)}if(/ad_gap|ad_limit|inc2_paused|inc2_rent_end|no_egg|pet_ready/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
 }
 
 // ---------- модалки ----------
@@ -1935,7 +1935,7 @@ function renderWb(){
  if(D.ready===false){el.innerHTML=`<div class="empty">${(ERR&&ERR.wb_soon)||T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
  let h=`<div class="sbx"><video class="sbx-v" src="assets/boss/upyr_idle.mp4?v=1" poster="assets/boss/upyr_poster.jpg?v=1" autoplay muted loop playsinline></video>
-  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>
+  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>${D.flee&&D.flee>Date.now()?`<div class="sbx-flee">🦇 ${T('sbx_flee',{t:mmss(D.flee-Date.now())})}</div>`:''}
   ${rest?`<div class="sbx-rest"><b>☠️ ${T('sbx_down')}</b><span>${T('sbx_down_by',{n:esc(B0.by||'')})}</span><span>${T('sbx_back')} <b class="wbcd">${mmss(B0.back-Date.now())}</b> · ❤️ ${fmt(B0.hp_max)}</span></div>`:`<div class="sbx-hp"><i style="width:${Math.max(2,B0.hp/B0.hp_max*100)}%"></i><span>❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)}</span></div>`}</div></div>
   ${D.champ?`<div class="sbx-champ">${T('sbx_champ',{n:esc(D.champ.name)})}</div>`:''}
   <div class="dstat sbst"><div><span>🎟️</span><b>${W.left}/${W.free}</b><small>${T('sbx_free')}</small></div>${W.packLeft?`<div><span>📦</span><b>${W.packLeft}</b><small>${T('sbx_pack')}</small></div>`:`<div><span>${RIC('ash')}</span><b>${W.paidLeft?fmt(W.price):'—'}</b><small>${T('sbx_next')}</small></div>`}<div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div></div>
@@ -2019,7 +2019,7 @@ const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
 function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
- if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
+ if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):V.wb.flee&&V.wb.flee>Date.now()?'🦇 '+mmss(V.wb.flee-Date.now()):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
  const l=sbLeft();
  $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
 function sbOpen(){haptic('medium');if(V&&V.wb&&!V.wb.off){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
