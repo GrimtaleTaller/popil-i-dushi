@@ -273,7 +273,7 @@ function afOf(it){const o={};AFK.forEach(k=>o[k]=0);for(const[k,v]of (it&&it.af)
 const afTxt=([k,v])=>`${AFI[k]||'✦'} ${T('af_'+k,{v:(+v).toFixed(1).replace(/\.0$/,'')})}`;
 const afLine=it=>it&&it.af&&it.af.length?`<div class="st afx">${it.af.map(afTxt).join(' · ')}</div>`:'';
 const starsOf=it=>it&&it.sr?`<span class="isr">${'★'.repeat(it.sr)}</span>`:'';
-function starDups(it){return [...G.inv,...(G.vault||[])].filter(x=>x.id!==it.id&&x.slot===it.slot&&x.r===it.r&&!(x.gm&&x.gm.length)).sort((a,b)=>(a.sr||0)-(b.sr||0)||a.il-b.il)}
+function starDups(it){return [...G.inv,...(G.vault||[])].filter(x=>x.id!==it.id&&x.slot===it.slot&&x.r===it.r&&!(x.gm&&x.gm.length)&&!x.lk).sort((a,b)=>(a.sr||0)-(b.sr||0)||a.il-b.il)}
 function starDup(it){return starDups(it)[0]}
 // 07.11 (критик): ціна зірок і перекидання — від рівня, до якого річ можна вдосконалити
 // доплата при вдалому куванні вічної за зірки й перекидання (07.11) — так само, як на сервері
@@ -474,10 +474,10 @@ function renderBag(){
  else if(bs==='lvl')list=[...list].sort((a,b)=>b.il-a.il||b.r-a.r);
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
  for(const it of list){const eq=G.eq[it.slot],better=it.il<=G.lvl&&(!eq||itemScore(it)>itemScore(eq)); // «краще» лише для того, що можна вдягти зараз
-  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="icw">${V.pen&&!V.twin&&it.r<=4&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="igvb" data-igv="${it.id}" title="${T('btn_igv')}" aria-label="${T('btn_igv')}">🎁</button>`:''}<div class="ic">${gearIc(it)}</div></div><div class="info">
-   <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
+  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="icw">${V.pen&&!V.twin&&it.r<=4&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="igvb" data-igv="${it.id}" title="${T('btn_igv')}" aria-label="${T('btn_igv')}">🎁</button>`:''}<div class="ic">${gearIc(it)}</div></div><div class="info">
+   <div class="nm" style="color:${RAR[it.r].c}">${it.lk?'📌 ':''}${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il,it)).join(' · ')}</div>`:''}</div>
-   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
+   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:it.lk?'':`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.lk?'':it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}<button class="btn lkb ${it.lk?'on':''}" data-lk="${it.id}" title="${T(it.lk?'lk_off':'lk_on')}" aria-label="${T(it.lk?'lk_off':'lk_on')}">📌</button>${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  setH($('p-bag'),h);
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
@@ -494,8 +494,9 @@ function renderBag(){
  if($('relJ'))$('relJ').onclick=()=>askOnce('relicJ',`<div class="ask ask-a"><div class="ask-ic">⚱️</div><h3>${T('ask_relic_t')}</h3><p class="ask-q">${T('relic_junk_ask',{n:V.forge.relic})}</p></div>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
  $('p-bag').querySelectorAll('[data-igv]').forEach(b=>b.onclick=()=>igiveDlg(+b.dataset.igv));
+ $('p-bag').querySelectorAll('[data-lk]').forEach(b=>b.onclick=()=>{const id=+b.dataset.lk,it=G.inv.find(i=>i.id===id);if(!it)return;act('lock',{id,on:!it.lk},r=>{haptic('light');toast(T(r.out&&r.out.lk?'lk_done':'lk_undone'))})}); // 21.11 (гравчиня Sonia): 📌 закріпити річ — не продасться й не розбереться
  $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
- $('sellC').onclick=()=>sellAsk(G.inv.filter(i=>i.r===0&&!(i.gm&&i.gm.length)).map(i=>i.id),'sellC');
+ $('sellC').onclick=()=>sellAsk(G.inv.filter(i=>i.r===0&&!(i.gm&&i.gm.length)&&!i.lk).map(i=>i.id),'sellC');
  $('disW').onclick=()=>{const n=(V.forge&&V.forge.junk)||0;if(!n){toast(ERR.no_junk);return}disAsk(worseIds(),'shards','disW',()=>act('dismantleJunk',{mode:'shards'},r=>toast(disMsg(r.out))))}; // 09.11 (Влад): розбір гірших (без легендарних) на уламки прямо в Сумці
  $('sellW').onclick=()=>sellAsk(worseIds(),'sellW');
  $('autoS').onclick=()=>act('settings',{autoSell:!G.autoSell});
@@ -570,7 +571,7 @@ const v=lotView(l);if(!v)continue;n++;
 }
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
 // 13.11 (Влад): розібрати всі речі однієї рідкості (зелені / сині / фіолетові) — з сумки, без каменів і вкладених зірок; кращі за надіте (і на майбутнє — вищого рівня) лишаємо
-function disRarIds(r){return G.inv.filter(i=>i.r===r&&!(i.gm&&i.gm.length)&&!(i.sr||i.rr)&&!((powDelta(i)||0)>0)).map(i=>i.id)}
+function disRarIds(r){return G.inv.filter(i=>i.r===r&&!(i.gm&&i.gm.length)&&!i.lk&&!(i.sr||i.rr)&&!((powDelta(i)||0)>0)).map(i=>i.id)}
 function disRar(r){const ids=disRarIds(r);if(!ids.length)return;const keep=G.inv.filter(i=>i.r===r&&!ids.includes(i.id)).length;
  const its=G.inv.filter(i=>ids.includes(i.id)),xp=G.dismode==='xp',sh=its.reduce((a,i)=>a+Math.round((i.r+1)*(i.r+1)*(1+i.il/10)),0);
  modal(`<div class="big">⚒️</div><p>${T('dis_rar_q',{n:ids.length,w:T('dis_r'+r).toLowerCase()})}</p>${xp?`<p class="hint">${T('to_xp')}</p>`:`<p><b>🔩 +${fmt(sh)}</b></p>`}${keep?`<p class="hint">${T('dis_rar_keep',{n:keep})}</p>`:''}`,T('dis_go'),()=>act('dismantle',{ids,mode:G.dismode},x=>{toast(disMsg(x.out));haptic('medium')}))}
@@ -580,7 +581,7 @@ function sellOneAsk(id){const it=G.inv.find(i=>i.id===id);if(!it)return;if(it.r<
  modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)} ${starsOf(it)}</h3><p class="hint">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${it.gm&&it.gm.length?' · 💎×'+it.gm.length:''}</p><p>${T('sell_ask')}</p>`,`${T('sell_yes')} · 💰${fmt(sellPrice(it))}`,()=>sell([id]))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
 // 14.11 (Влад): «Продати гірші» / «Розібрати гірші» — спершу вікно, скільки буде золота / уламків / досвіду; галочка «Більше не питати» (на цьому пристрої)
-const worseIds=()=>G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id);
+const worseIds=()=>G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&!i.lk&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id);
 const disXpOf=it=>Math.round(6*0.72*Math.pow(1.07,it.il-1)*3*Math.min(14,RAR[it.r].m)),disShOf=it=>Math.round((it.r+1)*(it.r+1)*(1+it.il/10)); // як disXp / disShards на сервері
 function askOnce(key,html,btn,go){let skip=false;try{skip=localStorage.getItem('gt_noask_'+key)==='1'}catch(e){}if(skip){go();return}
  modal(html+`<label class="noask"><input type="checkbox" id="noAsk"><i></i><span>${T('no_ask')}</span></label>`,btn,()=>{const c=$('noAsk');if(c&&c.checked){try{localStorage.setItem('gt_noask_'+key,'1')}catch(e){}}go()})}
@@ -672,12 +673,12 @@ function bindGem(){const P=$('p-forge');
  if(gemSel){const e=P.querySelector(`[data-gi="${gemSel}"],[data-gr^="${gemSel}:"]`);if(e)e.scrollIntoView({block:'center'});gemSel=null}}
 // 13.11 (Влад): вибір легендарки, яку спалює руна. Без каменів (як на сервері); за замовчуванням — найслабша, що не краща за надіту
 let enchSel=null;
-function enchLegs(){return G.inv.filter(i=>i.r===4&&!(i.gm&&i.gm.length)).sort((a,b)=>itemVal(a)-itemVal(b))}
+function enchLegs(){return G.inv.filter(i=>i.r===4&&!(i.gm&&i.gm.length)&&!i.lk).sort((a,b)=>itemVal(a)-itemVal(b))}
 function enchPicked(L){if(enchSel){const x=L.find(i=>i.id===enchSel);if(x)return x}const eqOf=i=>G.eq[i.slot],low=A=>[...A].sort((a,b)=>a.il-b.il||itemScore(a)-itemScore(b))[0]; /* 14.11 (Влад): за замовчуванням — найнижчий рівень (серед гірших за надіте) */return low(L.filter(i=>!eqOf(i)||itemScore(i)<=itemScore(eqOf(i))))||low(L)||null}
 function enchPickModal(){const L=enchLegs(),cur=enchPicked(L);if(!L.length)return;
  modal(`<div class="big">🔥</div><h3>${T('ench_pick_t')}</h3><div class="gpick">${L.map(i=>`<button class="btn${cur&&cur.id===i.id?' pri':''}" data-epk="${i.id}" style="text-align:left;display:flex;gap:12px;align-items:center;border-radius:14px;padding:8px 12px"><span style="width:48px;height:48px;flex:0 0 48px;display:flex;align-items:center;justify-content:center">${gearIc(i)}</span><span style="flex:1;min-width:0"><b style="color:${RAR[i.r].c}">${itemName(i)}</b><small style="display:block">${SLOT[i.slot].n} · ${T('lvl',{n:i.il})} · ≈ ${T('power',{n:fmt(Math.round(itemVal(i)))})}</small></span></button>`).join('')}</div>`,null,null,()=>document.querySelectorAll('[data-epk]').forEach(b=>b.onclick=()=>{enchSel=+b.dataset.epk;queue.shift();showModal();renderForge()}),'epick')}
 function renderForge(){
- const F=V.forge,legs=s=>G.inv.filter(i=>i.r===4&&i.slot===s);
+ const F=V.forge,legs=s=>G.inv.filter(i=>i.r===4&&i.slot===s&&!i.lk);
  if(!mSlot||!legs(mSlot).length)mSlot=SLOTS.find(s=>legs(s).length>=3)||SLOTS.find(s=>legs(s).length)||'weapon';
  const LG=legs(mSlot),maxN=Math.min(12,LG.length),need=F.myth.need;
  mN=Math.max(need,Math.min(mN,Math.max(need,maxN)));
@@ -722,7 +723,7 @@ function renderForge(){
  if(!aSlot||!mOf(aSlot).length)aSlot=SLOTS.find(s=>mOf(s).length)||aSlot||'weapon';
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aEx=aIt?astExtra(aIt):{gold:0,shards:0},eqA=G.eq[aSlot];
  // 08.11 (варіант Ж): 2 прадавні з сумки в жертву (найслабші, спершу без зірок і перекидань, без каменів) + 📜 Сувій
- const aNeed=A.sac||2,aScr=G.scroll||0,aCand=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b));
+ const aNeed=A.sac||2,aScr=G.scroll||0,aCand=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)&&!i.lk).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b));
  if(aPick){aPick=aPick.filter(id=>aCand.some(i=>i.id===id));if(!aPick.length)aPick=null} // 21.11 (Влад): свій вибір жертв для вічного, як у прадавнього
  const aSac=aPick?aPick.map(id=>aCand.find(i=>i.id===id)):aCand.slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
  const aEs=A.ess||0,aOk=aIt&&aScr>=1&&(G.ess||0)>=aEs&&aSac.length>=aNeed&&G.souls>=aSo&&G.gold>=aEx.gold&&G.shards>=aEx.shards;
