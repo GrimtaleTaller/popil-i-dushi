@@ -940,5 +940,3 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .rwin{text-align:center}.rwin h3{margin:10px 0 6px}.rwin p{margin:0;line-height:1.4}
 .rwin-crest{width:128px;height:128px;margin:4px auto 6px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#3a2618 0%,#1a1012 70%)}
 .rwin-crest .pen{width:auto;height:auto}
-.rprev{display:flex;justify-content:space-between;gap:4px;margin:6px 0 2px}.rprev>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
-.rprev .pen{width:auto;height:68px;display:flex;align-items:flex-end;justify-content:center}.rprev .pen svg{transform:none}.rprev small{font-size:10px;line-height:1.15;text-align:center;opacity:.8}
