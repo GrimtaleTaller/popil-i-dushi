@@ -904,3 +904,10 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .zh-k i{grid-column:1/2;font-style:normal;opacity:.7;font-size:12px}
 .zh-k small{grid-column:2/3;grid-row:1/3;align-self:center;opacity:.8}
 .zh-all{margin:12px 0 6px}
+/* Щоденні підземелля (з 23.11) */
+.card.dd{border-color:#5a4a2a}
+.dd-hd{display:flex;gap:10px;align-items:flex-start}.dd-hd h4{margin:0 0 2px}.dd-hd .hint{margin:0}
+.dd-ic{font-size:34px;line-height:1}
+.dd-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #2a241c}
+.dd-row>div{display:flex;flex-direction:column;gap:2px;min-width:0}.dd-row span{font-size:12px;opacity:.85}
+.dd-row.lock{opacity:.5}.dd-row .btn{flex:0 0 auto}

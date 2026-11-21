@@ -830,13 +830,33 @@ function dngList(){
  }
  h+=`<details class="dinfo"><summary>ℹ️ ${tr('dng_how')}</summary><p>${tr('dng_hint',{r:D.rooms,d:daily})}</p><p>${tr('chest_hint')}</p></details>`;
  return h}
+// ===== Щоденні підземелля (з 23.11): щодня одне з 6, по черзі; 3 складності; вхід — «підготовка» ресурсами =====
+const DD_I={gold:'💰',mats:'⛏️',gems:'🔷',leg:'⚔️',ash:'⚱️',scroll:'📜'};
+function ddCostTxt(c){return [c.gold?'💰'+fmt(c.gold):'',c.matN?'⛏️'+MATN[c.mat]+' ×'+fmt(c.matN):'',c.cat?'💎×'+c.cat:''].filter(Boolean).join(' · ')}
+function ddRewTxt(k,r){return k==='gold'?'💰'+fmt(r.gold):k==='mats'?'⛏️'+MATN[r.mat]+' ×'+r.matN:k==='gems'?T('dd_r_gems',{n:r.gems}):k==='leg'?T('dd_r_leg',{l:r.legIl}):k==='ash'?'⚱️'+r.ash:T('dd_r_scroll',{p:Math.round(r.scroll*100)})}
+function ddCard(){const D=V.dd;if(!D||!D.live)return'';
+ const ms=Math.max(0,D.end-Date.now()),hh=Math.floor(ms/36e5),mm=Math.floor(ms%36e5/6e4);
+ let h=`<div class="card dd"><div class="dd-hd"><span class="dd-ic">${DD_I[D.k]}</span><div><h4>${T('dd_n_'+D.k)}</h4><p class="hint">${T('dd_l_'+D.k)}</p></div></div>
+ <p class="sub">${T('dd_tier',{t:D.t})} · ${T('dd_used',{n:D.used,b:D.base})} · ${T('dd_next',{k:DD_I[D.next]+' '+T('dd_n_'+D.next),t:T('t_hm',{h:hh,m:mm})})}</p>`;
+ for(const x of D.ds){const lock=!x.open,weak=x.open&&!x.win;
+  h+=`<div class="dd-row${lock?' lock':''}"><div><b>${T('diff_'+x.d)}</b><span>${T('dd_pay')}: ${ddCostTxt(x.c)}</span><span>${T('dd_get')}: ${ddRewTxt(D.k,x.r)} · 🏅${x.r.marks}</span>${weak?`<span class="dn">💪 ${T('need_power',{n:fmt(x.need),m:fmt(V.hero?V.hero.power:0)})}</span>`:''}</div>
+  <button class="btn${lock||weak?'':' pri'}" data-ddg="${x.d}" ${lock||weak||busy?'disabled':''}>${lock?'🔒':T('dd_go')}</button></div>`}
+ h+=`<p class="hint">${T('dd_hint',{b:D.base})}</p><p class="sub">🏅 ${T('dd_marks',{n:D.tmk})}</p></div>`;
+ return h}
+function ddResult(o){const g=o.gain;
+ const rw=[g.gold?`💰 <b>+${fmt(g.gold)}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',(g.gems||[]).length?`🔷 ${g.gems.map(gemName).join(', ')}`:'',g.item?`<span style="color:${RAR[4].c}">${itemName(g.item)} · ${T('lvl',{n:g.item.il})}</span>`:'',g.ash?`${T('r_ash')} <b>+${g.ash}</b>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('dd_scroll_got')}</span>`:'',g.marks?`🏅 ${T('dd_marks_got',{n:g.marks})}`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${T('dd_n_'+o.k)}: ${T(o.full?'dng_win':'dng_lose')}</h3>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.k==='scroll'&&o.full&&!g.scroll?`<p class="hint">${T('dd_scroll_no')}</p>`:''}`,T('ok'));haptic(o.full?'heavy':'medium')}
+// раз на день — коротка новина про сьогоднішнє підземелля (дзвінок 19.11)
+function ddNews(){const D=V&&V.dd;if(!D||!D.live||!G||G.maxStage<5)return;let k='';try{k=localStorage.getItem('gt_ddn')||''}catch(e){}const day=new Date().toISOString().slice(0,10);if(k===day)return;try{localStorage.setItem('gt_ddn',day)}catch(e){}
+ modal(`<div class="big">${DD_I[D.k]}</div><h3>${T('dd_news_t')}: ${T('dd_n_'+D.k)}</h3><p>${T('dd_l_'+D.k)}</p><p class="hint">${T('dd_news_h')}</p>`,T('dd_news_go'),()=>{dsub='dd';dirty.dng=1;const b=document.querySelector('.tabs button[data-t="dng"]');if(b)b.click()},null,'ddnews')}
 function renderDng(){
- if(!V.swamp)dsub='dng';
- const h=`<div class="dwrap">${dsub==='sw'?swampCard():dngList()}</div>`;
+ if(dsub==='sw'&&!V.swamp||dsub==='dd'&&!(V.dd&&V.dd.live))dsub='dng';
+ const h=`<div class="dwrap">${dsub==='sw'?swampCard():dsub==='dd'?ddCard():dngList()}</div>`;
  setH($('p-dng'),h);
  const loseAsk=(b,go)=>b.dataset.e==='0'?modal(`<div class="big">💪</div><p>${T('lose_warn')}</p>`,T('lose_go'),go):go(); // 09.11: Сили менше за поріг — попередити
  $('p-dng').querySelectorAll('[data-dng]').forEach(b=>b.onclick=()=>loseAsk(b,()=>act('dungeon',{t:+b.dataset.dng,d:+b.dataset.d},r=>dngPlay(r.out))));
  {const P=$('swPath'),A=P&&P.querySelector('.act');if(A)P.scrollLeft=A.offsetLeft-P.clientWidth/2+A.offsetWidth/2} // 15.11: стежка поверхів — обраний по центру
+ $('p-dng').querySelectorAll('[data-ddg]').forEach(b=>b.onclick=()=>act('ddng',{d:+b.dataset.ddg},r=>{r.out.dd=1;dngPlay(r.out)}));
  $('p-dng').querySelectorAll('[data-swf]').forEach(b=>b.onclick=()=>{swF=+b.dataset.swf;renderDng()});
  if($('swGo'))$('swGo').onclick=()=>{const S=V.swamp,f0=+$('swGo').dataset.f,pay=((S.floors||[]).find(x=>x.f===f0)||{}).pay??S.pay,go=()=>act('swamp',{f:+$('swGo').dataset.f},r=>{r.out.sw=1;if(r.out.win)swF=0;dngPlay(r.out)});
   if($('swGo').dataset.e==='0')modal(`<div class="big">💪</div><p>${T('lose_warn')}</p>`,T('lose_go'),go);else if(!S.left&&pay>=100)modal(`<div class="big">⚱️</div><p>${T('sw_pay_ask',{p:fmt(pay)})}</p>`,T('enter',{p:fmt(pay)}),go,null,'swpay');else go()}; // 09.11: результат відомий наперед — попередити про поразку
@@ -846,7 +866,7 @@ function renderDng(){
 }
 // ---------- підземелля на весь екран: відтворення бою, порахованого сервером ----------
 function dngPlay(o){
- const sw=!!o.sw,res=sw?swResult:dngResult,NR=sw?o.rooms.length&&V.swamp?V.swamp.rooms+1:7:6;
+ const sw=!!o.sw,res=sw?swResult:o.dd?ddResult:dngResult,NR=sw?o.rooms.length&&V.swamp?V.swamp.rooms+1:7:6;
  if(!o.rooms||!o.rooms[0]||!o.rooms[0].ev){res(o);return}
  const d=sw?{n:T('sw_name'),bg:'sw_bg'}:DNG[o.t-1],R=sw?{mobs:SWM.map(x=>[T(x[0]),x[1]]),boss:[T(SWB[0]),SWB[1]]}:REGIONS[(d.reg-1)%REGIONS.length],timers=[];let done=false;
  const el=document.createElement('div');el.className='dngv';el.id='dngv';
@@ -1611,7 +1631,7 @@ function zhCard(d){const Z=V&&V.zh;if(!Z||!Z.live)return'';
  <div class="zh-th">${Z.th.map((v,i)=>{const got=Z.got&(1<<i),ok=Z.pts>=v;return `<div class="${got?'got':ok?'ok':''}"><b>${got?'✅':ok?'🎁':'🔒'} ${v}</b><span>${zhRew(Z.thR[i])}</span></div>`}).join('')}</div>
  ${can?`<div class="row"><button class="btn pri glow" id="zhClaim" ${busy?'disabled':''}>🎁 ${T('claim_all')}</button></div>`:nx?`<p class="sub">${T('zh_next',{n:fmt(Math.ceil(nx-Z.pts))})}</p>`:''}
  <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>`<div class="zh-k"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k)}</i><small>${(Z.c&&Z.c[k])||0}/${Z.norm[k][0]}</small></div>`).join('')}</details>
- <p class="hint">${Z.ok?T('zh_cash_ok',{l:Z.lv}):T('zh_cash_no')}</p></div>`;
+ <p class="hint">${Z.ok&&!V.twin?T('zh_cash_ok',{l:Z.lv}):T('zh_cash_no')}</p></div>`;
  return h}
 function zhList(d){
  let h='';const dv=(d.div||[]),pot=d.dpot||0;
@@ -1622,7 +1642,9 @@ function zhList(d){
   if(d.me&&d.me.dv)h+=`<p class="sub">${T('zh_me_dv',{d:ZH_DV[d.me.dv-1],p:d.me.drn})}</p>`;
   h+='</div>'}
  return h}
+let zhFirst=1;
 function renderRank(){
+ if(zhFirst&&V&&V.zh&&V.zh.live){zhFirst=0;if(topKind==='stage')topKind='zh'} // з 23.11 рейтинги відкриваються на Жнивах
  const el=$('p-top'),d=topData[topKind],aw=topKind==='rating'&&d&&d.week,val=r=>topKind==='power'||topKind==='clan'||topKind==='zh'?fmt(Math.floor(r.v)):aw?(Number(r.v)>0?'+':'')+Number(r.v)+`<small style="opacity:.6"> · ${Number(r.r)}</small>`:r.v; // 16.11: арена — приріст за тиждень · рейтинг
  let h=`<div class="chips">${(V&&V.zh&&V.zh.live?['zh']:[]).concat(['stage','power','rating','clan','lvl']).map(k=>`<button data-tk="${k}" class="${k===topKind?'act':''}">${T('top_'+k)}</button>`).join('')}</div>`;
  if(!d){h+=`<div class="empty">${T('loading')}</div>`;
@@ -1633,7 +1655,7 @@ function renderRank(){
   const prizeOf=pl=>{const x=P.find(q=>pl>=q.from&&pl<=q.to);return x?x.ash:0};
   if(d.prizes){const ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
    h+=`<div class="card"><h4>🏆 ${T('prize_t')}</h4><p class="hint">${T('prize_hint')}</p>${hasPrize?`<div class="chips">${P.map(q=>`<span class="chip">${q.from===q.to?q.from:q.from+'–'+q.to}: ⚱️${q.ash}</span>`).join('')}</div>`:`<p class="hint">${T('prize_none')}</p>`}
-   ${aw?`<p class="hint">${T('top_rating_w',{n:d.arenaMin||20})}</p><p class="hint">${T('top_rating_f',{f:d.me?Number(d.me.f)||0:0,n:d.arenaMin||20})}</p>`:''}${d.pot>0&&topKind!=='zh'?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
+   ${aw?`<p class="hint">${T('top_rating_w',{n:d.arenaMin||20})}</p><p class="hint">${T('top_rating_f',{f:d.me?Number(d.me.f)||0:0,n:d.arenaMin||20})}</p>`:''}${d.pot>0&&topKind!=='zh'?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>/^zh\d$/.test(x.kind)?'🌾 '+T('zh_dv_n',{d:ZH_DV[+x.kind[2]-1]})+' #'+x.place:T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).join(', ')}</p>`:''}</div>`}
   const row=r=>{const pl=aw?(r.cp||0):r.place;return `<div class="${r.me?'me':''}"${aw&&!r.cp?' style="opacity:.55"':''}><b>${!pl?'—':pl<=3?['🥇','🥈','🥉'][pl-1]:pl}</b><span>${penI(r.pn)}${r.frm==='moon'?FRM_MOON:''}${esc(r.name)}${hasPrize&&(aw?r.cp&&prizeOf(r.cp):prizeOf(r.place))?` <small style="color:var(--gold)">⚱️${prizeOf(aw?r.cp:r.place)}</small>`:''}${topKind==='zh'&&r.dv?` <small style="opacity:.6">· ${ZH_DV[r.dv-1]}</small>`:''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`};
   if(topKind==='zh')h=h.replace('<div class="card">',zhCard(d)+'<div class="card">')+zhList(d);
   h+=(topKind==='zh'?`<h4 class="zh-all">🏆 ${T('zh_all')}</h4>`:'')+'<div class="rank">'+(d.rows.length?d.rows.map(row).join(''):`<div class="empty">${T('zh_empty')}</div>`)+'</div>';
@@ -1672,6 +1694,7 @@ function afterSync(r){
   modal(`<div class="big">🌙</div><h3>${T('away')}</h3><p>${T('away_line',{t:(h?T('hours',{n:h})+' ':'')+T('mins',{n:m}),s:p.stage})}</p><p>${T('p_killed')} <b>${fmt(p.kills)}</b></p><p>${T('p_gold')} <b>+${fmt(p.gold)}</b></p><p>${T('p_xp')} <b>+${fmt(p.xp)}</b></p>${p.souls?`<p>${T('p_souls')} <b>+${fmt(p.souls)}</b></p>`:''}${p.items?`<p>${T('p_items')} <b>${p.items}</b>${p.offBy?' <small>('+[2,3].filter(r=>p.offBy[r]).map(r=>`<span style="color:${RAR[r].c}">${RAR[r].n} ${p.offBy[r]}</span>`).join(', ')+')</small>':''}</p>`:''}${p.offSh?`<p>${T('p_offsh',{n:(p.offBy?p.offBy[0]+p.offBy[1]:0)})} <b>+🔩${fmt(p.offSh)}</b></p>`:''}`,T('claim'))}
  if(p&&p.boss&&!p.boss.win){p.boss.auto=1;if(p.offline)modal(`<div class="big">⚔️</div><h3>${T('auto_off_t')}</h3><p>${T('auto_off_txt',{n:p.boss.stage})}</p>`,T('ok'))}
  if(p&&p.boss&&!B.rep)startReplay(p.boss);
+ ddNews();
  const d=V.daily;
  if(d&&dailyShown!==String(G.daily.date)+d.streak){dailyShown=String(G.daily.date)+d.streak;
   let days='';for(let i=1;i<=7;i++)days+=`<div class="${i<d.streak?'got':i===d.streak?'now':''}">${T('day',{n:i})}<br>${i===7?'🧰':'💰'}</div>`;
@@ -2019,7 +2042,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):g==='dng'&&V&&V.swamp?[['dng','dsub_dng'],['sw','dsub_sw']]:null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
