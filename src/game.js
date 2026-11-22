@@ -1161,25 +1161,31 @@ const SHOP_DESC={newb:'shop_d_newb',inc12:'shop_d_inc12',inc24:'shop_d_inc24',as
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function vipLine(k){const n=k==='starter'?3:VIP_D[k];if(!n||!vipActive())return '';return `<p class="hint" style="color:var(--gold)">${T('shop_vip_on',{d:dt(G.vip)})} — ${T('shop_vip_ext',{n,d:dt(G.vip+n*864e5)})}</p>`} // 13.11 (Влад): VIP активний — покупка продовжить дні
-let wdConnOff=null;
+let wdConnS=null; // 22.11: поточна сесія підключення гаманця для виводу {busy, offs, timer}
+function wdEnd(S){S=S||wdConnS;if(!S)return;S.offs.forEach(f=>{try{f()}catch(e){}});S.offs=[];clearTimeout(S.timer);if(wdConnS===S){wdConnS=null;try{tcUI&&tcUI.setConnectRequestParameters(null)}catch(e){}}}
 async function wdConnect(){ // 22.11 (Влад): гаманець для виводу — TON Connect з ton_proof; сервер перевіряє підпис власника (payout.ts → tonproof.ts)
- if(wdConnOff){try{wdConnOff()}catch(e){}wdConnOff=null}
+ if(wdConnS&&wdConnS.busy)return; // подвійне натискання
+ wdEnd();const S={busy:true,offs:[],timer:0};wdConnS=S;
  let ui,pl;
- try{ui=await loadTC();pl=(await api('wdProof')).out.payload}catch(e){toast(errT(e));return}
+ try{ui=await loadTC();try{await ui.connectionRestored}catch(e){} // спершу дочекатися відновлення старого з'єднання (магазин), інакше воно прийде в нашу підписку
+  pl=(await api('wdProof')).out.payload}catch(e){wdEnd(S);toast(errT(e));return}
+ if(wdConnS!==S)return;
  try{if(ui.connected)await ui.disconnect()}catch(e){} // доказ власника гаманець дає лише при новому підключенні
+ if(wdConnS!==S)return;
  ui.setConnectRequestParameters({state:'ready',value:{tonProof:pl}});
- const done=()=>{if(wdConnOff){try{wdConnOff()}catch(e){}wdConnOff=null}try{ui.setConnectRequestParameters(null)}catch(e){}};
- const offS=ui.onStatusChange(w=>{if(!w)return;
-   const tp=w.connectItems&&w.connectItems.tonProof,a=w.account||{};done();
-   if(!tp||!('proof' in tp)){toast(T('wd_conn_noproof'));try{ui.disconnect()}catch(e){}return}
+ S.offs.push(ui.onStatusChange(w=>{if(!w||wdConnS!==S)return;
+   const tp=w.connectItems&&w.connectItems.tonProof,a=w.account||{};
+   if(tp&&tp.proof&&tp.proof.payload!==pl)return; // чужий доказ (старе підключення) — не наш
+   wdEnd(S);
+   if(!tp||!tp.proof){toast(T('wd_conn_noproof'));try{ui.disconnect()}catch(e){}return}
    toast(T('wd_conn_wait'));
    api('wdWallet',{addr:a.address,chain:a.chain,si:a.walletStateInit,pub:a.publicKey,proof:tp.proof,app:(w.device&&w.device.appName)||''})
     .then(()=>{toast(T('wd_conn_ok'));haptic('medium');wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e)));
-  },()=>{});
- const offM=ui.onModalStateChange?ui.onModalStateChange(st=>{if(st&&st.status==='closed'&&st.closeReason==='action-cancelled'){done();toast(T('wd_conn_cancel'))}}):null;
- wdConnOff=()=>{try{offS()}catch(e){}try{offM&&offM()}catch(e){}};
- setTimeout(()=>{if(wdConnOff)done()},10*60e3); // покинуте підключення не висить вічно
- try{await ui.openModal()}catch(e){done();toast(errT(e))}
+  },()=>{}));
+ if(ui.onModalStateChange)S.offs.push(ui.onModalStateChange(st=>{if(wdConnS===S&&st&&st.status==='closed'&&st.closeReason==='action-cancelled'){wdEnd(S);toast(T('wd_conn_cancel'))}}));
+ S.timer=setTimeout(()=>wdEnd(S),10*60e3); // покинуте підключення не висить вічно
+ S.busy=false;
+ try{await ui.openModal()}catch(e){wdEnd(S);toast(errT(e))}
 }
 function loadTC(){ // TON Connect вантажимо лише тоді, коли гравець обирає оплату криптою
  if(tcUI)return Promise.resolve(tcUI);
