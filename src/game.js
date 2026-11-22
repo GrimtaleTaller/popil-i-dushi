@@ -1279,10 +1279,18 @@ function shopOther(k){
   document.querySelectorAll('#mbox [data-pbal]').forEach(b=>b.onclick=()=>{if(b.disabled)return;queue.shift();showModal();shopBal(k)});
  },'oth');
 }
+let balBusy=false;
 function shopBal(k){ // 22.11 (Влад): оплата з балансу виводу — сервер списує й видає товар одразу (purchase_bal)
  const it=shopData&&shopData.items.find(x=>x.k===k);if(!it)return;const b=shopData.bal||0;
  if(b<it.usd){toast(ERR.bal_low||T('shop_fail'));return}
- modal(`<div class="big">💰</div><h3>${T('shop_i_'+k)}</h3><p>${T('shop_bal_q',{x:it.usd.toFixed(2),b:(Math.round((b-it.usd)*100)/100).toFixed(2)})}</p>`,T('shop_bal_go'),()=>{shopBuy(k,'bal')},null,'shbal')}
+ const key='b'+Date.now().toString(36)+Math.random().toString(36).slice(2,10),usd=it.usd; // один ключ на підтвердження: повтор запиту не спише вдруге
+ modal(`<div class="big">💰</div><h3>${T('shop_i_'+k)}</h3><p>${T('shop_bal_q',{x:usd.toFixed(2),b:(Math.round((b-usd)*100)/100).toFixed(2)})}</p>`,T('shop_bal_go'),()=>{balPay(k,usd,key)},null,'shbal')}
+async function balPay(item,usd,key){
+ if(balBusy)return;balBusy=true;
+ try{const r=await api('shopBuy',{item,m:'bal',usd,key});toast(T('shop_ok_t'));if(shopData)shopData.bal=r.out.bal;wdChip(r.out.bal);wdData=null;shopPaid()}
+ catch(e){toast(errT(e));wdData=null;try{shopReload()}catch(_){}setTimeout(sync,500)} // могло пройти до помилки мережі — оновлюємо магазин і баланс
+ finally{balBusy=false}
+}
 async function shopBuy(item,m,asset){
  if(busy)return;
  try{
@@ -1292,7 +1300,6 @@ async function shopBuy(item,m,asset){
    w.openInvoice(r.out.link,st=>{if(st==='paid'){toast(T('shop_ok_t'));shopPaid();setTimeout(sync,3000)}else if(st==='failed')toast(T('shop_fail'));else if(st==='cancelled')toast(T('shop_cancel'))});
    return;
   }
-  if(m==='bal'){const r=await api('shopBuy',{item,m});toast(T('shop_ok_t'));if(shopData)shopData.bal=r.out.bal;wdChip(r.out.bal);wdData=null;shopPaid();return}
   if(m==='net'){const r=await api('shopBuy',{item,m,asset});netInvoice(r.out);return}
   if(m==='cpay'){const r=await api('shopBuy',{item,m,asset});const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(r.out.link);else window.open(r.out.link,'_blank','noopener');toast(T('shop_wait_cp'));shopWatch(r.out.id,0);return}
   const addr=await tcWallet();if(!addr){toast(errT(new Error('no_wallet')));return}
@@ -1326,7 +1333,7 @@ function netInvoice(o){
 }
 let opsT=0;
 const OPS_ST={new:['🕓','op_new'],wait:['⏳','op_wait'],paid:['✅','op_paid'],refunded:['↩️','op_ref'],expired:['⌛','op_exp'],late:['⚠️','op_late']};
-const opM=o=>o.m==='stars'?'⭐ Stars':o.m==='gram'?'💎 GRAM':o.m==='usdt'?'💵 USDT · TON':o.m==='net'?netName(o.net):o.m;
+const opM=o=>o.m==='stars'?'⭐ Stars':o.m==='gram'?'💎 GRAM':o.m==='usdt'?'💵 USDT · TON':o.m==='net'?netName(o.net):o.m==='bal'?'💰 '+T('shop_bal_t'):o.m;
 function opsHtml(ops){
  return `<div class="card"><h4>🧾 ${T('ops_t')}</h4><div class="ops">${ops.map(o=>{const st=OPS_ST[o.st]||['•',o.st];return `<div class="op op-${o.st}"><div><b>${T('shop_i_'+o.item)}</b><small>${esc(opM(o))} · $${o.usd.toFixed(2)} · ${dt(o.at)}</small></div><span>${st[0]} ${T(st[1])}</span>${o.st==='new'&&o.address?`<button class="btn" data-reop="${o.id}">${T('op_open')}</button>`:''}</div>`}).join('')}</div>
   ${ops.some(o=>o.st==='late')?`<p class="hint">${T('op_late_h')}</p>`:''}</div>`;
