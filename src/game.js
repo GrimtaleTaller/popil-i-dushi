@@ -510,8 +510,9 @@ const curIc=c=>c==='gold'?'💰':'⚱️',curHave=c=>c==='gold'?G.gold:(G.ash||0
 let mktErrN=0;
 const mkQ=()=>({...mktF,slot:mktF.slot||(mktTab==='mat'?'mat':'items'),t:mktTab==='mat'?mktF.t:0}); // 19.11: «Речі» — сервер віддає лоти без матеріалів
 function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',mkQ(),r=>{mktData=r.out;const g=r.out.got;if(g&&g.n){const x=[g.ash?'⚱️'+fmt(g.ash):'',g.gold?'💰'+fmt(g.gold):''].filter(Boolean).join(' + ');modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,x,p:Math.round(r.out.fee*100)})}</p>`,T('ok'))}dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData){mktErrN=Math.min(6,mktErrN+1);setTimeout(()=>{dirty.market=1;flush()},800*Math.pow(2,mktErrN))}else mktErrN=0})} // 15.11 (критик): після помилки — наростаюча пауза 1,6…51 с, не шторм запитів
-const MKT_MAX={ash:1e6,gold:1e13};const MKT_MIN={4:{ash:100,gold:1e6},5:{ash:300},6:{ash:600}}; // 22.11 (Влад): мінімальні ціни речей, як на сервері (MARKET.minPrice)
-function mktMin(r){return (mktData&&mktData.minP&&mktData.minP[r])||MKT_MIN[r]||null} // 18.11: межа ціни лота, як на сервері (MARKET.maxPrice) — гравець бачить, у чому помилка
+const MKT_MAX={ash:1e6,gold:1e13}; // 18.11: межа ціни лота, як на сервері (MARKET.maxPrice) — гравець бачить, у чому помилка
+const MKT_MIN={4:{ash:100,gold:1e6},5:{ash:300},6:{ash:600}}; // 22.11 (Влад): мінімальні ціни речей, як на сервері (MARKET.minPrice); вище вічної — як вічна
+function mktMin(r){r=Math.min(r,6);return (mktData&&mktData.minP&&mktData.minP[r])||MKT_MIN[r]||null}
 function mktAct(a,args,cb){act(a,{...mkQ(),...args},r=>{if(r.out)mktData=r.out;dirty.market=1;cb&&cb(r)})}
 function curChips(id,sel,lockAsh){return `<div class="chips" id="${id}">${['ash','gold'].map(c=>`<button data-cur="${c}" class="${sel===c?'act':''}" ${lockAsh&&c==='gold'?'disabled':''}>${T('cur_'+c)}</button>`).join('')}</div>`}
 function bindCur(id,set){const w=$(id);if(!w)return;w.querySelectorAll('[data-cur]').forEach(b=>b.onclick=()=>{if(b.disabled)return;set(b.dataset.cur);w.querySelectorAll('[data-cur]').forEach(x=>x.classList.toggle('act',x===b))})}
