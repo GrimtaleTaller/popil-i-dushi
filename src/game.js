@@ -1033,12 +1033,14 @@ function renderWd(){const el=$('p-wd');
  const D=wdData,A=D.acc,mn=D.min[wdCur],left=Math.max(0,Math.round((D.cap-D.used)*100)/100);
  const SB0=D.subs||{},subOk=['news','chat','pay'].every(k=>SB0[k]==='in');
  const subBad=['news','chat'].some(k=>SB0[k]==='kicked'),subErr=['news','chat'].some(k=>SB0[k]==='err');
- const why=!A.ok?T('wd_need'):!subOk?T(subBad?'wd_sub_ban':subErr?'wd_sub_err':'wd_need_subs'):!D.wallet?T('wd_need_wallet'):D.pending?T('wd_pending_t'):D.bal<=0?T('wd_empty'):D.bal<mn?T('wd_low',{m:mn}):left<mn?T('wd_cap_t'):'';
+ const why=!A.ok?T('wd_need'):!subOk?T(subBad?'wd_sub_ban':subErr?'wd_sub_err':'wd_need_subs'):!D.wallet?T('wd_need_wallet'):!D.proved?T('wd_need_proof'):D.pending?T('wd_pending_t'):D.bal<=0?T('wd_empty'):D.bal<mn?T('wd_low',{m:mn}):left<mn?T('wd_cap_t'):'';
  let h=`<div class="card"><h4>💸 ${T('wd_bal')}</h4><div class="wdbal">$${D.bal.toFixed(2)}</div><p class="hint" style="margin:4px 0 0">${T('wd_bal_hint')}</p></div>`;
  h+=`<div class="card"><h4>🔓 ${T('wd_acc')}</h4><p style="margin:4px 0">${A.lvl>=A.needLvl?'✅':'⏳'} ${T('wd_acc_lvl',{n:Math.min(A.lvl,A.needLvl),m:A.needLvl})}</p><p style="margin:4px 0">${A.days>=A.needDays?'✅':'⏳'} ${T('wd_acc_days',{n:Math.min(A.days,A.needDays),m:A.needDays})}</p></div>`;
  // 14.11 (Влад): обов'язкові підписки на канал новин і чат гри — без них вивід недоступний
  h+=`<div class="card wdsubs"><h4>📌 ${T('wd_subs_t')}</h4><p class="hint" style="margin:0 0 6px">${T('wd_subs_h')}</p>`+[['news','📢','GRIMTALENEWS'],['chat','💬','GRIMTALECHAT'],['pay','💸','GRIMTALEPAYOUTS']].map(([k,ic,u])=>{const st=SB0[k];return `<div class="wdsub"><span>${st==='in'?'✅':st==='err'?'⚠️':st==='kicked'?'⛔':'❌'} ${ic} ${T('wd_sub_'+k)} <span class="hint" style="margin:0">@${u}</span></span>${st==='out'||!st?`<button class="btn" data-wdsub="${u}">${T('wd_sub_go')}</button>`:''}</div>`}).join('')+(subOk||subBad?'':`<div class="row" style="margin-top:6px"><button class="btn pri" id="wdSubChk">🔄 ${T('wd_sub_chk')}</button></div>`)+(subBad?`<p class="hint" style="margin:6px 0 0">${T('wd_sub_ban')}</p>`:subErr?`<p class="hint" style="margin:6px 0 0">${T('wd_sub_err')}</p>`:'')+`</div>`;
- h+=`<div class="card"><h4>👛 ${T('wd_wallet')}</h4>${D.wallet?`<p class="wdaddr">${esc(D.wallet)}</p>`:''}<p class="hint" style="margin:0 0 6px">${T('wd_wallet_hint')}</p><div class="row" style="gap:8px;align-items:center"><input id="wdAddr" class="inp" placeholder="UQ… / EQ…" autocomplete="off" spellcheck="false"><button class="btn" id="wdAddrGo" ${A.ok?'':'disabled'}>${D.wallet?T('wd_change'):T('wd_save')}</button></div>${A.ok?'':`<p class="hint" style="margin:6px 0 0">${T('wd_wallet_acc')}</p>`}</div>`;
+ // 22.11 (Влад): гаманець — лише кнопкою «Підключити гаманець» (TON Connect з доказом власника); у Walt адреси GRAM і USDT різні, тож ручне поле прибрано
+ const wOk=D.wallet&&D.proved;
+ h+=`<div class="card"><h4>👛 ${T('wd_wallet')}</h4>${D.wallet?`<p class="wdaddr">${esc(D.wallet)}</p><p class="hint" style="margin:0 0 6px">${wOk?'✅ '+T('wd_proved'):'⚠️ '+T('wd_need_proof')}</p>`:''}${wOk?'':`<p class="hint" style="margin:0 0 8px">${T('wd_wallet_hint')}</p>`}<button class="btn${wOk?'':' pri'}" id="wdConn" ${A.ok?'':'disabled'}>🔗 ${T(wOk?'wd_conn_other':'wd_conn')}</button>${A.ok?'':`<p class="hint" style="margin:6px 0 0">${T('wd_wallet_acc')}</p>`}</div>`;
  h+=`<div class="card"><h4>📤 ${T('wd_out')}</h4><div class="chips">${['gram','usdt'].map(c=>`<button data-wdc="${c}" class="${wdCur===c?'act':''}">${c==='gram'?'GRAM':'USDT'} (TON) · ${T('wd_from',{m:D.min[c]})}</button>`).join('')}</div><p class="hint" style="margin:6px 0">${T('wd_lim',{l:left.toFixed(2),c:D.cap})}</p><div class="row" style="gap:8px;align-items:center"><input id="wdUsd" class="inp" type="number" min="${mn}" step="0.01" inputmode="decimal" placeholder="$ ${mn}+"><button class="btn pri" id="wdGo" ${why?'disabled':''}>${T('wd_go')}</button></div>${why?`<p class="hint" style="margin:6px 0 0">${why}</p>`:''}<p class="hint" style="margin:6px 0 0">${T('wd_note')}</p></div>`;
  const R=D.ref||{sum:0,list:[]};h+=`<div class="card"><h4>👥 ${T('wd_ref')}</h4><p style="margin:4px 0"><b>${T('wd_ref_sum',{n:R.sum.toFixed(2)})}</b></p><p class="hint" style="margin:0 0 6px">${T('wd_ref_hint')}</p>`+(R.list.length?R.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${x.usd<0?'↩️ −':'💵 +'}$${Math.abs(x.usd).toFixed(2)} · ${T('wd_ref_lv',{n:x.lv})}</span><span class="hint" style="margin:0">${dt(x.at)}</span></div>`).join(''):`<p class="hint" style="margin:0">${T('wd_ref_none')}</p>`)+`</div>`+refsCard('wd'); // 13.11 (Влад): нарахування з покупок рефералів
  if((D.prizes||[]).length)h+=`<div class="card"><h4>🏆 ${T('wd_prizes')}</h4>`+D.prizes.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>💵 +$${Number(x.usd).toFixed(2)} · ${x.kind==='wboss'?'🩸':x.kind==='rating'?'⚔️':'💪'} #${Number(x.place)}</span><span class="hint" style="margin:0">${x.hold?'⏳ '+T('wd_hold',{d:dt(x.hold)}):dt(x.at)}</span></div>`).join('')+`</div>`; // 16.11: призи тижня з пулу; hold — ще не на балансі
@@ -1052,8 +1054,7 @@ function renderWd(){const el=$('p-wd');
  el.querySelectorAll('[data-wdc]').forEach(b=>b.onclick=()=>{wdCur=b.dataset.wdc;dirty.wd=1;flush()});
  el.querySelectorAll('[data-wdsub]').forEach(b=>b.onclick=()=>{haptic('light');tgOpen('https://t.me/'+b.dataset.wdsub)});
  if($('wdSubChk'))$('wdSubChk').onclick=()=>{const b=$('wdSubChk');b.disabled=true;api('wdInfo',{fresh:1}).then(r=>{wdData=r.out;wdAt=Date.now();const S2=r.out.subs||{},ok=['news','chat','pay'].every(k=>S2[k]==='in');toast(T(ok?'wd_sub_ok':Object.values(S2).includes('kicked')?'wd_sub_ban':Object.values(S2).includes('err')?'wd_sub_err':'wd_sub_no'));haptic(ok?'medium':'light');dirty.wd=1;flush()}).catch(e=>{toast(errT(e));b.disabled=false})};
- $('wdAddrGo').onclick=()=>{const a=$('wdAddr').value.trim();if(!a){toast(T('wd_addr_empty'));return}
-  modal(`<div class="big">👛</div><p class="wdaddr">${esc(a)}</p><p>${T('wd_bind_q')}</p>`,T('wd_save'),()=>api('wdWallet',{addr:a}).then(()=>{toast(T('wd_saved'));$('wdAddr').value='';wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e))),null,'wdbind')};
+ $('wdConn').onclick=()=>{if(D.wallet&&D.proved)modal(`<div class="big">👛</div><p>${T('wd_bind_q')}</p>`,T('wd_conn'),()=>{wdConnect()},null,'wdbind');else wdConnect()};
  $('wdGo').onclick=()=>{const u=Math.floor((+$('wdUsd').value||0)*100+1e-6)/100;if(u<mn){toast(T('wd_low',{m:mn}));return}if(u>D.bal){toast(ERR.wd_funds||T('wd_low',{m:mn}));return}
   modal(`<div class="big">💸</div><p>${T('wd_q',{u:u.toFixed(2),c:wdCur.toUpperCase()})}</p><p class="wdaddr">${esc(D.wallet)}</p>`,T('wd_go'),()=>api('wdReq',{cur:wdCur,usd:u}).then(()=>{toast(T('wd_sent'));wdData=null;dirty.wd=1;flush()}).catch(e=>{toast(errT(e));if(/wd_subs/.test(String(e&&e.message)))api('wdInfo',{fresh:1}).then(r=>{wdData=r.out;wdAt=Date.now();dirty.wd=1;flush()}).catch(()=>{})}),null,'wdq')};
  if($('wdAdmLoad'))$('wdAdmLoad').onclick=()=>api('wdAdmin').then(r=>{wdAdm=r.out;dirty.wd=1;flush()}).catch(e=>toast(errT(e)));
@@ -1188,6 +1189,32 @@ const SHOP_DESC={newb:'shop_d_newb',inc12:'shop_d_inc12',inc24:'shop_d_inc24',as
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function vipLine(k){const n=k==='starter'?3:VIP_D[k];if(!n||!vipActive())return '';return `<p class="hint" style="color:var(--gold)">${T('shop_vip_on',{d:dt(G.vip)})} — ${T('shop_vip_ext',{n,d:dt(G.vip+n*864e5)})}</p>`} // 13.11 (Влад): VIP активний — покупка продовжить дні
+let wdConnS=null; // 22.11: поточна сесія підключення гаманця для виводу {busy, offs, timer}
+function wdEnd(S){S=S||wdConnS;if(!S)return;S.offs.forEach(f=>{try{f()}catch(e){}});S.offs=[];clearTimeout(S.timer);if(wdConnS===S){wdConnS=null;try{tcUI&&tcUI.setConnectRequestParameters(null)}catch(e){}}}
+async function wdConnect(){ // 22.11 (Влад): гаманець для виводу — TON Connect з ton_proof; сервер перевіряє підпис власника (payout.ts → tonproof.ts)
+ if(wdConnS&&wdConnS.busy)return; // подвійне натискання
+ wdEnd();const S={busy:true,offs:[],timer:0};wdConnS=S;
+ let ui,pl;
+ try{ui=await loadTC();try{await ui.connectionRestored}catch(e){} // спершу дочекатися відновлення старого з'єднання (магазин), інакше воно прийде в нашу підписку
+  pl=(await api('wdProof')).out.payload}catch(e){wdEnd(S);toast(errT(e));return}
+ if(wdConnS!==S)return;
+ try{if(ui.connected)await ui.disconnect()}catch(e){} // доказ власника гаманець дає лише при новому підключенні
+ if(wdConnS!==S)return;
+ ui.setConnectRequestParameters({state:'ready',value:{tonProof:pl}});
+ S.offs.push(ui.onStatusChange(w=>{if(!w||wdConnS!==S)return;
+   const tp=w.connectItems&&w.connectItems.tonProof,a=w.account||{};
+   if(tp&&tp.proof&&tp.proof.payload!==pl)return; // чужий доказ (старе підключення) — не наш
+   wdEnd(S);
+   if(!tp||!tp.proof){toast(T('wd_conn_noproof'));try{ui.disconnect()}catch(e){}return}
+   toast(T('wd_conn_wait'));
+   api('wdWallet',{addr:a.address,chain:a.chain,si:a.walletStateInit,pub:a.publicKey,proof:tp.proof,app:(w.device&&w.device.appName)||''})
+    .then(()=>{toast(T('wd_conn_ok'));haptic('medium');wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e)));
+  },()=>{}));
+ if(ui.onModalStateChange)S.offs.push(ui.onModalStateChange(st=>{if(wdConnS===S&&st&&st.status==='closed'&&st.closeReason==='action-cancelled'){wdEnd(S);toast(T('wd_conn_cancel'))}}));
+ S.timer=setTimeout(()=>wdEnd(S),10*60e3); // покинуте підключення не висить вічно
+ S.busy=false;
+ try{await ui.openModal()}catch(e){wdEnd(S);toast(errT(e))}
+}
 function loadTC(){ // TON Connect вантажимо лише тоді, коли гравець обирає оплату криптою
  if(tcUI)return Promise.resolve(tcUI);
  if(!tcLoading)tcLoading=new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://unpkg.com/@tonconnect/ui@2/dist/tonconnect-ui.min.js';sc.onload=()=>{try{tcUI=new TON_CONNECT_UI.TonConnectUI({manifestUrl:new URL('tonconnect-manifest.json',location.href).href});tcUI.onStatusChange(()=>{dirty.shop=1;flush()});ok(tcUI)}catch(e){no(e)}};sc.onerror=()=>{tcLoading=null;no(new Error('net'))};document.head.appendChild(sc)});
