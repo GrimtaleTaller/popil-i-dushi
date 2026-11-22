@@ -438,7 +438,7 @@ function igiveDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;
  const go=()=>{const C=clanData;if(!C||!C.clan){toast(ERR.igv_noclan);return}
   const D3=3*864e5,nw=Date.now(),mine=(C.members||[]).find(m=>m.me);if(mine&&mine.ja&&nw-mine.ja<D3){toast(ERR.igv_new);return}
   const ms=(C.members||[]).filter(m=>!m.me);if(!ms.length){toast(T('igv_none'));return}
-  const fee=it.r>=4?10:5,rl=m=>m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤',dd=t=>{const d=new Date(t);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')};
+  const fee=it.r>=4?50:5,/* 22.11: легендарна ⚱️50 */rl=m=>m.role==='leader'?'👑':m.role==='officer'?'⭐':'👤',dd=t=>{const d=new Date(t);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')};
   let pid=0,pnm='';
   modal(`<div class="big">🎁</div><h3>${T('igv_t')}</h3><p style="color:${RAR[it.r].c};margin:4px 0"><b>${itemName(it)}</b></p><p class="hint">${T('igv_hint')}</p>
    <div class="pick"><button class="pickb" id="igPick"><span>${T('igv_pick')}</span><i>▾</i></button><div class="plist" id="igList">${ms.map(m=>{const nn=m.ja&&nw-m.ja<D3;return `<button data-ip="${m.id}"${nn?' disabled':''}>${rl(m)} <b>${esc(m.name)}</b><small>${nn?T('igv_new_m',{d:dd(m.ja+D3)}):T('lvl',{n:m.lvl||'—'})}</small></button>`}).join('')}</div></div>
