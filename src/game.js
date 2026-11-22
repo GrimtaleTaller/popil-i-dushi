@@ -237,7 +237,7 @@ function replayTick(dt){
  }
  if(R.i>=R.res.ev.length&&R.t>=(R.res.ev.length?R.res.ev[R.res.ev.length-1][0]:0)+0.4){
   const res=R.res;B.rep=null;B.boss=false;
-  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:'')+(res.gems?' '+res.gems.map(k=>gemIc(k)).join(''):'')+(res.egg?' +'+eggIc(res.egg):''));B.m=null;B.resp=0.8}
+  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:'')+(res.gems?' '+res.gems.map(k=>gemIc(k)).join(''):'')+(res.egg?' +'+eggIc(res.egg)+' '+T(res.egg==='r'?'egg_r':'egg_c'):''));B.m=null;B.resp=0.8}
   else{B.dead=2.5;$('dead').style.display='grid';toast(T(res.timeout?'boss_timeout':'boss_lose')+(res.auto?' '+T('auto_off'):''));B.m=null}
   R.after&&R.after();renderBoss();paintArena();
  }
@@ -893,11 +893,13 @@ function dngPlay(o){
  at(t+400,fin);
 }
 
+// 21.11 (Влад): нагорода пише тип яйця — звичайне чи рідкісне (раніше лише «Яйце вихованця +1», Макс шукав рідкісне в Сумці)
+function eggRw(g){if(g.egg)return [`${eggIc(g.egg)} ${T(g.egg==='r'?'egg_r':'egg_c')}: <b>+1</b>`];if(!g.eggs)return [];if(g.eggR==null)return [`${T('r_egg')} <b>+${g.eggs}</b>`];const c=g.eggs-g.eggR;return [c>0?`${eggIc('c')} ${T('egg_c')}: <b>+${c}</b>`:'',g.eggR>0?`${eggIc('r')} ${T('egg_r')}: <b>+${g.eggR}</b>`:'']}
 // підсумок серії заходів
 function dngBatch(o){
  const d=DNG[o.t-1],g=o.gain;
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+${g.scroll}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+${g.scroll}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',...eggRw(g)].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  haptic('heavy');
 }
 // 15.11: повернуто — випадково видалено разом зі старою карткою Болота (f6cb938), через це після бою в Болоті була помилка
@@ -905,15 +907,15 @@ function swResult(o){
  const g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?'👑 '+T(SWB[0]):T('sw_wave',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
  const rw=[g.scroll?`<span style="color:${RAR[6].c}"><b>📜 ${T('r_scroll')} +1!</b></span>`:'',g.gold?`🪙 <b>+${fmt(g.gold)}</b>`:'',g.xp?`✨ XP <b>+${fmt(g.xp)}</b>`:'',g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T('sw_floor',{n:o.f})}: ${T(o.win?'sw_win':'sw_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.win&&!g.scroll?`<p class="hint">${T(g.noSc?'sw_sc_low':'sw_noscroll')}</p>`:''}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T('sw_floor',{n:o.f})}: ${T(o.win?'sw_win':'sw_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.win&&!g.scroll?`<p class="hint">${T(g.noSc?'sw_sc_low':'sw_noscroll')}</p>`:''}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*300));
  haptic(o.win?'heavy':'medium');
 }
 function dngResult(o){
  const d=DNG[o.t-1],g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?T('boss'):T('room',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',...eggRw(g)].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
  haptic(o.full?'heavy':'medium');
 }
@@ -1003,12 +1005,14 @@ function renderWd(){const el=$('p-wd');
  const D=wdData,A=D.acc,mn=D.min[wdCur],left=Math.max(0,Math.round((D.cap-D.used)*100)/100),mx=Math.max(0,Math.floor(Math.min(D.bal,left)*100+1e-6)/100); // 21.11 (Влад): більше, ніж є на балансі (і в ліміті), ввести не можна
  const SB0=D.subs||{},subOk=['news','chat','pay'].every(k=>SB0[k]==='in');
  const subBad=['news','chat'].some(k=>SB0[k]==='kicked'),subErr=['news','chat'].some(k=>SB0[k]==='err');
- const why=!A.ok?T('wd_need'):!subOk?T(subBad?'wd_sub_ban':subErr?'wd_sub_err':'wd_need_subs'):!D.wallet?T('wd_need_wallet'):D.pending?T('wd_pending_t'):D.bal<=0?T('wd_empty'):D.bal<mn?T('wd_low',{m:mn}):left<mn?T('wd_cap_t'):'';
+ const why=!A.ok?T('wd_need'):!subOk?T(subBad?'wd_sub_ban':subErr?'wd_sub_err':'wd_need_subs'):!D.wallet?T('wd_need_wallet'):!D.proved?T('wd_need_proof'):D.pending?T('wd_pending_t'):D.bal<=0?T('wd_empty'):D.bal<mn?T('wd_low',{m:mn}):left<mn?T('wd_cap_t'):'';
  let h=`<div class="card"><h4>💸 ${T('wd_bal')}</h4><div class="wdbal">$${D.bal.toFixed(2)}</div><p class="hint" style="margin:4px 0 0">${T('wd_bal_hint')}</p></div>`;
  h+=`<div class="card"><h4>🔓 ${T('wd_acc')}</h4><p style="margin:4px 0">${A.lvl>=A.needLvl?'✅':'⏳'} ${T('wd_acc_lvl',{n:Math.min(A.lvl,A.needLvl),m:A.needLvl})}</p><p style="margin:4px 0">${A.days>=A.needDays?'✅':'⏳'} ${T('wd_acc_days',{n:Math.min(A.days,A.needDays),m:A.needDays})}</p></div>`;
  // 14.11 (Влад): обов'язкові підписки на канал новин і чат гри — без них вивід недоступний
  h+=`<div class="card wdsubs"><h4>📌 ${T('wd_subs_t')}</h4><p class="hint" style="margin:0 0 6px">${T('wd_subs_h')}</p>`+[['news','📢','GRIMTALENEWS'],['chat','💬','GRIMTALECHAT'],['pay','💸','GRIMTALEPAYOUTS']].map(([k,ic,u])=>{const st=SB0[k];return `<div class="wdsub"><span>${st==='in'?'✅':st==='err'?'⚠️':st==='kicked'?'⛔':'❌'} ${ic} ${T('wd_sub_'+k)} <span class="hint" style="margin:0">@${u}</span></span>${st==='out'||!st?`<button class="btn" data-wdsub="${u}">${T('wd_sub_go')}</button>`:''}</div>`}).join('')+(subOk||subBad?'':`<div class="row" style="margin-top:6px"><button class="btn pri" id="wdSubChk">🔄 ${T('wd_sub_chk')}</button></div>`)+(subBad?`<p class="hint" style="margin:6px 0 0">${T('wd_sub_ban')}</p>`:subErr?`<p class="hint" style="margin:6px 0 0">${T('wd_sub_err')}</p>`:'')+`</div>`;
- h+=`<div class="card"><h4>👛 ${T('wd_wallet')}</h4>${D.wallet?`<p class="wdaddr">${esc(D.wallet)}</p>`:''}<p class="hint" style="margin:0 0 6px">${T('wd_wallet_hint')}</p><div class="row" style="gap:8px;align-items:center"><input id="wdAddr" class="inp" placeholder="UQ… / EQ…" autocomplete="off" spellcheck="false"><button class="btn" id="wdAddrGo" ${A.ok?'':'disabled'}>${D.wallet?T('wd_change'):T('wd_save')}</button></div>${A.ok?'':`<p class="hint" style="margin:6px 0 0">${T('wd_wallet_acc')}</p>`}</div>`;
+ // 22.11 (Влад): гаманець — лише кнопкою «Підключити гаманець» (TON Connect з доказом власника); у Walt адреси GRAM і USDT різні, тож ручне поле прибрано
+ const wOk=D.wallet&&D.proved;
+ h+=`<div class="card"><h4>👛 ${T('wd_wallet')}</h4>${D.wallet?`<p class="wdaddr">${esc(D.wallet)}</p><p class="hint" style="margin:0 0 6px">${wOk?'✅ '+T('wd_proved'):'⚠️ '+T('wd_need_proof')}</p>`:''}${wOk?'':`<p class="hint" style="margin:0 0 8px">${T('wd_wallet_hint')}</p>`}<button class="btn${wOk?'':' pri'}" id="wdConn" ${A.ok?'':'disabled'}>🔗 ${T(wOk?'wd_conn_other':'wd_conn')}</button>${A.ok?'':`<p class="hint" style="margin:6px 0 0">${T('wd_wallet_acc')}</p>`}</div>`;
  h+=`<div class="card"><h4>📤 ${T('wd_out')}</h4><div class="chips">${['gram','usdt'].map(c=>`<button data-wdc="${c}" class="${wdCur===c?'act':''}">${c==='gram'?'GRAM':'USDT'} (TON) · ${T('wd_from',{m:D.min[c]})}</button>`).join('')}</div><p class="hint" style="margin:6px 0">${T('wd_lim',{l:left.toFixed(2),c:D.cap})}</p><div class="row" style="gap:8px;align-items:center"><input id="wdUsd" class="inp" type="number" min="${mn}" max="${mx}" step="0.01" inputmode="decimal" placeholder="$ ${mn}–${mx.toFixed(2)}"><button class="btn" id="wdMax" ${why?'disabled':''}>${T('wd_max')}</button><button class="btn pri" id="wdGo" ${why?'disabled':''}>${T('wd_go')}</button></div>${why?`<p class="hint" style="margin:6px 0 0">${why}</p>`:''}<p class="hint" style="margin:6px 0 0">${T('wd_note')}</p></div>`;
  const R=D.ref||{sum:0,list:[]};h+=`<div class="card"><h4>👥 ${T('wd_ref')}</h4><p style="margin:4px 0"><b>${T('wd_ref_sum',{n:R.sum.toFixed(2)})}</b></p><p class="hint" style="margin:0 0 6px">${T('wd_ref_hint')}</p>`+(R.list.length?R.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${x.usd<0?'↩️ −':'💵 +'}$${Math.abs(x.usd).toFixed(2)} · ${T('wd_ref_lv',{n:x.lv})}</span><span class="hint" style="margin:0">${dt(x.at)}</span></div>`).join(''):`<p class="hint" style="margin:0">${T('wd_ref_none')}</p>`)+`</div>`+refsCard('wd'); // 13.11 (Влад): нарахування з покупок рефералів
  if((D.prizes||[]).length)h+=`<div class="card"><h4>🏆 ${T('wd_prizes')}</h4>`+D.prizes.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>💵 +$${Number(x.usd).toFixed(2)} · ${x.kind==='wboss'?'🩸':x.kind==='rating'?'⚔️':'💪'} #${Number(x.place)}</span><span class="hint" style="margin:0">${x.hold?'⏳ '+T('wd_hold',{d:dt(x.hold)}):dt(x.at)}</span></div>`).join('')+`</div>`; // 16.11: призи тижня з пулу; hold — ще не на балансі
@@ -1023,8 +1027,7 @@ function renderWd(){const el=$('p-wd');
  el.querySelectorAll('[data-wdc]').forEach(b=>b.onclick=()=>{wdCur=b.dataset.wdc;dirty.wd=1;flush()});
  el.querySelectorAll('[data-wdsub]').forEach(b=>b.onclick=()=>{haptic('light');tgOpen('https://t.me/'+b.dataset.wdsub)});
  if($('wdSubChk'))$('wdSubChk').onclick=()=>{const b=$('wdSubChk');b.disabled=true;api('wdInfo',{fresh:1}).then(r=>{wdData=r.out;wdAt=Date.now();const S2=r.out.subs||{},ok=['news','chat','pay'].every(k=>S2[k]==='in');toast(T(ok?'wd_sub_ok':Object.values(S2).includes('kicked')?'wd_sub_ban':Object.values(S2).includes('err')?'wd_sub_err':'wd_sub_no'));haptic(ok?'medium':'light');dirty.wd=1;flush()}).catch(e=>{toast(errT(e));b.disabled=false})};
- $('wdAddrGo').onclick=()=>{const a=$('wdAddr').value.trim();if(!a){toast(T('wd_addr_empty'));return}
-  modal(`<div class="big">👛</div><p class="wdaddr">${esc(a)}</p><p>${T('wd_bind_q')}</p>`,T('wd_save'),()=>api('wdWallet',{addr:a}).then(()=>{toast(T('wd_saved'));$('wdAddr').value='';wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e))),null,'wdbind')};
+ $('wdConn').onclick=()=>{if(D.wallet&&D.proved)modal(`<div class="big">👛</div><p>${T('wd_bind_q')}</p>`,T('wd_conn'),()=>{wdConnect()},null,'wdbind');else wdConnect()};
  $('wdUsd').oninput=()=>{const i=$('wdUsd'),v=+i.value;if(v>mx){i.value=mx.toFixed(2);toast(T('wd_over',{m:mx.toFixed(2)}))}};
  $('wdMax').onclick=()=>{$('wdUsd').value=mx.toFixed(2)};
  $('wdGo').onclick=()=>{const u=Math.floor((+$('wdUsd').value||0)*100+1e-6)/100;if(u<mn){toast(T('wd_low',{m:mn}));return}
@@ -1163,6 +1166,32 @@ const SHOP_DESC={newb:'shop_d_newb',inc12:'shop_d_inc12',inc24:'shop_d_inc24',as
 const shortAddr=a=>{if(!a)return '';try{if(window.TON_CONNECT_UI&&TON_CONNECT_UI.toUserFriendlyAddress)a=TON_CONNECT_UI.toUserFriendlyAddress(a)}catch(e){}return String(a).slice(0,4)+'…'+String(a).slice(-4)};
 function vipActive(){return (G&&G.vip||0)>Date.now()}
 function vipLine(k){const n=k==='starter'?3:VIP_D[k];if(!n||!vipActive())return '';return `<p class="hint" style="color:var(--gold)">${T('shop_vip_on',{d:dt(G.vip)})} — ${T('shop_vip_ext',{n,d:dt(G.vip+n*864e5)})}</p>`} // 13.11 (Влад): VIP активний — покупка продовжить дні
+let wdConnS=null; // 22.11: поточна сесія підключення гаманця для виводу {busy, offs, timer}
+function wdEnd(S){S=S||wdConnS;if(!S)return;S.offs.forEach(f=>{try{f()}catch(e){}});S.offs=[];clearTimeout(S.timer);if(wdConnS===S){wdConnS=null;try{tcUI&&tcUI.setConnectRequestParameters(null)}catch(e){}}}
+async function wdConnect(){ // 22.11 (Влад): гаманець для виводу — TON Connect з ton_proof; сервер перевіряє підпис власника (payout.ts → tonproof.ts)
+ if(wdConnS&&wdConnS.busy)return; // подвійне натискання
+ wdEnd();const S={busy:true,offs:[],timer:0};wdConnS=S;
+ let ui,pl;
+ try{ui=await loadTC();try{await ui.connectionRestored}catch(e){} // спершу дочекатися відновлення старого з'єднання (магазин), інакше воно прийде в нашу підписку
+  pl=(await api('wdProof')).out.payload}catch(e){wdEnd(S);toast(errT(e));return}
+ if(wdConnS!==S)return;
+ try{if(ui.connected)await ui.disconnect()}catch(e){} // доказ власника гаманець дає лише при новому підключенні
+ if(wdConnS!==S)return;
+ ui.setConnectRequestParameters({state:'ready',value:{tonProof:pl}});
+ S.offs.push(ui.onStatusChange(w=>{if(!w||wdConnS!==S)return;
+   const tp=w.connectItems&&w.connectItems.tonProof,a=w.account||{};
+   if(tp&&tp.proof&&tp.proof.payload!==pl)return; // чужий доказ (старе підключення) — не наш
+   wdEnd(S);
+   if(!tp||!tp.proof){toast(T('wd_conn_noproof'));try{ui.disconnect()}catch(e){}return}
+   toast(T('wd_conn_wait'));
+   api('wdWallet',{addr:a.address,chain:a.chain,si:a.walletStateInit,pub:a.publicKey,proof:tp.proof,app:(w.device&&w.device.appName)||''})
+    .then(()=>{toast(T('wd_conn_ok'));haptic('medium');wdData=null;dirty.wd=1;flush()}).catch(e=>toast(errT(e)));
+  },()=>{}));
+ if(ui.onModalStateChange)S.offs.push(ui.onModalStateChange(st=>{if(wdConnS===S&&st&&st.status==='closed'&&st.closeReason==='action-cancelled'){wdEnd(S);toast(T('wd_conn_cancel'))}}));
+ S.timer=setTimeout(()=>wdEnd(S),10*60e3); // покинуте підключення не висить вічно
+ S.busy=false;
+ try{await ui.openModal()}catch(e){wdEnd(S);toast(errT(e))}
+}
 function loadTC(){ // TON Connect вантажимо лише тоді, коли гравець обирає оплату криптою
  if(tcUI)return Promise.resolve(tcUI);
  if(!tcLoading)tcLoading=new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://unpkg.com/@tonconnect/ui@2/dist/tonconnect-ui.min.js';sc.onload=()=>{try{tcUI=new TON_CONNECT_UI.TonConnectUI({manifestUrl:new URL('tonconnect-manifest.json',location.href).href});tcUI.onStatusChange(()=>{dirty.shop=1;flush()});ok(tcUI)}catch(e){no(e)}};sc.onerror=()=>{tcLoading=null;no(new Error('net'))};document.head.appendChild(sc)});
@@ -1637,7 +1666,7 @@ function renderRank(){
 // дія на сервері: блокує кнопки, показує помилки
 async function act(a,args,ok){
  if(busy)return;busy=true;renderBoss();
- try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/ad_gap|ad_limit|inc2_paused|inc2_rent_end|no_egg|pet_ready/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
+ try{const r=await api(a,args);ok&&ok(r);afterSync(r);return r}catch(e){toast(errT(e));if(e&&(e.code==='price_changed'||String(e.message||e).includes('price_changed')))setTimeout(()=>sync(),50);if(/wb_fled/.test(String(e&&e.message||e))){wbData=null;setTimeout(()=>sync(true),50)}if(/ad_gap|ad_limit|inc2_paused|inc2_rent_end|no_egg|pet_ready/.test(String(e&&e.message||e)))setTimeout(()=>sync(true),50)}finally{busy=false;renderBoss();paintArena()}
 }
 
 // ---------- модалки ----------
@@ -1842,7 +1871,7 @@ function renderQuest(){
  
  h+=`<p class="hint">${T('pass_hint')}</p>`;
  el.innerHTML=pvT+h;passBuyBind(el);el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});if($('peAll'))$('peAll').onclick=()=>{passAll=!passAll;renderQuest()};
- $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
+ $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?(o.eggs-(o.eggR||0)>0?' '+eggIc('c')+'×'+(o.eggs-(o.eggR||0)):'')+(o.eggR?' '+eggIc('r')+' '+T('egg_r')+' ×'+o.eggR:''):''));haptic('medium')});
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
 let adCtl=null,adLoading=false,adQ=[];
@@ -1931,17 +1960,39 @@ function renderColl(){
 let wbData=null,wbBusy=false,wbAt=0;
 // 15.11 (реліз боса, Влад «усе А» попередньо): вікно Боса сервера — Граф Упир (відео-петля), спроби, 4 удари, рейтинги: тиждень / грошова ліга / клани
 let wbTab='week';
+// 22.11 (Влад): Граф утік — вкладка лишається з підсумками: до закриття тижня — рейтинг шкоди й очікувані призи, після — хто скільки отримав (Попіл і гроші)
+function wbWkL(wk){const a=new Date(Date.parse(wk+'T00:00:00Z')),b=new Date(a.getTime()+6*864e5),z=n=>String(n).padStart(2,'0');return `${z(a.getUTCDate())}–${z(b.getUTCDate())}.${z(b.getUTCMonth()+1)}`}
+function wbGone(el,D){const R=D.res,hm=t=>{const d=new Date(t),z=n=>String(n).padStart(2,'0');return z(d.getHours())+':'+z(d.getMinutes())};
+ let h=`<div class="sbx sbx-gone"><img class="sbx-v" src="assets/boss/upyr_poster.jpg?v=1" alt=""><div class="sbx-o"><div class="sbx-nm">${T('sbx_gone_t')}</div><div class="sbx-lv">${R?T('sbx_gone_res',{w:wbWkL(R.week)}):T('sbx_gone_pre',{t:hm(D.end)})}</div></div></div>`;
+ if(!R){ // тиждень ще не закрито: рейтинг шкоди заморожено, призи — орієнтовні
+  const cm=D.cashMe?(D.cash||[]).find(x=>x.place===D.cashMe.place):null;
+  h+=`<div class="dstat sbst"><div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div><div><span>⚔️</span><b>${D.me?fmt(D.me.dmg):'—'}</b><small>${T('sbx_gone_dmg')}</small></div><div><span>💵</span><b>${cm&&cm.usd>0?usdF(cm.usd):'—'}</b><small>${T('sbx_gone_est')}</small></div></div>
+  <div class="chips sbx-tabs">${['week','cash','clan'].map(k=>`<button data-wbt="${k}" class="${wbTab===k?'act':''}">${T('sbx_tab_'+k)}</button>`).join('')}</div>`;
+  if(wbTab==='week')h+=`<div class="card"><div class="rank">`+((D.top||[]).length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_prizes')}</p></div>`;
+  else if(wbTab==='cash')h+=`<div class="card"><h4>💰 ${T('sbx_cash_t')}${D.pot>0?' · '+usdF(D.pot):''} · 👥 ${D.cashN||0}</h4><div class="rank">`+((D.cash||[]).length?D.cash.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${x.usd>0?usdF(x.usd):x.pct+'%'}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_gone_est_h')}</p></div>`;
+  else h+=`<div class="card"><div class="rank">`+((D.clans||[]).length?D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>';
+ }else if(R.pending){h+=`<div class="card"><p class="hint" style="margin:0">${T('sbx_gone_pend')}</p></div>`}
+ else{const M=R.me;
+  h+=`<div class="card">${M?`<p style="margin:0 0 4px"><b>${T('sbx_res_me',{p:M.place,d:fmt(M.dmg)})}</b></p><p style="margin:0">⚱️ ${fmt(M.ash)}${M.usd>0?` · 💵 ${usdF(M.usd)}${M.hold?' ⏳ '+T('sbx_res_hold'):''}`:''}</p>`:`<p class="hint" style="margin:0">${T('sbx_res_none')}</p>`}</div>
+  <div class="chips sbx-tabs">${['pl','clan'].map(k=>`<button data-wbt="${k==='pl'?'week':'clan'}" class="${(wbTab==='clan')===(k==='clan')?'act':''}">${T(k==='pl'?'sbx_tab_pl':'sbx_tab_clan')}</button>`).join('')}</div>`;
+  if(wbTab!=='clan')h+=`<div class="card"><div class="rank">`+(R.rows.length?R.rows.map(x=>`<div class="${x.me?'me':''}"><b>${x.place<=3?['🥇','🥈','🥉'][x.place-1]:x.place}</b><span>${penI(x.pn)}${esc(x.name)}<small style="display:block;opacity:.65">⚔️ ${fmt(x.dmg)}</small></span><i>⚱️${fmt(x.ash)}${x.usd>0?`<br><small style="color:#7fe08f">💵 ${usdF(x.usd)}${x.hold?' ⏳':''}</small>`:''}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_res_hint')}</p></div>`;
+  else h+=`<div class="card"><div class="rank">`+(R.clans.length?R.clans.map(x=>`<div><b>${x.place}</b><span>${esc(x.name)}<small style="display:block;opacity:.65">⚔️ ${fmt(x.dmg)}</small></span><i>⚱️${fmt(x.ash)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>';
+ }
+ setH(el,h);iconize(el);el.querySelectorAll('[data-wbt]').forEach(b=>b.onclick=()=>{wbTab=b.dataset.wbt;wbGone(el,D)});
+ live('wboss',()=>api('wbInfo').then(r=>r.out),o=>{if(!o||same(o,wbData))return false;wbData=o;return true},6e4);
+}
 function renderWb(){
- if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return}
+ if(V.wb&&V.wb.off&&!V.wb.gone){tab='arena';lastSub.arena='arena';showPane();return}
  const W=V.wb,el=$('p-wboss');
- if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
- if(wbData&&Date.now()-wbAt>6e4)wbData=null;
- if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(!W||(!W.gone&&G.maxStage<W.stage)){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
+ if(wbData&&Date.now()-wbAt>(wbData.flee?8e3:6e4))wbData=null; // під час втечі Графа — частіше, щоб здоров'я й таймер рухались
+ if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{if(/wb_fled/.test(String(e&&e.message||e))&&!(V&&V.wb&&V.wb.gone)){if(V&&V.wb){V.wb.off=1;V.wb.gone=1}tab='arena';lastSub.arena='arena';setTimeout(()=>sync(true),50)}toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(W.gone){wbGone(el,wbData);return}
  const D=wbData,B0=D.boss,rest=!!(B0.back&&B0.back>Date.now()),kind=rest?'':W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price; // 18.11 (Влад «А»): rest — бос повалений, відпочиває 30 хв
  if(D.ready===false){el.innerHTML=`<div class="empty">${(ERR&&ERR.wb_soon)||T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
  let h=`<div class="sbx"><video class="sbx-v" src="assets/boss/upyr_idle.mp4?v=1" poster="assets/boss/upyr_poster.jpg?v=1" autoplay muted loop playsinline></video>
-  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>
+  <div class="sbx-o"><div class="sbx-nm">${T('sbx_name')}</div><div class="sbx-lv">${T('sbx_lvl',{n:B0.lvl})}${B0.lvl>1?' · '+T('sbx_rage'):''} · ${T('sbx_end',{t:tLeft(D.end-Date.now())})}</div>${D.flee&&D.flee>Date.now()?`<div class="sbx-flee">🦇 ${T('sbx_flee',{t:mmss(D.flee-Date.now())})}</div>`:''}
   ${rest?`<div class="sbx-rest"><b>☠️ ${T('sbx_down')}</b><span>${T('sbx_down_by',{n:esc(B0.by||'')})}</span><span>${T('sbx_back')} <b class="wbcd">${mmss(B0.back-Date.now())}</b> · ❤️ ${fmt(B0.hp_max)}</span></div>`:`<div class="sbx-hp"><i style="width:${Math.max(2,B0.hp/B0.hp_max*100)}%"></i><span>❤️ ${fmt(B0.hp)} / ${fmt(B0.hp_max)}</span></div>`}</div></div>
   ${D.champ?`<div class="sbx-champ">${T('sbx_champ',{n:esc(D.champ.name)})}</div>`:''}
   <div class="dstat sbst"><div><span>🎟️</span><b>${W.left}/${W.free}</b><small>${T('sbx_free')}</small></div>${W.packLeft?`<div><span>📦</span><b>${W.packLeft}</b><small>${T('sbx_pack')}</small></div>`:`<div><span>${RIC('ash')}</span><b>${W.paidLeft?fmt(W.price):'—'}</b><small>${T('sbx_next')}</small></div>`}<div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div></div>
@@ -2007,7 +2058,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):g==='dng'&&V&&V.swamp?[['dng','dsub_dng'],['sw','dsub_sw']]:null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off&&!V.wb.gone?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):g==='dng'&&V&&V.swamp?[['dng','dsub_dng'],['sw','dsub_sw']]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
@@ -2025,10 +2076,11 @@ const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
 function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
- if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
+ if(V&&V.wb&&V.wb.gone){$('sBosT').textContent=T('sbx_gone_pill');$('sBosC').textContent='🏆';return} // 22.11 (Влад): після втечі — веде до підсумків тижня // нд 22.11 12:00: Граф утік — кнопки боса більше немає
+ if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):V.wb.flee&&V.wb.flee>Date.now()?'🦇 '+mmss(V.wb.flee-Date.now()):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
  const l=sbLeft();
  $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
-function sbOpen(){haptic('medium');if(V&&V.wb&&!V.wb.off){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
+function sbOpen(){haptic('medium');if(V&&V.wb&&(!V.wb.off||V.wb.gone)){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
  modal(`<div class="sbw"><div class="sbart"><img src="assets/boss_teaser.webp?v=1" alt=""><i class="sbeye l"></i><i class="sbeye r"></i><i class="sbcrk"></i><i class="sbfog a"></i><i class="sbfog b"></i><i class="sbbat b1"></i><i class="sbbat b2"></i><i class="sbbat b3"></i></div>
   <div class="sbtag">${T('sb_tag')}</div><h3 class="sbh">${T('sb_t')}</h3><p class="sbq">${T('sb_q')}</p>
   <div class="sbcdw"><span>${T(l?'sb_in':'sb_soon_t')}</span><b id="sbCd">${l?sbHms(l):T('sb_soon')}</b></div>
