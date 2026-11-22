@@ -413,3 +413,10 @@ Object.assign(window.I18N.ru.err,{wd_wallet:'Сначала подключи к�
 Object.assign(window.I18N.uk.err,{wd_proof_net:'Мережа TON зараз не відповідає — спробуй підключити ще раз за хвилину'});
 Object.assign(window.I18N.en.err,{wd_proof_net:'The TON network is not responding — try connecting again in a minute'});
 Object.assign(window.I18N.ru.err,{wd_proof_net:'Сеть TON сейчас не отвечает — попробуй подключить ещё раз через минуту'});
+// 22.11 (Влад): оплата в магазині з балансу виводу
+Object.assign(window.I18N.uk.t,{shop_bal_btn:'З балансу · ${x}',shop_bal_t:'З балансу виводу',shop_bal_have:'на балансі ${b}',shop_bal_q:'Оплатити ${x} з балансу виводу? На балансі залишиться ${b}.',shop_bal_go:'Оплатити'});
+Object.assign(window.I18N.uk.err,{bal_low:'На балансі недостатньо коштів'});
+Object.assign(window.I18N.en.t,{shop_bal_btn:'From balance · ${x}',shop_bal_t:'From withdrawal balance',shop_bal_have:'balance ${b}',shop_bal_q:'Pay ${x} from your withdrawal balance? ${b} will remain.',shop_bal_go:'Pay'});
+Object.assign(window.I18N.en.err,{bal_low:'Not enough funds on your balance'});
+Object.assign(window.I18N.ru.t,{shop_bal_btn:'С баланса · ${x}',shop_bal_t:'С баланса вывода',shop_bal_have:'на балансе ${b}',shop_bal_q:'Оплатить ${x} с баланса вывода? На балансе останется ${b}.',shop_bal_go:'Оплатить'});
+Object.assign(window.I18N.ru.err,{bal_low:'На балансе недостаточно средств'});

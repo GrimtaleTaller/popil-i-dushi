@@ -1013,7 +1013,7 @@ function renderWd(){const el=$('p-wd');
  // 22.11 (Влад): гаманець — лише кнопкою «Підключити гаманець» (TON Connect з доказом власника); у Walt адреси GRAM і USDT різні, тож ручне поле прибрано
  const wOk=D.wallet&&D.proved;
  h+=`<div class="card"><h4>👛 ${T('wd_wallet')}</h4>${D.wallet?`<p class="wdaddr">${esc(D.wallet)}</p><p class="hint" style="margin:0 0 6px">${wOk?'✅ '+T('wd_proved'):'⚠️ '+T('wd_need_proof')}</p>`:''}${wOk?'':`<p class="hint" style="margin:0 0 8px">${T('wd_wallet_hint')}</p>`}<button class="btn${wOk?'':' pri'}" id="wdConn" ${A.ok?'':'disabled'}>🔗 ${T(wOk?'wd_conn_other':'wd_conn')}</button>${A.ok?'':`<p class="hint" style="margin:6px 0 0">${T('wd_wallet_acc')}</p>`}</div>`;
- h+=`<div class="card"><h4>📤 ${T('wd_out')}</h4><div class="chips">${['gram','usdt'].map(c=>`<button data-wdc="${c}" class="${wdCur===c?'act':''}">${c==='gram'?'GRAM':'USDT'} (TON) · ${T('wd_from',{m:D.min[c]})}</button>`).join('')}</div><p class="hint" style="margin:6px 0">${T('wd_lim',{l:left.toFixed(2),c:D.cap})}</p><div class="row" style="gap:8px;align-items:center"><input id="wdUsd" class="inp" type="number" min="${mn}" step="0.01" inputmode="decimal" placeholder="$ ${mn}+"><button class="btn pri" id="wdGo" ${why?'disabled':''}>${T('wd_go')}</button></div>${why?`<p class="hint" style="margin:6px 0 0">${why}</p>`:''}<p class="hint" style="margin:6px 0 0">${T('wd_note')}</p></div>`;
+ h+=`<div class="card"><h4>📤 ${T('wd_out')}</h4><div class="chips">${['gram','usdt'].map(c=>`<button data-wdc="${c}" class="${wdCur===c?'act':''}">${c==='gram'?'GRAM':'USDT'} (TON) · ${T('wd_from',{m:D.min[c]})}</button>`).join('')}</div>${D.cap<1000?`<p class="hint" style="margin:6px 0">${T('wd_lim',{l:left.toFixed(2),c:D.cap})}</p>`:''}<div class="row" style="gap:8px;align-items:center"><input id="wdUsd" class="inp" type="number" min="${mn}" step="0.01" inputmode="decimal" placeholder="$ ${mn}+"><button class="btn pri" id="wdGo" ${why?'disabled':''}>${T('wd_go')}</button></div>${why?`<p class="hint" style="margin:6px 0 0">${why}</p>`:''}<p class="hint" style="margin:6px 0 0">${T('wd_note')}</p></div>`;
  const R=D.ref||{sum:0,list:[]};h+=`<div class="card"><h4>👥 ${T('wd_ref')}</h4><p style="margin:4px 0"><b>${T('wd_ref_sum',{n:R.sum.toFixed(2)})}</b></p><p class="hint" style="margin:0 0 6px">${T('wd_ref_hint')}</p>`+(R.list.length?R.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${x.usd<0?'↩️ −':'💵 +'}$${Math.abs(x.usd).toFixed(2)} · ${T('wd_ref_lv',{n:x.lv})}</span><span class="hint" style="margin:0">${dt(x.at)}</span></div>`).join(''):`<p class="hint" style="margin:0">${T('wd_ref_none')}</p>`)+`</div>`+refsCard('wd'); // 13.11 (Влад): нарахування з покупок рефералів
  if((D.prizes||[]).length)h+=`<div class="card"><h4>🏆 ${T('wd_prizes')}</h4>`+D.prizes.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>💵 +$${Number(x.usd).toFixed(2)} · ${x.kind==='wboss'?'🩸':x.kind==='rating'?'⚔️':'💪'} #${Number(x.place)}</span><span class="hint" style="margin:0">${x.hold?'⏳ '+T('wd_hold',{d:dt(x.hold)}):dt(x.at)}</span></div>`).join('')+`</div>`; // 16.11: призи тижня з пулу; hold — ще не на балансі
  if(D.list.length)h+=`<div class="card"><h4>🧾 ${T('wd_hist')}</h4>`+D.list.map(x=>`<div class="row" style="justify-content:space-between;margin:4px 0"><span>${WD_ST[x.status]||''} $${Number(x.usd).toFixed(2)} · ${String(x.cur).toUpperCase()}</span><span class="hint" style="margin:0">${dt(x.created_at)} · ${T('wd_st_'+x.status)}</span></div>`).join('')+`</div>`;
@@ -1234,6 +1234,7 @@ function renderShop(){
     <button class="btn pri" data-buy="${it.k}" data-m="stars"${soon?' disabled':''}>⭐ ${it.stars}</button>
     ${it.gram?`<button class="btn" data-buy="${it.k}" data-m="gram"${soon?' disabled':''}>💎 ${it.gram} GRAM</button>`:''}
     <button class="btn" data-buy="${it.k}" data-m="usdt"${soon?' disabled':''}>💵 ${it.usd.toFixed(2)} USDT</button></div>
+    ${!soon&&(S.bal||0)>=it.usd?`<button class="btn shbalb" data-bal="${it.k}" style="width:100%;margin-top:6px">💰 ${T('shop_bal_btn',{x:it.usd.toFixed(2)})}</button>`:''}
     <button class="btn shoth" data-other="${it.k}"${soon?' disabled':''}>${T('shop_other_link')} ›</button>`}</div>`;
  }
  if(ssub==='deal')h+=`<button class="btn shmore" id="shAll">${T('ssub_more')} ›</button>`;
@@ -1251,6 +1252,7 @@ function renderShop(){
   if(m==='usdt'&&!seen)modal(`<div class="big">💵</div><h3>${T('usdt_hint_t')}</h3><p class="hint">${T('usdt_hint')}</p>`,T('usdt_hint_ok'),()=>{try{localStorage.setItem('gtUsdtHint','1')}catch(e){}setTimeout(()=>shopBuy(k,m),50)});
   else shopBuy(k,m)});
  el.querySelectorAll('[data-other]').forEach(b=>b.onclick=e=>{e.preventDefault();if(!soon)shopOther(b.dataset.other)});
+ el.querySelectorAll('[data-bal]').forEach(b=>b.onclick=()=>shopBal(b.dataset.bal)); // 22.11 (Влад): оплата з балансу виводу
  if($('shOff'))$('shOff').onclick=()=>tcUI&&tcUI.disconnect();
  if($('shAll'))$('shAll').onclick=()=>{ssub='vip';dirty.shop=1;flush();renderSub()};
  if($('shRn'))$('shRn').onclick=renameAsk;
@@ -1268,14 +1270,19 @@ const netName=n=>{const x=OTH_NET.find(y=>y[0]===n);return x?x[2]+' · '+x[3]:n}
 function shopOther(k){
  const it=shopData.items.find(x=>x.k===k);if(!it)return;const on=shopData.nets||[],w=tcUI&&tcUI.account;
  const h=`<div class="big">🪙</div><h3>${T('shop_other_t')}</h3><p class="hint" style="text-align:center">${T('shop_i_'+k)} · $${it.usd.toFixed(2)}${it.pool?' · '+T('shop_pool_add',{x:Math.max(1,Math.round(it.pool.crypto))}):''}</p>
-  <div class="othl">${OTH_NET.map(([n,ic,c,nt])=>{const mn=(shopData.mins||{})[n]||0,low=mn&&it.usd<mn&&!V.isAdmin,ok=on.includes(n)&&!low;return `<button class="btn oth" data-pm="${n}"${ok?'':' disabled'}>${ic}<span><b>${c}</b><small>${T('net_w')} ${nt}</small></span><em>${!on.includes(n)?T('shop_soon_s'):mn?T('from_usd',{x:mn}):''}</em></button>`}).join('')}</div>
+  <div class="othl"><button class="btn oth" data-pbal="1"${(shopData.bal||0)>=it.usd?'':' disabled'}>💰<span><b>${T('shop_bal_t')}</b><small>${T('shop_bal_have',{b:(shopData.bal||0).toFixed(2)})}</small></span><em></em></button>${OTH_NET.map(([n,ic,c,nt])=>{const mn=(shopData.mins||{})[n]||0,low=mn&&it.usd<mn&&!V.isAdmin,ok=on.includes(n)&&!low;return `<button class="btn oth" data-pm="${n}"${ok?'':' disabled'}>${ic}<span><b>${c}</b><small>${T('net_w')} ${nt}</small></span><em>${!on.includes(n)?T('shop_soon_s'):mn?T('from_usd',{x:mn}):''}</em></button>`}).join('')}</div>
   <p class="hint">${on.length?T('shop_oth_hint'):T('shop_oth_soon')}</p>
   <div class="pmw"><span>${T('shop_wallet_t')}</span><button class="btn" id="pmW">${w?shortAddr(w.address)+' ▾':T('shop_wallet_conn')}</button></div>`;
  modal(h,null,null,()=>{
   $('pmW').onclick=async()=>{try{const ui=await loadTC();if(ui.account){await ui.disconnect()}await tcWallet()}catch(e){}queue.shift();showModal();shopOther(k)};
   document.querySelectorAll('#mbox [data-pm]').forEach(b=>b.onclick=()=>{if(b.disabled)return;queue.shift();showModal();shopBuy(k,'net',b.dataset.pm)});
+  document.querySelectorAll('#mbox [data-pbal]').forEach(b=>b.onclick=()=>{if(b.disabled)return;queue.shift();showModal();shopBal(k)});
  },'oth');
 }
+function shopBal(k){ // 22.11 (Влад): оплата з балансу виводу — сервер списує й видає товар одразу (purchase_bal)
+ const it=shopData&&shopData.items.find(x=>x.k===k);if(!it)return;const b=shopData.bal||0;
+ if(b<it.usd){toast(ERR.bal_low||T('shop_fail'));return}
+ modal(`<div class="big">💰</div><h3>${T('shop_i_'+k)}</h3><p>${T('shop_bal_q',{x:it.usd.toFixed(2),b:(Math.round((b-it.usd)*100)/100).toFixed(2)})}</p>`,T('shop_bal_go'),()=>{shopBuy(k,'bal')},null,'shbal')}
 async function shopBuy(item,m,asset){
  if(busy)return;
  try{
@@ -1285,6 +1292,7 @@ async function shopBuy(item,m,asset){
    w.openInvoice(r.out.link,st=>{if(st==='paid'){toast(T('shop_ok_t'));shopPaid();setTimeout(sync,3000)}else if(st==='failed')toast(T('shop_fail'));else if(st==='cancelled')toast(T('shop_cancel'))});
    return;
   }
+  if(m==='bal'){const r=await api('shopBuy',{item,m});toast(T('shop_ok_t'));if(shopData)shopData.bal=r.out.bal;wdChip(r.out.bal);wdData=null;shopPaid();return}
   if(m==='net'){const r=await api('shopBuy',{item,m,asset});netInvoice(r.out);return}
   if(m==='cpay'){const r=await api('shopBuy',{item,m,asset});const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(r.out.link);else window.open(r.out.link,'_blank','noopener');toast(T('shop_wait_cp'));shopWatch(r.out.id,0);return}
   const addr=await tcWallet();if(!addr){toast(errT(new Error('no_wallet')));return}
