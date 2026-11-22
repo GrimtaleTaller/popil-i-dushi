@@ -921,6 +921,12 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .apick.on{opacity:1}
 .apick small{font-size:11px;color:var(--muted,#9a9aa2)}
 .apick i{position:absolute;top:-4px;right:-4px;background:var(--green,#3bb273);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:18px;text-align:center;font-style:normal}
+/* 21.11: 📌 закріпити річ — маленький значок у лівому нижньому куті іконки (картка не росте); світла рамка — не закріплена, золота з сяйвом — закріплена (21.11: яскравіше, Влад «занадто сіра») */
+.icx{position:relative;flex:0 0 auto}
+.icx .lkb{position:absolute;left:-10px;bottom:-9px;font:inherit;font-size:12px;line-height:1;background:#3a2c30;border:1px solid #b89a86;border-radius:50%;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.6)}
+.icx .lkb::before{content:'';position:absolute;inset:-8px}
+.icx .lkb.on{background:#5a4320;border:2px solid #f0cf72;box-shadow:0 0 7px rgba(240,207,114,.75)}
+.icx .lkb:active{transform:scale(.9)}
 .sbx-flee{margin-top:4px;color:#ff8a65;font-weight:700;font-size:13px;text-shadow:0 1px 3px #000}
 /* картинки нових активностей (21.11, Higgsfield) */
 .dd-art{height:96px;margin:-9px -10px 10px;border-radius:14px 14px 0 0;background-size:cover;background-position:center;box-shadow:inset 0 -30px 30px -10px rgba(0,0,0,.65)}
@@ -940,3 +946,5 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .rwin{text-align:center}.rwin h3{margin:10px 0 6px}.rwin p{margin:0;line-height:1.4}
 .rwin-crest{width:128px;height:128px;margin:4px auto 6px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#3a2618 0%,#1a1012 70%)}
 .rwin-crest .pen{width:auto;height:auto}
+/* 22.11 (Влад): Граф утік — підсумки тижня, банер нижчий */
+.sbx.sbx-gone{height:190px}.sbx.sbx-gone .sbx-v{object-position:center 22%}
