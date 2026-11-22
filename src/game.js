@@ -237,7 +237,7 @@ function replayTick(dt){
  }
  if(R.i>=R.res.ev.length&&R.t>=(R.res.ev.length?R.res.ev[R.res.ev.length-1][0]:0)+0.4){
   const res=R.res;B.rep=null;B.boss=false;
-  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:'')+(res.gems?' '+res.gems.map(k=>gemIc(k)).join(''):'')+(res.egg?' +'+eggIc(res.egg):''));B.m=null;B.resp=0.8}
+  if(res.win){deathFx();haptic('heavy');toast(T('boss_win')+' +💰'+fmt(res.gold)+(res.souls?' +🔥'+res.souls:'')+(res.cat?' +💎':'')+(res.ash?' +⚱️'+res.ash:'')+(res.gems?' '+res.gems.map(k=>gemIc(k)).join(''):'')+(res.egg?' +'+eggIc(res.egg)+' '+T(res.egg==='r'?'egg_r':'egg_c'):''));B.m=null;B.resp=0.8}
   else{B.dead=2.5;$('dead').style.display='grid';toast(T(res.timeout?'boss_timeout':'boss_lose')+(res.auto?' '+T('auto_off'):''));B.m=null}
   R.after&&R.after();renderBoss();paintArena();
  }
@@ -273,7 +273,7 @@ function afOf(it){const o={};AFK.forEach(k=>o[k]=0);for(const[k,v]of (it&&it.af)
 const afTxt=([k,v])=>`${AFI[k]||'✦'} ${T('af_'+k,{v:(+v).toFixed(1).replace(/\.0$/,'')})}`;
 const afLine=it=>it&&it.af&&it.af.length?`<div class="st afx">${it.af.map(afTxt).join(' · ')}</div>`:'';
 const starsOf=it=>it&&it.sr?`<span class="isr">${'★'.repeat(it.sr)}</span>`:'';
-function starDups(it){return [...G.inv,...(G.vault||[])].filter(x=>x.id!==it.id&&x.slot===it.slot&&x.r===it.r&&!(x.gm&&x.gm.length)).sort((a,b)=>(a.sr||0)-(b.sr||0)||a.il-b.il)}
+function starDups(it){return [...G.inv,...(G.vault||[])].filter(x=>x.id!==it.id&&x.slot===it.slot&&x.r===it.r&&!(x.gm&&x.gm.length)&&!x.lk).sort((a,b)=>(a.sr||0)-(b.sr||0)||a.il-b.il)}
 function starDup(it){return starDups(it)[0]}
 // 07.11 (критик): ціна зірок і перекидання — від рівня, до якого річ можна вдосконалити
 // доплата при вдалому куванні вічної за зірки й перекидання (07.11) — так само, як на сервері
@@ -476,10 +476,10 @@ function renderBag(){
  else if(bs==='lvl')list=[...list].sort((a,b)=>b.il-a.il||b.r-a.r);
  if(!list.length)h+=`<div class="empty">${T('bag_empty')}</div>`;
  for(const it of list){const eq=G.eq[it.slot],better=it.il<=G.lvl&&(!eq||itemScore(it)>itemScore(eq)); // «краще» лише для того, що можна вдягти зараз
-  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="icw">${V.pen&&!V.twin&&it.r<=4&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="igvb" data-igv="${it.id}" title="${T('btn_igv')}" aria-label="${T('btn_igv')}">🎁</button>`:''}<div class="ic">${gearIc(it)}</div></div><div class="info">
+  h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="icw">${V.pen&&!V.twin&&it.r<=4&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="igvb" data-igv="${it.id}" title="${T('btn_igv')}" aria-label="${T('btn_igv')}">🎁</button>`:''}<div class="icx"><div class="ic">${gearIc(it)}</div><button class="lkb${it.lk?' on':''}" data-lk="${it.id}" title="${T(it.lk?'lk_off':'lk_on')}" aria-label="${T(it.lk?'lk_off':'lk_on')}">📌</button></div></div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il,it)).join(' · ')}</div>`:''}</div>
-   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
+   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:it.lk?'':`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.lk?'':it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  setH($('p-bag'),h);
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
@@ -496,8 +496,9 @@ function renderBag(){
  if($('relJ'))$('relJ').onclick=()=>askOnce('relicJ',`<div class="ask ask-a"><div class="ask-ic">⚱️</div><h3>${T('ask_relic_t')}</h3><p class="ask-q">${T('relic_junk_ask',{n:V.forge.relic})}</p></div>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
  $('p-bag').querySelectorAll('[data-igv]').forEach(b=>b.onclick=()=>igiveDlg(+b.dataset.igv));
+ $('p-bag').querySelectorAll('[data-lk]').forEach(b=>b.onclick=()=>{const id=+b.dataset.lk,it=G.inv.find(i=>i.id===id);if(!it)return;act('lock',{id,on:!it.lk},r=>{haptic('light');toast(T(r.out&&r.out.lk?'lk_done':'lk_undone'))})}); // 21.11 (гравчиня Sonia): 📌 закріпити річ — не продасться й не розбереться
  $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
- $('sellC').onclick=()=>sellAsk(G.inv.filter(i=>i.r===0&&!(i.gm&&i.gm.length)).map(i=>i.id),'sellC');
+ $('sellC').onclick=()=>sellAsk(G.inv.filter(i=>i.r===0&&!(i.gm&&i.gm.length)&&!i.lk).map(i=>i.id),'sellC');
  $('disW').onclick=()=>{const n=(V.forge&&V.forge.junk)||0;if(!n){toast(ERR.no_junk);return}disAsk(worseIds(),'shards','disW',()=>act('dismantleJunk',{mode:'shards'},r=>toast(disMsg(r.out))))}; // 09.11 (Влад): розбір гірших (без легендарних) на уламки прямо в Сумці
  $('sellW').onclick=()=>sellAsk(worseIds(),'sellW');
  $('autoS').onclick=()=>act('settings',{autoSell:!G.autoSell});
@@ -572,7 +573,7 @@ const v=lotView(l);if(!v)continue;n++;
 }
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
 // 13.11 (Влад): розібрати всі речі однієї рідкості (зелені / сині / фіолетові) — з сумки, без каменів і вкладених зірок; кращі за надіте (і на майбутнє — вищого рівня) лишаємо
-function disRarIds(r){return G.inv.filter(i=>i.r===r&&!(i.gm&&i.gm.length)&&!(i.sr||i.rr)&&!((powDelta(i)||0)>0)).map(i=>i.id)}
+function disRarIds(r){return G.inv.filter(i=>i.r===r&&!(i.gm&&i.gm.length)&&!i.lk&&!(i.sr||i.rr)&&!((powDelta(i)||0)>0)).map(i=>i.id)}
 function disRar(r){const ids=disRarIds(r);if(!ids.length)return;const keep=G.inv.filter(i=>i.r===r&&!ids.includes(i.id)).length;
  const its=G.inv.filter(i=>ids.includes(i.id)),xp=G.dismode==='xp',sh=its.reduce((a,i)=>a+Math.round((i.r+1)*(i.r+1)*(1+i.il/10)),0);
  modal(`<div class="big">⚒️</div><p>${T('dis_rar_q',{n:ids.length,w:T('dis_r'+r).toLowerCase()})}</p>${xp?`<p class="hint">${T('to_xp')}</p>`:`<p><b>🔩 +${fmt(sh)}</b></p>`}${keep?`<p class="hint">${T('dis_rar_keep',{n:keep})}</p>`:''}`,T('dis_go'),()=>act('dismantle',{ids,mode:G.dismode},x=>{toast(disMsg(x.out));haptic('medium')}))}
@@ -582,7 +583,7 @@ function sellOneAsk(id){const it=G.inv.find(i=>i.id===id);if(!it)return;if(it.r<
  modal(`<div class="big">${gearIc(it,1)}</div><h3 style="color:${RAR[it.r].c}">${itemName(it)} ${starsOf(it)}</h3><p class="hint">${RAR[it.r].n} · ${T('lvl',{n:it.il})}${it.gm&&it.gm.length?' · 💎×'+it.gm.length:''}</p><p>${T('sell_ask')}</p>`,`${T('sell_yes')} · 💰${fmt(sellPrice(it))}`,()=>sell([id]))}
 function sell(ids){if(!ids.length){toast(T('nothing_sell'));return}act('sell',{ids},r=>toast(T('sold',{g:fmt(r.out.gold)})))}
 // 14.11 (Влад): «Продати гірші» / «Розібрати гірші» — спершу вікно, скільки буде золота / уламків / досвіду; галочка «Більше не питати» (на цьому пристрої)
-const worseIds=()=>G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id);
+const worseIds=()=>G.inv.filter(i=>i.r<4&&!(i.gm&&i.gm.length)&&!i.lk&&G.eq[i.slot]&&itemScore(i)<=itemScore(G.eq[i.slot])).map(i=>i.id);
 const disXpOf=it=>Math.round(6*0.72*Math.pow(1.07,it.il-1)*3*Math.min(14,RAR[it.r].m)),disShOf=it=>Math.round((it.r+1)*(it.r+1)*(1+it.il/10)); // як disXp / disShards на сервері
 function askOnce(key,html,btn,go){let skip=false;try{skip=localStorage.getItem('gt_noask_'+key)==='1'}catch(e){}if(skip){go();return}
  modal(html+`<label class="noask"><input type="checkbox" id="noAsk"><i></i><span>${T('no_ask')}</span></label>`,btn,()=>{const c=$('noAsk');if(c&&c.checked){try{localStorage.setItem('gt_noask_'+key,'1')}catch(e){}}go()})}
@@ -674,12 +675,12 @@ function bindGem(){const P=$('p-forge');
  if(gemSel){const e=P.querySelector(`[data-gi="${gemSel}"],[data-gr^="${gemSel}:"]`);if(e)e.scrollIntoView({block:'center'});gemSel=null}}
 // 13.11 (Влад): вибір легендарки, яку спалює руна. Без каменів (як на сервері); за замовчуванням — найслабша, що не краща за надіту
 let enchSel=null;
-function enchLegs(){return G.inv.filter(i=>i.r===4&&!(i.gm&&i.gm.length)).sort((a,b)=>itemVal(a)-itemVal(b))}
+function enchLegs(){return G.inv.filter(i=>i.r===4&&!(i.gm&&i.gm.length)&&!i.lk).sort((a,b)=>itemVal(a)-itemVal(b))}
 function enchPicked(L){if(enchSel){const x=L.find(i=>i.id===enchSel);if(x)return x}const eqOf=i=>G.eq[i.slot],low=A=>[...A].sort((a,b)=>a.il-b.il||itemScore(a)-itemScore(b))[0]; /* 14.11 (Влад): за замовчуванням — найнижчий рівень (серед гірших за надіте) */return low(L.filter(i=>!eqOf(i)||itemScore(i)<=itemScore(eqOf(i))))||low(L)||null}
 function enchPickModal(){const L=enchLegs(),cur=enchPicked(L);if(!L.length)return;
  modal(`<div class="big">🔥</div><h3>${T('ench_pick_t')}</h3><div class="gpick">${L.map(i=>`<button class="btn${cur&&cur.id===i.id?' pri':''}" data-epk="${i.id}" style="text-align:left;display:flex;gap:12px;align-items:center;border-radius:14px;padding:8px 12px"><span style="width:48px;height:48px;flex:0 0 48px;display:flex;align-items:center;justify-content:center">${gearIc(i)}</span><span style="flex:1;min-width:0"><b style="color:${RAR[i.r].c}">${itemName(i)}</b><small style="display:block">${SLOT[i.slot].n} · ${T('lvl',{n:i.il})} · ≈ ${T('power',{n:fmt(Math.round(itemVal(i)))})}</small></span></button>`).join('')}</div>`,null,null,()=>document.querySelectorAll('[data-epk]').forEach(b=>b.onclick=()=>{enchSel=+b.dataset.epk;queue.shift();showModal();renderForge()}),'epick')}
 function renderForge(){
- const F=V.forge,legs=s=>G.inv.filter(i=>i.r===4&&i.slot===s);
+ const F=V.forge,legs=s=>G.inv.filter(i=>i.r===4&&i.slot===s&&!i.lk);
  if(!mSlot||!legs(mSlot).length)mSlot=SLOTS.find(s=>legs(s).length>=3)||SLOTS.find(s=>legs(s).length)||'weapon';
  const LG=legs(mSlot),maxN=Math.min(12,LG.length),need=F.myth.need;
  mN=Math.max(need,Math.min(mN,Math.max(need,maxN)));
@@ -724,7 +725,7 @@ function renderForge(){
  if(!aSlot||!mOf(aSlot).length)aSlot=SLOTS.find(s=>mOf(s).length)||aSlot||'weapon';
  const AM=mOf(aSlot),aIt=AM.find(i=>i.id===aSel)||AM[0],aSo=aIt?Math.round(400+aIt.il*12):0,aEx=aIt?astExtra(aIt):{gold:0,shards:0},eqA=G.eq[aSlot];
  // 08.11 (варіант Ж): 2 прадавні з сумки в жертву (найслабші, спершу без зірок і перекидань, без каменів) + 📜 Сувій
- const aNeed=A.sac||2,aScr=G.scroll||0,aCand=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b));
+ const aNeed=A.sac||2,aScr=G.scroll||0,aCand=G.inv.filter(i=>i.r===5&&(!aIt||(i.id!==aIt.id&&i.slot===aIt.slot))&&!(i.gm&&i.gm.length)&&!i.lk).sort((a,b)=>((a.sr||a.rr)?1:0)-((b.sr||b.rr)?1:0)||itemVal(a)-itemVal(b));
  if(aPick){aPick=aPick.filter(id=>aCand.some(i=>i.id===id));if(!aPick.length)aPick=null} // 21.11 (Влад): свій вибір жертв для вічного, як у прадавнього
  const aSac=aPick?aPick.map(id=>aCand.find(i=>i.id===id)):aCand.slice(0,aNeed),aSacUp=aSac.some(i=>i.sr||i.rr); // перша — найслабша, згорить при невдачі
  const aEs=A.ess||0,aOk=aIt&&aScr>=1&&(G.ess||0)>=aEs&&aSac.length>=aNeed&&G.souls>=aSo&&G.gold>=aEx.gold&&G.shards>=aEx.shards;
@@ -914,11 +915,13 @@ function dngPlay(o){
  at(t+400,fin);
 }
 
+// 21.11 (Влад): нагорода пише тип яйця — звичайне чи рідкісне (раніше лише «Яйце вихованця +1», Макс шукав рідкісне в Сумці)
+function eggRw(g){if(g.egg)return [`${eggIc(g.egg)} ${T(g.egg==='r'?'egg_r':'egg_c')}: <b>+1</b>`];if(!g.eggs)return [];if(g.eggR==null)return [`${T('r_egg')} <b>+${g.eggs}</b>`];const c=g.eggs-g.eggR;return [c>0?`${eggIc('c')} ${T('egg_c')}: <b>+${c}</b>`:'',g.eggR>0?`${eggIc('r')} ${T('egg_r')}: <b>+${g.eggR}</b>`:'']}
 // підсумок серії заходів
 function dngBatch(o){
  const d=DNG[o.t-1],g=o.gain;
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+${g.scroll}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+${g.cat}</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+${g.ess}</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+${g.scroll}</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',...eggRw(g)].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">⚡</div><h3>${d.n}${o.d>1?' · '+T('diff_'+o.d):''}</h3><p>${T('batch_res',{n:o.runs,w:o.wins})}</p>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  haptic('heavy');
 }
 // 15.11: повернуто — випадково видалено разом зі старою карткою Болота (f6cb938), через це після бою в Болоті була помилка
@@ -926,15 +929,15 @@ function swResult(o){
  const g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?'👑 '+T(SWB[0]):T('sw_wave',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
  const rw=[g.scroll?`<span style="color:${RAR[6].c}"><b>📜 ${T('r_scroll')} +1!</b></span>`:'',g.gold?`🪙 <b>+${fmt(g.gold)}</b>`:'',g.xp?`✨ XP <b>+${fmt(g.xp)}</b>`:'',g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T('sw_floor',{n:o.f})}: ${T(o.win?'sw_win':'sw_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.win&&!g.scroll?`<p class="hint">${T(g.noSc?'sw_sc_low':'sw_noscroll')}</p>`:''}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ modal(`<div class="big">${o.win?'🏆':'💀'}</div><h3>${T('sw_floor',{n:o.f})}: ${T(o.win?'sw_win':'sw_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${o.win&&!g.scroll?`<p class="hint">${T(g.noSc?'sw_sc_low':'sw_noscroll')}</p>`:''}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*300));
  haptic(o.win?'heavy':'medium');
 }
 function dngResult(o){
  const d=DNG[o.t-1],g=o.gain;
  const rows=o.rooms.map((x,i)=>`<div><span>${x.boss?T('boss'):T('room',{n:i+1})}</span><b style="color:${x.win?'#56c271':'#e0484e'}">${x.win?'✓':'✗'} ❤️${x.hpLeft}%</b></div>`).join('');
- const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',g.egg||g.eggs?`${T('r_egg')} <b>+${g.eggs||1}</b>`:''].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
- modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}`,T('ok'));
+ const rw=[g.chests?`${chestIc(g.chestG)} ${T('chest_'+(g.chestG||1))}: <b>${g.chests}</b>`:'',g.matN?`${T('r_mat',{m:MATN[g.mat]})} <b>${g.matN}</b>`:'',g.ash?`${T('r_ash')} <b>+${fmt(g.ash)}</b>`:'',g.souls?`${T('r_souls')} <b>+${g.souls}</b>`:'',g.cat?`${T('r_cat')} <b>+1</b>`:'',g.ess?`<span style="color:${RAR[6].c}">${T('r_ess')} <b>+1</b></span>`:'',g.scroll?`<span style="color:${RAR[6].c}">📜 ${T('r_scroll')} <b>+1</b></span>`:'',g.gems?`${T('r_gems')} <b>+${g.gems}</b>`:'',...eggRw(g)].filter(Boolean).map(x=>`<p>${x}</p>`).join('');
+ modal(`<div class="big">${o.full?'🏆':'💀'}</div><h3>${d.n}: ${T(o.full?'dng_win':'dng_lose')}</h3><div class="rooms">${rows}</div>${rw||`<p class="hint">${T('no_reward')}</p>`}${g.chests?`<p class="hint">${T('chests_in_bag')}</p>`:''}${g.egg||g.eggs?`<p class="hint">${T('eggs_in_pet')}</p>`:''}`,T('ok'));
  document.querySelectorAll('.rooms div').forEach((e,i)=>setTimeout(()=>e.classList.add('show'),250+i*350));
  haptic(o.full?'heavy':'medium');
 }
@@ -1915,7 +1918,7 @@ function renderQuest(){
  
  h+=`<p class="hint">${T('pass_hint')}</p>`;
  el.innerHTML=pvT+h;passBuyBind(el);el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});if($('peAll'))$('peAll').onclick=()=>{passAll=!passAll;renderQuest()};
- $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?' 🥚×'+o.eggs:''));haptic('medium')});
+ $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?(o.eggs-(o.eggR||0)>0?' '+eggIc('c')+'×'+(o.eggs-(o.eggR||0)):'')+(o.eggR?' '+eggIc('r')+' '+T('egg_r')+' ×'+o.eggR:''):''));haptic('medium')});
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
 let adCtl=null,adLoading=false,adQ=[];
@@ -2004,12 +2007,34 @@ function renderColl(){
 let wbData=null,wbBusy=false,wbAt=0;
 // 15.11 (реліз боса, Влад «усе А» попередньо): вікно Боса сервера — Граф Упир (відео-петля), спроби, 4 удари, рейтинги: тиждень / грошова ліга / клани
 let wbTab='week';
+// 22.11 (Влад): Граф утік — вкладка лишається з підсумками: до закриття тижня — рейтинг шкоди й очікувані призи, після — хто скільки отримав (Попіл і гроші)
+function wbWkL(wk){const a=new Date(Date.parse(wk+'T00:00:00Z')),b=new Date(a.getTime()+6*864e5),z=n=>String(n).padStart(2,'0');return `${z(a.getUTCDate())}–${z(b.getUTCDate())}.${z(b.getUTCMonth()+1)}`}
+function wbGone(el,D){const R=D.res,hm=t=>{const d=new Date(t),z=n=>String(n).padStart(2,'0');return z(d.getHours())+':'+z(d.getMinutes())};
+ let h=`<div class="sbx sbx-gone"><img class="sbx-v" src="assets/boss/upyr_poster.jpg?v=1" alt=""><div class="sbx-o"><div class="sbx-nm">${T('sbx_gone_t')}</div><div class="sbx-lv">${R?T('sbx_gone_res',{w:wbWkL(R.week)}):T('sbx_gone_pre',{t:hm(D.end)})}</div></div></div>`;
+ if(!R){ // тиждень ще не закрито: рейтинг шкоди заморожено, призи — орієнтовні
+  const cm=D.cashMe?(D.cash||[]).find(x=>x.place===D.cashMe.place):null;
+  h+=`<div class="dstat sbst"><div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div><div><span>⚔️</span><b>${D.me?fmt(D.me.dmg):'—'}</b><small>${T('sbx_gone_dmg')}</small></div><div><span>💵</span><b>${cm&&cm.usd>0?usdF(cm.usd):'—'}</b><small>${T('sbx_gone_est')}</small></div></div>
+  <div class="chips sbx-tabs">${['week','cash','clan'].map(k=>`<button data-wbt="${k}" class="${wbTab===k?'act':''}">${T('sbx_tab_'+k)}</button>`).join('')}</div>`;
+  if(wbTab==='week')h+=`<div class="card"><div class="rank">`+((D.top||[]).length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_prizes')}</p></div>`;
+  else if(wbTab==='cash')h+=`<div class="card"><h4>💰 ${T('sbx_cash_t')}${D.pot>0?' · '+usdF(D.pot):''} · 👥 ${D.cashN||0}</h4><div class="rank">`+((D.cash||[]).length?D.cash.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${x.usd>0?usdF(x.usd):x.pct+'%'}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_gone_est_h')}</p></div>`;
+  else h+=`<div class="card"><div class="rank">`+((D.clans||[]).length?D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>';
+ }else if(R.pending){h+=`<div class="card"><p class="hint" style="margin:0">${T('sbx_gone_pend')}</p></div>`}
+ else{const M=R.me;
+  h+=`<div class="card">${M?`<p style="margin:0 0 4px"><b>${T('sbx_res_me',{p:M.place,d:fmt(M.dmg)})}</b></p><p style="margin:0">⚱️ ${fmt(M.ash)}${M.usd>0?` · 💵 ${usdF(M.usd)}${M.hold?' ⏳ '+T('sbx_res_hold'):''}`:''}</p>`:`<p class="hint" style="margin:0">${T('sbx_res_none')}</p>`}</div>
+  <div class="chips sbx-tabs">${['pl','clan'].map(k=>`<button data-wbt="${k==='pl'?'week':'clan'}" class="${(wbTab==='clan')===(k==='clan')?'act':''}">${T(k==='pl'?'sbx_tab_pl':'sbx_tab_clan')}</button>`).join('')}</div>`;
+  if(wbTab!=='clan')h+=`<div class="card"><div class="rank">`+(R.rows.length?R.rows.map(x=>`<div class="${x.me?'me':''}"><b>${x.place<=3?['🥇','🥈','🥉'][x.place-1]:x.place}</b><span>${penI(x.pn)}${esc(x.name)}<small style="display:block;opacity:.65">⚔️ ${fmt(x.dmg)}</small></span><i>⚱️${fmt(x.ash)}${x.usd>0?`<br><small style="color:#7fe08f">💵 ${usdF(x.usd)}${x.hold?' ⏳':''}</small>`:''}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_res_hint')}</p></div>`;
+  else h+=`<div class="card"><div class="rank">`+(R.clans.length?R.clans.map(x=>`<div><b>${x.place}</b><span>${esc(x.name)}<small style="display:block;opacity:.65">⚔️ ${fmt(x.dmg)}</small></span><i>⚱️${fmt(x.ash)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>';
+ }
+ setH(el,h);iconize(el);el.querySelectorAll('[data-wbt]').forEach(b=>b.onclick=()=>{wbTab=b.dataset.wbt;wbGone(el,D)});
+ live('wboss',()=>api('wbInfo').then(r=>r.out),o=>{if(!o||same(o,wbData))return false;wbData=o;return true},6e4);
+}
 function renderWb(){
- if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return}
+ if(V.wb&&V.wb.off&&!V.wb.gone){tab='arena';lastSub.arena='arena';showPane();return}
  const W=V.wb,el=$('p-wboss');
- if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
+ if(!W||(!W.gone&&G.maxStage<W.stage)){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
  if(wbData&&Date.now()-wbAt>(wbData.flee?8e3:6e4))wbData=null; // під час втечі Графа — частіше, щоб здоров'я й таймер рухались
- if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{if(/wb_fled/.test(String(e&&e.message||e))){if(V&&V.wb){V.wb.off=1;V.wb.gone=1}tab='arena';lastSub.arena='arena';setTimeout(()=>sync(true),50)}toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{if(/wb_fled/.test(String(e&&e.message||e))&&!(V&&V.wb&&V.wb.gone)){if(V&&V.wb){V.wb.off=1;V.wb.gone=1}tab='arena';lastSub.arena='arena';setTimeout(()=>sync(true),50)}toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(W.gone){wbGone(el,wbData);return}
  const D=wbData,B0=D.boss,rest=!!(B0.back&&B0.back>Date.now()),kind=rest?'':W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price; // 18.11 (Влад «А»): rest — бос повалений, відпочиває 30 хв
  if(D.ready===false){el.innerHTML=`<div class="empty">${(ERR&&ERR.wb_soon)||T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
@@ -2080,7 +2105,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off&&!V.wb.gone?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
@@ -2097,11 +2122,12 @@ setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
 const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
-function sbPaint(){const b=$('sBos');if(!b)return;if(!G||V&&V.wb&&V.wb.gone){b.style.display='none';return}b.style.display=''; // нд 22.11 12:00: Граф утік — кнопки боса більше немає
+function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
+ if(V&&V.wb&&V.wb.gone){$('sBosT').textContent=T('sbx_gone_pill');$('sBosC').textContent='🏆';return} // 22.11 (Влад): після втечі — веде до підсумків тижня // нд 22.11 12:00: Граф утік — кнопки боса більше немає
  if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):V.wb.flee&&V.wb.flee>Date.now()?'🦇 '+mmss(V.wb.flee-Date.now()):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
  const l=sbLeft();
  $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
-function sbOpen(){haptic('medium');if(V&&V.wb&&!V.wb.off){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
+function sbOpen(){haptic('medium');if(V&&V.wb&&(!V.wb.off||V.wb.gone)){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
  modal(`<div class="sbw"><div class="sbart"><img src="assets/boss_teaser.webp?v=1" alt=""><i class="sbeye l"></i><i class="sbeye r"></i><i class="sbcrk"></i><i class="sbfog a"></i><i class="sbfog b"></i><i class="sbbat b1"></i><i class="sbbat b2"></i><i class="sbbat b3"></i></div>
   <div class="sbtag">${T('sb_tag')}</div><h3 class="sbh">${T('sb_t')}</h3><p class="sbq">${T('sb_q')}</p>
   <div class="sbcdw"><span>${T(l?'sb_in':'sb_soon_t')}</span><b id="sbCd">${l?sbHms(l):T('sb_soon')}</b></div>
