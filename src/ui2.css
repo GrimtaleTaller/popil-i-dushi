@@ -902,3 +902,6 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .icx .lkb.on{background:#5a4320;border:2px solid #f0cf72;box-shadow:0 0 7px rgba(240,207,114,.75)}
 .icx .lkb:active{transform:scale(.9)}
 .sbx-flee{margin-top:4px;color:#ff8a65;font-weight:700;font-size:13px;text-shadow:0 1px 3px #000}
+
+/* 22.11 (Влад): Граф утік — підсумки тижня, банер нижчий */
+.sbx.sbx-gone{height:190px}.sbx.sbx-gone .sbx-v{object-position:center 22%}

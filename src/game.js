@@ -1928,12 +1928,34 @@ function renderColl(){
 let wbData=null,wbBusy=false,wbAt=0;
 // 15.11 (реліз боса, Влад «усе А» попередньо): вікно Боса сервера — Граф Упир (відео-петля), спроби, 4 удари, рейтинги: тиждень / грошова ліга / клани
 let wbTab='week';
+// 22.11 (Влад): Граф утік — вкладка лишається з підсумками: до закриття тижня — рейтинг шкоди й очікувані призи, після — хто скільки отримав (Попіл і гроші)
+function wbWkL(wk){const a=new Date(Date.parse(wk+'T00:00:00Z')),b=new Date(a.getTime()+6*864e5),z=n=>String(n).padStart(2,'0');return `${z(a.getUTCDate())}–${z(b.getUTCDate())}.${z(b.getUTCMonth()+1)}`}
+function wbGone(el,D){const R=D.res,hm=t=>{const d=new Date(t),z=n=>String(n).padStart(2,'0');return z(d.getHours())+':'+z(d.getMinutes())};
+ let h=`<div class="sbx sbx-gone"><img class="sbx-v" src="assets/boss/upyr_poster.jpg?v=1" alt=""><div class="sbx-o"><div class="sbx-nm">${T('sbx_gone_t')}</div><div class="sbx-lv">${R?T('sbx_gone_res',{w:wbWkL(R.week)}):T('sbx_gone_pre',{t:hm(D.end)})}</div></div></div>`;
+ if(!R){ // тиждень ще не закрито: рейтинг шкоди заморожено, призи — орієнтовні
+  const cm=D.cashMe?(D.cash||[]).find(x=>x.place===D.cashMe.place):null;
+  h+=`<div class="dstat sbst"><div><span>🏆</span><b>${D.me?'#'+D.me.place:'—'}</b><small>${T('sbx_place')}</small></div><div><span>⚔️</span><b>${D.me?fmt(D.me.dmg):'—'}</b><small>${T('sbx_gone_dmg')}</small></div><div><span>💵</span><b>${cm&&cm.usd>0?usdF(cm.usd):'—'}</b><small>${T('sbx_gone_est')}</small></div></div>
+  <div class="chips sbx-tabs">${['week','cash','clan'].map(k=>`<button data-wbt="${k}" class="${wbTab===k?'act':''}">${T('sbx_tab_'+k)}</button>`).join('')}</div>`;
+  if(wbTab==='week')h+=`<div class="card"><div class="rank">`+((D.top||[]).length?D.top.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_prizes')}</p></div>`;
+  else if(wbTab==='cash')h+=`<div class="card"><h4>💰 ${T('sbx_cash_t')}${D.pot>0?' · '+usdF(D.pot):''} · 👥 ${D.cashN||0}</h4><div class="rank">`+((D.cash||[]).length?D.cash.map(x=>`<div class="${x.me?'me':''}"><b>${x.place}</b><span>${esc(x.name)}</span><i>${x.usd>0?usdF(x.usd):x.pct+'%'}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_gone_est_h')}</p></div>`;
+  else h+=`<div class="card"><div class="rank">`+((D.clans||[]).length?D.clans.map(x=>`<div><b>${x.place}</b><span>${penI(x.pn)}${esc(x.name)}</span><i>${fmt(x.dmg)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>';
+ }else if(R.pending){h+=`<div class="card"><p class="hint" style="margin:0">${T('sbx_gone_pend')}</p></div>`}
+ else{const M=R.me;
+  h+=`<div class="card">${M?`<p style="margin:0 0 4px"><b>${T('sbx_res_me',{p:M.place,d:fmt(M.dmg)})}</b></p><p style="margin:0">⚱️ ${fmt(M.ash)}${M.usd>0?` · 💵 ${usdF(M.usd)}${M.hold?' ⏳ '+T('sbx_res_hold'):''}`:''}</p>`:`<p class="hint" style="margin:0">${T('sbx_res_none')}</p>`}</div>
+  <div class="chips sbx-tabs">${['pl','clan'].map(k=>`<button data-wbt="${k==='pl'?'week':'clan'}" class="${(wbTab==='clan')===(k==='clan')?'act':''}">${T(k==='pl'?'sbx_tab_pl':'sbx_tab_clan')}</button>`).join('')}</div>`;
+  if(wbTab!=='clan')h+=`<div class="card"><div class="rank">`+(R.rows.length?R.rows.map(x=>`<div class="${x.me?'me':''}"><b>${x.place<=3?['🥇','🥈','🥉'][x.place-1]:x.place}</b><span>${penI(x.pn)}${esc(x.name)}<small style="display:block;opacity:.65">⚔️ ${fmt(x.dmg)}</small></span><i>⚱️${fmt(x.ash)}${x.usd>0?`<br><small style="color:#7fe08f">💵 ${usdF(x.usd)}${x.hold?' ⏳':''}</small>`:''}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+`</div><p class="hint">${T('sbx_res_hint')}</p></div>`;
+  else h+=`<div class="card"><div class="rank">`+(R.clans.length?R.clans.map(x=>`<div><b>${x.place}</b><span>${esc(x.name)}<small style="display:block;opacity:.65">⚔️ ${fmt(x.dmg)}</small></span><i>⚱️${fmt(x.ash)}</i></div>`).join(''):`<div><span class="hint">${T('sbx_empty')}</span></div>`)+'</div></div>';
+ }
+ setH(el,h);iconize(el);el.querySelectorAll('[data-wbt]').forEach(b=>b.onclick=()=>{wbTab=b.dataset.wbt;wbGone(el,D)});
+ live('wboss',()=>api('wbInfo').then(r=>r.out),o=>{if(!o||same(o,wbData))return false;wbData=o;return true},6e4);
+}
 function renderWb(){
- if(V.wb&&V.wb.off){tab='arena';lastSub.arena='arena';showPane();return}
+ if(V.wb&&V.wb.off&&!V.wb.gone){tab='arena';lastSub.arena='arena';showPane();return}
  const W=V.wb,el=$('p-wboss');
- if(!W||G.maxStage<W.stage){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
+ if(!W||(!W.gone&&G.maxStage<W.stage)){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
  if(wbData&&Date.now()-wbAt>(wbData.flee?8e3:6e4))wbData=null; // під час втечі Графа — частіше, щоб здоров'я й таймер рухались
- if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{if(/wb_fled/.test(String(e&&e.message||e))){if(V&&V.wb){V.wb.off=1;V.wb.gone=1}tab='arena';lastSub.arena='arena';setTimeout(()=>sync(true),50)}toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(!wbData){el.innerHTML=`<div class="empty">${T('loading')}</div>`;if(!wbBusy){wbBusy=true;api('wbInfo').then(r=>{wbData=r.out;wbAt=Date.now()}).catch(e=>{if(/wb_fled/.test(String(e&&e.message||e))&&!(V&&V.wb&&V.wb.gone)){if(V&&V.wb){V.wb.off=1;V.wb.gone=1}tab='arena';lastSub.arena='arena';setTimeout(()=>sync(true),50)}toast(errT(e));return slp(5000)}).finally(()=>{wbBusy=false;dirty.wboss=1})}return}
+ if(W.gone){wbGone(el,wbData);return}
  const D=wbData,B0=D.boss,rest=!!(B0.back&&B0.back>Date.now()),kind=rest?'':W.left>0?'free':W.packLeft>0?'pack':W.paidLeft>0?'ash':'',canAsh=kind!=='ash'||(G.ash||0)>=W.price; // 18.11 (Влад «А»): rest — бос повалений, відпочиває 30 хв
  if(D.ready===false){el.innerHTML=`<div class="empty">${(ERR&&ERR.wb_soon)||T('wb_soon')}</div>`;return}
  const nextG=W.chestG[Math.min(W.n,W.chestG.length-1)];
@@ -2004,7 +2026,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):g==='dng'&&V&&V.swamp?[['dng','dsub_dng'],['sw','dsub_sw']]:null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off&&!V.wb.gone?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log'].map(k=>[k,'csub_'+k]):g==='dng'&&V&&V.swamp?[['dng','dsub_dng'],['sw','dsub_sw']]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
@@ -2021,11 +2043,12 @@ setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
 const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
-function sbPaint(){const b=$('sBos');if(!b)return;if(!G||V&&V.wb&&V.wb.gone){b.style.display='none';return}b.style.display=''; // нд 22.11 12:00: Граф утік — кнопки боса більше немає
+function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
+ if(V&&V.wb&&V.wb.gone){$('sBosT').textContent=T('sbx_gone_pill');$('sBosC').textContent='🏆';return} // 22.11 (Влад): після втечі — веде до підсумків тижня // нд 22.11 12:00: Граф утік — кнопки боса більше немає
  if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):V.wb.flee&&V.wb.flee>Date.now()?'🦇 '+mmss(V.wb.flee-Date.now()):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
  const l=sbLeft();
  $('sBosT').textContent=T('sb_pill');$('sBosC').textContent=l?sbHms(l):T('sb_soon');const c=$('sbCd');if(c)c.textContent=l?sbHms(l):T('sb_soon')}
-function sbOpen(){haptic('medium');if(V&&V.wb&&!V.wb.off){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
+function sbOpen(){haptic('medium');if(V&&V.wb&&(!V.wb.off||V.wb.gone)){lastSub.arena='wboss';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();return}const l=sbLeft();
  modal(`<div class="sbw"><div class="sbart"><img src="assets/boss_teaser.webp?v=1" alt=""><i class="sbeye l"></i><i class="sbeye r"></i><i class="sbcrk"></i><i class="sbfog a"></i><i class="sbfog b"></i><i class="sbbat b1"></i><i class="sbbat b2"></i><i class="sbbat b3"></i></div>
   <div class="sbtag">${T('sb_tag')}</div><h3 class="sbh">${T('sb_t')}</h3><p class="sbq">${T('sb_q')}</p>
   <div class="sbcdw"><span>${T(l?'sb_in':'sb_soon_t')}</span><b id="sbCd">${l?sbHms(l):T('sb_soon')}</b></div>
