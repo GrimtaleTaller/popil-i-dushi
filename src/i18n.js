@@ -540,3 +540,7 @@ Object.assign(window.I18N.en.t,{zh_kp_clan:'5 per donation of {g} gold (≈ an h
 Object.assign(window.I18N.uk.t,{zh_clan_hint:'Жнива: +5 очок за внесок від {g} золота, {a} Попелу, {n} матеріалів {m} або {s} уламків (до 3 на день)'});
 Object.assign(window.I18N.ru.t,{zh_clan_hint:'Жатва: +5 очков за взнос от {g} золота, {a} Пепла, {n} материалов {m} или {s} осколков (до 3 в день)'});
 Object.assign(window.I18N.en.t,{zh_clan_hint:'Harvest: +5 points per donation of {g} gold, {a} Ash, {n} {m} materials or {s} shards (up to 3 a day)'});
+// 23.11 (Влад): внески рахуються кількістю — кожен мінімум = 1 внесок
+Object.assign(window.I18N.uk.t,{zh_kp_clan:'5 за кожні {g} золота (≈ година фарму), {a} Попелу, {n} матеріалів {m} (свого тиру) або {s} уламків — до 3 на день',zh_clan_hint:'Жнива: +5 очок за кожні {g} золота, {a} Попелу, {n} матеріалів {m} або {s} уламків (до 3 на день; 3 мінімуми за раз — одразу всі 3)'});
+Object.assign(window.I18N.ru.t,{zh_kp_clan:'5 за каждые {g} золота (≈ час фарма), {a} Пепла, {n} материалов {m} (своего тира) или {s} осколков — до 3 в день',zh_clan_hint:'Жатва: +5 очков за каждые {g} золота, {a} Пепла, {n} материалов {m} или {s} осколков (до 3 в день; 3 минимума за раз — сразу все 3)'});
+Object.assign(window.I18N.en.t,{zh_kp_clan:'5 per every {g} gold (≈ an hour of farming), {a} Ash, {n} {m} materials (your tier) or {s} shards — up to 3 a day',zh_clan_hint:'Harvest: +5 points per every {g} gold, {a} Ash, {n} {m} materials or {s} shards (up to 3 a day; 3 minimums at once count as all 3)'});
