@@ -794,6 +794,12 @@ function iconize(root,full){if(!root)return;const w=document.createTreeWalker(ro
    if(p==='🟧'){const i=document.createElement('img');i.className='hic s ico leg';i.src='assets/items/weapon0_4.webp';i.alt='';f.appendChild(i)}
    else if(k){const i=document.createElement('img');i.className='hic s ico';i.src='assets/res/'+k+'.webp?v=1';i.alt='';f.appendChild(i);txt(tail)}else txt(p)}
   if(!hit)return;txt(v.slice(last));t.parentNode.replaceChild(f,t)})}
+// 23.11 (Влад: «підказки час від часу ховаються самі»): розгорнуті <details> («Як отримати очки», «ℹ️ Як це працює» тощо)
+// згорталися, коли вкладка перемальовувалась із сервера. Запам'ятовуємо відкриті (ключ — клас + текст заголовка) і відкриваємо знову.
+{const OPEN=new Set(),key=d=>(d.className||'')+'|'+((d.querySelector('summary')||{}).textContent||'').trim();
+ document.addEventListener('toggle',e=>{const d=e.target;if(!d||d.tagName!=='DETAILS')return;const k=key(d);if(d.open)OPEN.add(k);else OPEN.delete(k)},true);
+ const fix=n=>{if(!OPEN.size||!n||n.nodeType!==1)return;const L=n.tagName==='DETAILS'?[n]:n.querySelectorAll?n.querySelectorAll('details'):[];for(const d of L)if(!d.open&&OPEN.has(key(d)))d.open=true};
+ new MutationObserver(ms=>{for(const m of ms)m.addedNodes.forEach(fix)}).observe(document.documentElement,{childList:true,subtree:true})}
 {const Q=new Set();let R=0;const go=()=>new MutationObserver(ms=>{for(const m of ms)m.addedNodes.forEach(x=>{const e=x.nodeType===3?x.parentNode:x;if(e&&e.nodeType===1)Q.add(e)});if(!R&&Q.size)R=requestAnimationFrame(()=>{R=0;const A=[...Q];Q.clear();A.forEach(e=>{if(e.isConnected&&!e.closest('.noi,#chatRoot'))iconize(e)})})}).observe(document.body,{childList:true,subtree:true});if(document.body)go();else addEventListener('DOMContentLoaded',go)} // будь-які нові елементи (вкладки, вікна, сповіщення) — без ручних викликів
 const RIS=k=>`<img class="hic s" src="assets/res/${k}.webp?v=1" alt="">`;const RIC=k=>`<img class="ric" src="assets/res/${k}.webp?v=1" alt="" decoding="async">`; // 15.11: намальовані значки ресурсів (Higgsfield, стиль значків клану)
 const DIC=k=>`<img class="cic" src="assets/dng/${k}.webp?v=1" alt="" loading="lazy" decoding="async">`;
