@@ -1887,7 +1887,7 @@ function tutCheck(){
  if(tutCur){if(tutCur.still&&!tutCur.still())tutHide();else{tutPlace();return}}
  const old=tutHas('old');
  if(!old&&!tutHas('intro')){
-  if(groupOf(tab)==='bag')return; // вступ показуємо на головному екрані, не у вікні героя
+  if(SHEETS.includes(groupOf(tab)))return; // вступ показуємо на головному екрані, не у вікні-шторці
   const [txt,sel]=TUT_INTRO[introI]||TUT_INTRO[0];
   tutShow({txt,sel,block:1,skip:1,i:introI+1,n:TUT_INTRO.length,ok:()=>{introI++;if(introI>=TUT_INTRO.length){introI=0;tutMark('intro')}}});return;
  }
@@ -1900,7 +1900,8 @@ function tutCheck(){
   if((old&&!g.all)||tutHas('tg_'+g.k)||(tutHas('p_'+g.p)&&!g.np))continue;
   let ok=false;try{ok=g.c()}catch(e){}
   if(!ok)continue;
-  const inG=groupOf(tab)===g.tab,sel=inG?(g.q?`#p-hero [data-hq="${g.p}"]`:`#subtabs button[data-s="${g.p}"]`):tabBtn(g.tab);
+  const inG=groupOf(tab)===g.tab;if(!inG&&SHEETS.includes(groupOf(tab)))continue; // 23.11: у шторці не вказуємо на кнопки під нею
+  const sel=inG?(g.q?`#p-hero [data-hq="${g.p}"]`:`#subtabs button[data-s="${g.p}"]`):tabBtn(g.tab);
   tutShow({txt:'tg_'+g.k,sel,skip:!old,still:()=>(groupOf(tab)===g.tab)===inG&&curPane()!==g.p&&!tipPending(),ok:()=>tutMark('tg_'+g.k)});return;
  }
 }
@@ -2182,7 +2183,7 @@ function renderSub(){
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
  e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else if(g==='dng'){dsub=k;dirty.dng=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
 }
-// 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває «Арена → Рейтинги»
+// 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває вікно «Рейтинги» (з 23.11 — окреме, не в Арені)
 const rkPlace=k=>{const d=topData&&topData[k];if(!d)return 0;const m=(d.rows||[]).find(r=>r.me)||d.me;return m&&m.place||0};
 function rkPaint(){const e=$('rkPl');if(!e)return;const p=rkPlace('power'),s=rkPlace('stage');e.innerHTML=[p?`<small>💪</small>#${p}`:'',s?`<small>🗺️</small>#${s}`:''].filter(Boolean).join(' · ')}
 function rkLoad(){if(document.visibilityState!=='visible')return;for(const k of ['power','stage'])api('top',{kind:k}).then(r=>{topData[r.out.kind]=r.out;rkPaint()}).catch(()=>{})}
@@ -2280,7 +2281,7 @@ function nbOpen(){if(!NB)return;haptic('medium');const o=NB,l=o.until-Date.now()
    else shopBuy('newb',m)})},'newb')}
 setInterval(nbPaint,1e3);if($('nbOf'))$('nbOf').onclick=nbOpen;window.__nbOpen=nbOpen; // __nbOpen — для тестів
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
-$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click();$('lvl').onclick=()=>{haptic('light');openTab(lastSub.me||'prof')}; // 23.11: рівень — Профіль · Вивід · Журнал // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
+$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click();$('lvl').onclick=()=>{haptic('light');openTab('prof')}; // 23.11: рівень — Профіль · Вивід · Журнал; фігурка — Сумка // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
 $('next').onclick=()=>{if(G.stage<G.maxStage)act('stage',{s:G.stage+1},()=>{B.m=null;B.resp=0.1})};
 $('bossBtn').onclick=()=>{if(G.kills>=WAVES&&!B.rep){
