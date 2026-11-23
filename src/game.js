@@ -2281,7 +2281,7 @@ function nbOpen(){if(!NB)return;haptic('medium');const o=NB,l=o.until-Date.now()
    else shopBuy('newb',m)})},'newb')}
 setInterval(nbPaint,1e3);if($('nbOf'))$('nbOf').onclick=nbOpen;window.__nbOpen=nbOpen; // __nbOpen — для тестів
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
-$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click();$('lvl').onclick=()=>{haptic('light');openTab('prof')}; // 23.11: рівень — Профіль · Вивід · Журнал; фігурка — Сумка // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
+$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click();$('lvlw').onclick=()=>{haptic('light');openTab('prof')}; // 23.11: рівень — Профіль · Вивід · Журнал; фігурка — Сумка // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
 $('next').onclick=()=>{if(G.stage<G.maxStage)act('stage',{s:G.stage+1},()=>{B.m=null;B.resp=0.1})};
 $('bossBtn').onclick=()=>{if(G.kills>=WAVES&&!B.rep){

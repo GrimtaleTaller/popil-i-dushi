@@ -939,3 +939,6 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .sbx.sbx-gone{height:190px}.sbx.sbx-gone .sbx-v{object-position:center 22%}
 /* 23.11 очки Жнив на картці підземелля */
 .dzh{display:flex;align-items:center;gap:6px;margin:2px 0 6px;color:#d9c27a}.dzh img{width:18px;height:18px;flex:none}.dzh.off{color:#9a8f86}
+
+/* 23.11 (Влад «А»): значок 👤 на рівні — тап відкриває Профіль · Вивід · Журнал */
+.lvlw{position:relative;flex:none;cursor:pointer}.lvlme{position:absolute;right:-6px;bottom:-6px;width:17px;height:17px;border-radius:50%;background:#1c1620;border:1px solid #c0563a99;display:grid;place-items:center;font-size:10px;line-height:1;box-shadow:0 1px 4px #0008}
