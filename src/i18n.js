@@ -533,3 +533,10 @@ Object.assign(window.I18N.ru.t,{dzh_pts:'+{n} в Жатву за победу',d
  zh_kp_dng:'по сложности (Обыч. · Героич. · Кошмар): свой высший тир — 10 · 13 · 16; на 1 ниже — 8 · 10 · 12; на 2 — 5 · 6 · 8; на 3 — 2 · 3 · 4; на 4 и ниже — 0; поражение — 30%'});
 Object.assign(window.I18N.en.t,{dzh_pts:'+{n} Harvest points per win',dzh_x2:'×2 today',dzh_over:'daily norm reached — less from now on',dzh_zero:'0 Harvest points — tier too low (points from tier {f})',
  zh_kp_dng:'by difficulty (Normal · Heroic · Nightmare): your highest tier — 10 · 13 · 16; 1 lower — 8 · 10 · 12; 2 lower — 5 · 6 · 8; 3 lower — 2 · 3 · 4; 4+ lower — 0; a loss — 30%'});
+// 23.11 (Влад «А»): внесок у казну — очки Жнив лише від суми під гравця
+Object.assign(window.I18N.uk.t,{zh_kp_clan:'5 за внесок від {g} золота (≈ година фарму), {a} Попелу, {n} матеріалів {m} (свого тиру) або {s} уламків'});
+Object.assign(window.I18N.ru.t,{zh_kp_clan:'5 за взнос от {g} золота (≈ час фарма), {a} Пепла, {n} материалов {m} (своего тира) или {s} осколков'});
+Object.assign(window.I18N.en.t,{zh_kp_clan:'5 per donation of {g} gold (≈ an hour of farming), {a} Ash, {n} {m} materials (your tier) or {s} shards'});
+Object.assign(window.I18N.uk.t,{zh_clan_hint:'Жнива: +5 очок за внесок від {g} золота, {a} Попелу, {n} матеріалів {m} або {s} уламків (до 3 на день)'});
+Object.assign(window.I18N.ru.t,{zh_clan_hint:'Жатва: +5 очков за взнос от {g} золота, {a} Пепла, {n} материалов {m} или {s} осколков (до 3 в день)'});
+Object.assign(window.I18N.en.t,{zh_clan_hint:'Harvest: +5 points per donation of {g} gold, {a} Ash, {n} {m} materials or {s} shards (up to 3 a day)'});

@@ -1578,7 +1578,7 @@ function renderClan(){
  else if(C.role==='leader')S.main+=`<button class="cdescadd" id="cDescEd">📜 ${T('clan_desc_add')}</button>`; // 14.11 (Влад): окреме вікно опису для голови
  S.main+=`<button class="cinvtop" id="cInvTop">🔗 ${T('cinv_t')}</button>`; // 14.11 (Влад «А»): запрошення в клан — видно одразу, веде до картки з «Поділитись»
  const bank=C.clan.bank||0;
- S.main+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>
+ S.main+=`<div class="card"><h4>🏦 ${T('clan_bank')}: <span style="color:var(--gold)">💰${fmt(bank)}</span></h4><p class="hint">${T('clan_bank_hint')}</p>${V&&V.zh&&V.zh.live&&V.zh.cm?`<p class="sub dzh">${RIS('zh')} ${T('zh_clan_hint',{g:fmt(V.zh.cm.gold),a:V.zh.cm.ash,n:V.zh.cm.mn,m:MATN[V.zh.cm.m],s:fmt(V.zh.cm.sh)})}</p>`:''}
   <div class="row" style="align-items:center"><input id="cGive" class="inp" type="number" min="1" inputmode="numeric" placeholder="${T('amount')}"><button class="btn" id="cGiveAll">${T('give_all')}</button><button class="btn pri" id="cGiveGo">${T('give')}</button></div>
   <h4 style="margin-top:12px">⚱️ ${T('clan_ash')}: <span style="color:var(--gold)">${fmt(C.clan.ash||0)}</span></h4>
   <div class="row" style="align-items:center"><input id="cAsh" class="inp" type="number" min="1" inputmode="numeric" placeholder="⚱️ ${fmtX(G.ash)}"><button class="btn" id="cAshAll">${T('give_all')}</button><button class="btn pri" id="cAshGo">${T('give')}</button></div>
@@ -1732,7 +1732,7 @@ function zhCard(d){const Z=V&&V.zh;if(!Z||!Z.live)return'';
  <p class="sub">${T('zh_today',{d:Z.day,c:Z.cap})}${Z.x2?' · '+T('zh_x2',{a:ZH_I[Z.x2]+' '+T('zh_k_'+Z.x2)}):''}</p>
  <div class="zh-th">${Z.th.map((v,i)=>{const got=Z.got&(1<<i),ok=Z.pts>=v;return `<div class="${got?'got':ok?'ok':''}"><b>${got?'✅':ok?'🎁':'🔒'} ${v}</b><span>${zhRew(Z.thR[i])}</span></div>`}).join('')}</div>
  ${can?`<div class="row"><button class="btn pri glow" id="zhClaim" ${busy?'disabled':''}>🎁 ${T('claim_all')}</button></div>`:nx?`<p class="sub">${T('zh_next',{n:fmt(Math.ceil(nx-Z.pts))})}</p>`:''}
- <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>`<div class="zh-k"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k)}</i><small>${(Z.c&&Z.c[k])||0}/${Z.norm[k][0]}</small></div>`).join('')}</details>
+ <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>`<div class="zh-k"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k,k==='clan'&&Z.cm?{g:fmt(Z.cm.gold),a:Z.cm.ash,n:Z.cm.mn,m:MATN[Z.cm.m],s:fmt(Z.cm.sh)}:undefined)}</i><small>${(Z.c&&Z.c[k])||0}/${Z.norm[k][0]}</small></div>`).join('')}</details>
  <p class="hint">${Z.ok&&!V.twin?T('zh_cash_ok',{l:Z.lv}):T('zh_cash_no')}</p></div>`;
  return h}
 function zhList(d){
