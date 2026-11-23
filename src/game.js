@@ -1898,7 +1898,7 @@ function tutCheck(){
 }
 function tutRestart(){tutLocal.clear();introI=0;api('tut',{reset:true}).then(()=>{toast(T('tut_restarted'));tab='hero';document.querySelector(tabBtn('hero')).click()}).catch(e=>toast(errT(e)))}
 // новина з бота: показуємо один раз
-function newsHtml(s){s=String(s||'');let img='';const m=/^\s*<a href="(https:\/\/grimtaletaller\.github\.io\/popil-i-dushi\/assets\/news\/[\w.-]+)">[^<]*<\/a>\s*/.exec(s);if(m){img=`<img class="newsimg" src="${m[1]}" alt="">`;s=s.slice(m[0].length)} // 14.11: картинка новини
+function newsHtml(s){s=String(s||'');let img='';const m=/^\s*<a href="(https:\/\/grimtaletaller\.github\.io\/popil-i-dushi\/assets\/(?:news|dd)\/[\w.-]+)">[^<]*<\/a>\s*/.exec(s);if(m){img=`<img class="newsimg" src="${m[1]}" alt="">`;s=s.slice(m[0].length)} // 14.11: картинка новини
  return img+esc(s).replace(/&lt;(\/?)(b|i)&gt;/g,'<$1$2>').replace(/\n/g,'<br>')}
 function showNews(n){
  if(!n||n.id===newsShown)return;newsShown=n.id;
