@@ -152,7 +152,10 @@ function askPm(){const w=tg();if(!w||!V||V.pm!==0||typeof w.requestWriteAccess!=
 function openBot(){const u='https://t.me/Grimtalebot';const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')}
 function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CHAT);else window.open(GAME_CHAT,'_blank','noopener')}
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
+// 23.11 (Влад «А»): дія, що понад норму дня не дає очок Жнив, — підказка «+0», щоб не здавалось, що очки загубились
+function zhZero(o,n){if(!o||!n||!n.live||!n.c||!n.norm)return;for(const k in n.c){const a=o[k]||0,b=n.c[k]||0,nm=n.norm[k];if(nm&&!nm[1]&&b>a&&a>=nm[0]){setTimeout(()=>toast(T('zh_zero_t',{k:ZH_I[k]+' '+T('zh_k_'+k),n:nm[0]})),1500);return}}}
 function apply(v){
+ {const zo=V&&V.zh&&V.zh.live&&V.zh.c;if(zo&&v&&v.zh)zhZero(zo,v.zh)}
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
  V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);if(v&&'mp' in v){MP=v.mp||null;if(MP&&!MP.prem&&MP.until>Date.now()&&!mpShown){mpShown=1;if(!NB)mpAuto(0)}}if(v&&v.pjoin)pjoinShow(v.pjoin);if(v&&v.cinv)cinvShow(v.cinv);heroPen();raceWinChk();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
@@ -297,7 +300,7 @@ function raceTill(ms){const d=new Date(ms),z=n=>String(n).padStart(2,'0');return
 function raceWk(wk){const t=Date.parse(wk+'T00:00:00Z'),a=new Date(t-7*864e5),b=new Date(t-864e5),z=n=>String(n).padStart(2,'0');return `${z(a.getUTCDate())}${a.getUTCMonth()===b.getUTCMonth()?'':'.'+z(a.getUTCMonth()+1)}–${z(b.getUTCDate())}.${z(b.getUTCMonth()+1)}`}
 // 13.11 (Влад «А»): зелена плашка балансу виводу в шапці — видно на всіх екранах; тап → Герой → 💸 Вивід
 var wdUsd=null;function wdChip(u){if(u!=null)wdUsd=Number(u)||0;const c=$('wdChip');if(!c||wdUsd==null)return;c.hidden=false;const t='$'+wdUsd.toFixed(2);if($('wdChipV').textContent!==t)$('wdChipV').textContent=t;
- if(!c.onclick)c.onclick=()=>{haptic('light');lastSub.bag='wd';const b=document.querySelector(tabBtn('bag'));if(b)b.click()}} // 14.11: як швидка кнопка «Вивід» (раніше lastSub.hero='wd' — ✕ відкривав вивід знову, вийти не можна було)
+ if(!c.onclick)c.onclick=()=>{haptic('light');openTab('wd')}} // 14.11: як швидка кнопка «Вивід» (раніше lastSub.hero='wd' — ✕ відкривав вивід знову, вийти не можна було)
 // 13.11 (Влад): подарунок з привітанням від адміна — вікно на головному екрані, Попіл зараховується лише після «Забрати» (giftClaim)
 // 15.11 (Влад): намальовані значки клану (Higgsfield nano_banana_2, стиль речей) — assets/clan/*.webp
 const CIC_V=1,cIc=(n,c)=>`<img class="cic${c?' '+c:''}" src="assets/clan/${n}.webp?v=${CIC_V}" alt="" loading="lazy" decoding="async">`;
@@ -370,7 +373,7 @@ function invite(){
  try{navigator.clipboard.writeText(link);toast(T('link_copied'))}catch(e){toast(link)}
 }
 function renderHero(){
- let h=`<div class="qrow">${[['bag','🎒',T('sub_bag')],['pet','🐾',T('sub_pet')],['train','💪',T('sub_train')],['market','⚖️',T('sub_market')],['wd','💸',T('sub_wd').replace(/^💸\s*/,'')]].map(([k,i,n])=>`<button class="qb" data-hq="${k}"><span>${i}</span>${n}${k==='bag'&&G.inv.some(x=>x.nw)?'<i class="qdot"></i>':''}</button>`).join('')}</div><div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
+ let h=`<div class="qrow">${[['bag','🎒',T('sub_bag')],['pet','🐾',T('sub_pet')],['train','💪',T('sub_train')],['market','⚖️',T('sub_market')],['top','🏆',T('sub_top')]].map(([k,i,n])=>`<button class="qb" data-hq="${k}"><span>${i}</span>${n}${k==='bag'&&G.inv.some(x=>x.nw)?'<i class="qdot"></i>':''}</button>`).join('')}</div><div class="row" style="margin:0 0 10px"><button class="btn pri" id="bestBtn">${T('equip_best')}</button><button class="btn" id="invBtn">${T('invite')}</button></div><div class="slots">`;
  for(const s of SLOTS){const it=G.eq[s];
   h+=`<div class="slot" ${it?`data-rf="${it.id}" style="border-color:${RAR[it.r].c}66"`:''}><div class="ic">${it?gearIc(it,1):SLOT[s].ic}</div><div class="sn">${SLOT[s].n}</div>`+
    (it?`<div class="it" style="color:${RAR[it.r].c}">${itemName(it)} ${starsOf(it)}</div><div class="sn">${T('lvl',{n:it.il})} ${sockView(it)}</div>${refOk(it)?`<div class="sn ref">⬆️ ${T('ref_btn')}</div>`:''}`:`<div class="sn" style="margin-top:6px">${T('empty_slot')}</div>`)+'</div>'}
@@ -386,7 +389,7 @@ function renderHero(){
  setH($('p-hero'),h);$('hStats').ontoggle=e=>{statsOpen=e.target.open}; /* характеристики згорнуті внизу (04.11), стан пам'ятаємо між оновленнями */$('invBtn').onclick=invite;$('bestBtn').onclick=()=>act('equipBest',{},r=>{toast(r.out.n?T('equipped_n',{n:r.out.n}):T('all_best'));gemMoveAsk(r.out.gm)});
  $('p-hero').querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
  $('p-hero').querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>refineDlg(+b.dataset.rf));
- $('p-hero').querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{const k=b.dataset.hq,keep=lastSub.bag;lastSub.bag=k;document.querySelector(tabBtn('bag')).click();if(k==='pet'||k==='train')lastSub.bag=keep});
+ $('p-hero').querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{const k=b.dataset.hq,keep=lastSub.bag;if(k==='top'){openTab('top');return}lastSub.bag=k;document.querySelector(tabBtn('bag')).click();if(k==='pet'||k==='train')lastSub.bag=keep});
 }
 // Вдосконалення речі (04.11): +1 рівень предмета за золото й уламки, до (найвищий етап − 15)
 const refK=r=>((V.refine&&V.refine.m)||[0,0,0,1,2,5,15])[r]||1; // множник ціни за рідкістю (04.11: вічна в 7,5 раза дорожча за легендарку)
@@ -485,7 +488,7 @@ function renderBag(){
   h+=`<div class="item" style="border-left-color:${RAR[it.r].c}"><div class="icw">${V.pen&&!V.twin&&it.r<=4&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="igvb" data-igv="${it.id}" title="${T('btn_igv')}" aria-label="${T('btn_igv')}">🎁</button>`:''}<div class="icx"><div class="ic">${gearIc(it)}</div><button class="lkb${it.lk?' on':''}" data-lk="${it.id}" title="${T(it.lk?'lk_off':'lk_on')}" aria-label="${T(it.lk?'lk_off':'lk_on')}">📌</button></div></div><div class="info">
    <div class="nm" style="color:${RAR[it.r].c}">${it.nw?'🆕 ':''}${itemName(it)} ${starsOf(it)}</div><div class="sub">${RAR[it.r].n} · ${SLOT[it.slot].n} · ${T('lvl',{n:it.il})} ${sockView(it)}${better?` · <span class="up">${T('better')}</span>`:''}${powTag(it)}</div>
    <div class="st">${statLine(stSr(it),eq?fullSt(eq):{},gemSum(it))}</div>${afLine(it)}${it.gm&&it.gm.length?`<div class="st">${it.gm.map(k=>gemIc(k)+' '+gemTxt(k,it.il,it)).join(' · ')}</div>`:''}</div>
-   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:it.lk?'':`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.lk?'':it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!it.sr&&!it.rr&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`:''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
+   <div class="acts">${it.il>G.lvl?`<button class="btn" disabled title="${T('need_lvl',{n:it.il})}">🔒 ${T('need_lvl',{n:it.il})}</button>`:`<button class="btn pri" data-eq="${it.id}">${T('equip')}</button>`}${it.gm&&it.gm.length?`<button class="btn" data-gsock="${it.id}">◆ ${T('gem_socks')}</button>`:it.lk?'':`<button class="btn" data-sell="${it.id}">${RIS('gold')}${fmt(sellPrice(it))}</button>`}${it.lk?'':it.r>=5?(it.gm&&it.gm.length?`<button class="btn" disabled title="${T('relic_gems')}">⚱️ ${T('relic_gems')}</button>`:`<button class="btn" data-rel="${it.id}">⚱️ +${(V.forge&&V.forge.relicAsh||{})[it.r]||0}</button>`):''}${it.r<4&&!(it.gm&&it.gm.length)&&!it.lk?`<button class="btn" data-dis="${it.id}">⚒️ ${T('btn_dis')} ${G.dismode==='xp'?'✨':'🔩'}</button>`:''}${it.r>=2&&!(it.gm&&it.gm.length)&&!it.lk?(it.sr||it.rr?`<button class="btn" style="opacity:.5" data-mkno="1">🔒 ${T('btn_mkt')}</button>`:`<button class="btn" data-mk="${it.id}">⚱️ ${T('btn_mkt')}</button>`):''}${refOk(it)||(V.afx&&V.afx.n[it.r])?`<button class="btn" data-rf="${it.id}">${refOk(it)?'⬆️':'✦'}</button>`:''}</div></div>`}
  setH($('p-bag'),h);
  if($('ovfOk'))$('ovfOk').onclick=()=>act('ovfSeen',{});
  if($('keyGv'))$('keyGv').onclick=keyGiveDlg;
@@ -501,6 +504,7 @@ function renderBag(){
  $('p-bag').querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>relicAsk([+b.dataset.rel],'relic'));
  if($('relJ'))$('relJ').onclick=()=>askOnce('relicJ',`<div class="ask ask-a"><div class="ask-ic">⚱️</div><h3>${T('ask_relic_t')}</h3><p class="ask-q">${T('relic_junk_ask',{n:V.forge.relic})}</p></div>`,T('relic_btn'),()=>act('relicAsh',{ids:'junk'},r=>toast(T('relic_done',{n:r.out.n,a:r.out.ash}))));
  $('p-bag').querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>marketSellDlg(+b.dataset.mk));
+ $('p-bag').querySelectorAll('[data-mkno]').forEach(b=>b.onclick=()=>{toast(errT({message:'market_upg'}));haptic('light')}); // 23.11 (Влад «А»): річ із зірками / перекинутими властивостями — замкнена кнопка з поясненням, а не порожнє місце
  $('p-bag').querySelectorAll('[data-igv]').forEach(b=>b.onclick=()=>igiveDlg(+b.dataset.igv));
  $('p-bag').querySelectorAll('[data-lk]').forEach(b=>b.onclick=()=>{const id=+b.dataset.lk,it=G.inv.find(i=>i.id===id);if(!it)return;act('lock',{id,on:!it.lk},r=>{haptic('light');toast(T(r.out&&r.out.lk?'lk_done':'lk_undone'))})}); // 21.11 (гравчиня Sonia): 📌 закріпити річ — не продасться й не розбереться
  $('p-bag').querySelectorAll('[data-gsock]').forEach(b=>b.onclick=()=>{fsub='gem';gemSel=+b.dataset.gsock;document.querySelector('.tabs button[data-t="forge"]').click()});
@@ -1741,7 +1745,8 @@ function zhCard(d){const Z=V&&V.zh;if(!Z||!Z.live)return'';
  <p class="sub">${T('zh_today',{d:Z.day,c:Z.cap})}${Z.x2?' · '+T('zh_x2',{a:ZH_I[Z.x2]+' '+T('zh_k_'+Z.x2)}):''}</p>
  <div class="zh-th">${Z.th.map((v,i)=>{const got=Z.got&(1<<i),ok=Z.pts>=v;return `<div class="${got?'got':ok?'ok':''}"><b>${got?'✅':ok?'🎁':'🔒'} ${v}</b><span>${zhRew(Z.thR[i])}</span></div>`}).join('')}</div>
  ${can?`<div class="row"><button class="btn pri glow" id="zhClaim" ${busy?'disabled':''}>🎁 ${T('claim_all')}</button></div>`:nx?`<p class="sub">${T('zh_next',{n:fmt(Math.ceil(nx-Z.pts))})}</p>`:''}
- <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>`<div class="zh-k"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k,k==='clan'&&Z.cm?{g:fmt(Z.cm.gold),a:Z.cm.ash,n:Z.cm.mn,m:MATN[Z.cm.m],s:fmt(Z.cm.sh)}:undefined)}</i><small>${(Z.c&&Z.c[k])||0}/${Z.norm[k][0]}</small></div>`).join('')}</details>
+ <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>{const c=(Z.c&&Z.c[k])||0,[f,hf]=Z.norm[k],dn=c>=f&&!hf,ls=c>=f&&hf; /* 23.11 (Влад «А»): норму дня виконано — видно одразу */
+  return `<div class="zh-k${dn?' zh-done':''}"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k,k==='clan'&&Z.cm?{g:fmt(Z.cm.gold),a:Z.cm.ash,n:Z.cm.mn,m:MATN[Z.cm.m],s:fmt(Z.cm.sh)}:undefined)}${dn?`<em>✅ ${T('zh_k_done')}</em>`:ls?`<em class="ls">⬇ ${T('dzh_over')}</em>`:''}</i><small>${dn?'✅ '+f:c}/${f}</small></div>`}).join('')}</details>
  <p class="hint">${Z.ok&&!V.twin?T('zh_cash_ok',{l:Z.lv}):T('zh_cash_no')}</p></div>`;
  return h}
 function zhList(d){
@@ -1888,7 +1893,7 @@ function tutCheck(){
  if(tutCur){if(tutCur.still&&!tutCur.still())tutHide();else{tutPlace();return}}
  const old=tutHas('old');
  if(!old&&!tutHas('intro')){
-  if(groupOf(tab)==='bag')return; // вступ показуємо на головному екрані, не у вікні героя
+  if(SHEETS.includes(groupOf(tab)))return; // вступ показуємо на головному екрані, не у вікні-шторці
   const [txt,sel]=TUT_INTRO[introI]||TUT_INTRO[0];
   tutShow({txt,sel,block:1,skip:1,i:introI+1,n:TUT_INTRO.length,ok:()=>{introI++;if(introI>=TUT_INTRO.length){introI=0;tutMark('intro')}}});return;
  }
@@ -1901,7 +1906,8 @@ function tutCheck(){
   if((old&&!g.all)||tutHas('tg_'+g.k)||(tutHas('p_'+g.p)&&!g.np))continue;
   let ok=false;try{ok=g.c()}catch(e){}
   if(!ok)continue;
-  const inG=groupOf(tab)===g.tab,sel=inG?(g.q?`#p-hero [data-hq="${g.p}"]`:`#subtabs button[data-s="${g.p}"]`):tabBtn(g.tab);
+  const inG=groupOf(tab)===g.tab;if(!inG&&SHEETS.includes(groupOf(tab)))continue; // 23.11: у шторці не вказуємо на кнопки під нею
+  const sel=inG?(g.q?`#p-hero [data-hq="${g.p}"]`:`#subtabs button[data-s="${g.p}"]`):tabBtn(g.tab);
   tutShow({txt:'tg_'+g.k,sel,skip:!old,still:()=>(groupOf(tab)===g.tab)===inG&&curPane()!==g.p&&!tipPending(),ok:()=>tutMark('tg_'+g.k)});return;
  }
 }
@@ -2138,20 +2144,22 @@ function wbResult(o){
  haptic('heavy');
 }
 // головні вкладки й підвкладки
-const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'tasks'};
+const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'tasks',me:'prof',top:'top'};
 // 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Вихованець, Тренування, Журнал, Профіль — у вікні героя на весь екран
 // 10.11 (Влад, Штаб #4): магазин — окрема виділена вкладка в центрі нижньої панелі (була підвкладка вікна Героя)
 // 13.11 (Влад): у вікні Сумки без Вихованця й Тренування (вони є кнопками на головному екрані), Журнал — у самому кінці, щоб легше знайти «💸 Вивід»
-const groupOf=t=>['bag','market','pet','train','log','prof','wd'].includes(t)?'bag':t==='top'||t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
+const groupOf=t=>['bag','market','pet','train'].includes(t)?'bag':['prof','wd','log'].includes(t)?'me':t==='top'?'top':t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
+// 23.11 (Влад): Сумка — лише речі (Сумка · Ринок); Профіль · Вивід · Журнал — з рівня в шапці; Рейтинги — окреме вікно з кнопки на «Герої»; в Арені — лише бої
+const SHEETS=['bag','me','top'];const openTab=t=>{tab=t;lastSub[groupOf(t)]=t;showPane()};
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'||g==='dng'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');b.style.backgroundImage='';
  if(sc==='dng'){const sw=dsub==='sw'&&V&&V.swamp,D=V&&V.dng,op=D?D.tiers.filter(x=>x.open):[],bg=sw?'sw_bg':DNG[((op.length?op[op.length-1].t:1)-1)].bg; // 15.11: сцена Підземелля — малюнок найвищого відкритого тиру, Болота — болото
   b.style.backgroundImage=`radial-gradient(ellipse at center,#000a 0%,#0005 45%,transparent 75%),linear-gradient(0deg,#0b0a0fcc,transparent 40%),url(${IMG(bg)})`;
   b.innerHTML=`<div><b>${T(sw?'sw_name':'scene_dng')}</b><span>${T(sw?'scene_sw_s':'scene_dng_s')}</span></div>`;return}
  if(sc){b.innerHTML=`<div class="sc-ic">${sc==='forge'?'⚒️':'🏰'}</div><div><b>${T(sc==='forge'?'scene_forge':'scene_clan')}</b><span>${T(sc==='forge'?'scene_forge_s':'scene_clan_s')}</span></div>`}}
-function showPane(){if((tab!=='clan'||csub!=='chat')&&document.body.classList.contains('chfull'))chFull(0);if(groupOf(tab)!=='bag')prevTab=tab;heroSheet(groupOf(tab)==='bag');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
+function showPane(){if((tab!=='clan'||csub!=='chat')&&document.body.classList.contains('chfull'))chFull(0);if(!SHEETS.includes(groupOf(tab)))prevTab=tab;heroSheet(SHEETS.includes(groupOf(tab)));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+tab));dirty[tab]=1;flush();renderSub()}
 // «Герой» (Спорядження / Вихованець / Тренування / Журнал / Профіль) — окреме вікно-шторка поверх гри (04.11, ідея Влада: менше загромадження).
 // Підвкладки й панелі героя переносяться в шторку й повертаються назад при закритті. Закрити: ✕, тап по затемненню, свайп униз по шапці.
-let prevTab='hero';const HERO_PANES=['bag','market','pet','train','log','prof','wd'];
+let prevTab='hero';const HERO_PANES=['bag','market','pet','train','log','prof','wd','top'];
 function heroSheet(open){
  let sh=$('hsheet');
  if(!sh){sh=document.createElement('div');sh.id='hsheet';sh.innerHTML=`<div class="hs-bg"></div><div class="hs-box"><div class="hs-head"><div class="hs-t"><b id="hsTitle"></b><span id="hsSub"></span></div><div class="hs-cur" id="hsCur"></div><button class="mx" id="hsX">✕</button></div><div class="hs-body" id="hsBody"></div></div>`;document.body.appendChild(sh);
@@ -2162,7 +2170,7 @@ function heroSheet(open){
  if(open){
   if(st.parentNode!==body)body.appendChild(st);
   for(const k of HERO_PANES){const p=$('p-'+k);if(p.parentNode!==body)body.appendChild(p)}
-  $('hsTitle').textContent='🧙 '+T('hs_title');$('hsSub').textContent=G?T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)}):'';
+  {const sg=groupOf(tab);$('hsTitle').textContent=sg==='top'?'🏆 '+T('sub_top'):sg==='me'?'👤 '+T('sub_prof'):'🧙 '+T('hs_title')}$('hsSub').textContent=G?T('lvl',{n:G.lvl})+' · '+T('power',{n:fmt(V&&V.hero?V.hero.power:0)}):'';
   if(!sh.classList.contains('open')){sh.classList.add('open');document.body.classList.add('hs-open');body.scrollTop=0};renderTop()
  }else{
   if(!sh.classList.contains('open'))return;
@@ -2175,18 +2183,18 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off&&!V.wb.gone||wbHide()?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
+ const items=g==='hero'?null:g==='arena'?(V&&V.wb&&V.wb.off&&!V.wb.gone||wbHide()?null:[['arena','sub_pvp'],['wboss','sub_wb']]):g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='me'?[['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='top'?null:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
  e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else if(g==='dng'){dsub=k;dirty.dng=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
 }
-// 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває «Арена → Рейтинги»
+// 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває вікно «Рейтинги» (з 23.11 — окреме, не в Арені)
 const rkPlace=k=>{const d=topData&&topData[k];if(!d)return 0;const m=(d.rows||[]).find(r=>r.me)||d.me;return m&&m.place||0};
 function rkPaint(){const e=$('rkPl');if(!e)return;const p=rkPlace('power'),s=rkPlace('stage');e.innerHTML=[p?`<small>💪</small>#${p}`:'',s?`<small>🗺️</small>#${s}`:''].filter(Boolean).join(' · ')}
 function rkLoad(){if(document.visibilityState!=='visible')return;for(const k of ['power','stage'])api('top',{kind:k}).then(r=>{topData[r.out.kind]=r.out;rkPaint()}).catch(()=>{})}
 // тап — рейтинг, де в тебе найкраще місце (Сила чи Етап; при рівності — Сила). Влад 13.11
-if($('rkBtn'))$('rkBtn').onclick=()=>{haptic('light');const p=rkPlace('power'),s=rkPlace('stage');topKind=s&&(!p||s<p)?'stage':'power';lastSub.arena='top';const b=document.querySelector('.tabs button[data-t="arena"]');if(b)b.click();setTimeout(()=>{const t=document.querySelector('.tabsw');if(t)t.scrollIntoView({behavior:'smooth',block:'start'})},50)};
+if($('rkBtn'))$('rkBtn').onclick=()=>{haptic('light');const p=rkPlace('power'),s=rkPlace('stage');topKind=s&&(!p||s<p)?'stage':'power';openTab('top')};
 setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
 // 15.11 (Влад): анонс боса сервера — хто він, поки таємниця; поява — з новим ігровим днем (00:00 UTC = 02:00 Київ). Сам бос ще неактивний (рішення в Штабі)
 const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
@@ -2279,7 +2287,7 @@ function nbOpen(){if(!NB)return;haptic('medium');const o=NB,l=o.until-Date.now()
    else shopBuy('newb',m)})},'newb')}
 setInterval(nbPaint,1e3);if($('nbOf'))$('nbOf').onclick=nbOpen;window.__nbOpen=nbOpen; // __nbOpen — для тестів
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{const g=b.dataset.t;tab=lastSub[g]||g;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));showPane()});
-$('lvl').onclick=$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click(); // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
+$('hs').onclick=()=>document.querySelector(tabBtn('bag')).click();$('lvlw').onclick=()=>{haptic('light');openTab('prof')}; // 23.11: рівень — Профіль · Вивід · Журнал; фігурка — Сумка // рівень і фігурка героя відкривають вікно героя (Сумка й усе про героя)
 $('prev').onclick=()=>{if(G.stage>1)act('stage',{s:G.stage-1},()=>{B.m=null;B.resp=0.1})};
 $('next').onclick=()=>{if(G.stage<G.maxStage)act('stage',{s:G.stage+1},()=>{B.m=null;B.resp=0.1})};
 $('bossBtn').onclick=()=>{if(G.kills>=WAVES&&!B.rep){
