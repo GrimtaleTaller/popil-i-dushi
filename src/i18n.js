@@ -504,3 +504,25 @@ Object.assign(window.I18N.ru.err,{market_ash_only:'Древние и вечны�
 Object.assign(window.I18N.uk.t,{igv_hint:'Річ отримає учасник твого клану. Передавати й отримувати можна після 3 днів у клані: до 10 речей за 7 днів кожному. Отримана річ не зараховується в Колекцію і в рейтинг Сили.',igv_left:'Цього тижня ще можна: {n}',igv_lim:'Ліміт: не більше 10 речей за 7 днів',igv_lim_to:'Цей гравець уже отримав 10 речей за 7 днів'});
 Object.assign(window.I18N.ru.t,{igv_hint:'Вещь получит участник твоего клана. Передавать и получать можно после 3 дней в клане: до 10 вещей за 7 дней каждому. Полученная вещь не засчитывается в Коллекцию и в рейтинг Силы.',igv_left:'На этой неделе ещё можно: {n}',igv_lim:'Лимит: не больше 10 вещей за 7 дней',igv_lim_to:'Этот игрок уже получил 10 вещей за 7 дней'});
 Object.assign(window.I18N.en.t,{igv_hint:'A member of your clan receives the item. You can give and receive after 3 days in the clan: up to 10 items per 7 days each. A received item does not count toward the Collection or the Power rating.',igv_left:'Left this week: {n}',igv_lim:'Limit: up to 10 items per 7 days',igv_lim_to:'This player has already received 10 items in 7 days'});
+// 23.11 (Влад «2.А»): описи щоденних підземель — атмосфера, без «витрачаєш / виносиш» (що треба й що дають — у рядках Підготовка / Нагорода)
+Object.assign(window.I18N.uk.t,{
+ dd_l_gold:'Покинуті шахти, де в темряві ще блищить золота жила. Хто не боїться обвалів — повертається з повними кишенями.',
+ dd_l_mats:'Гноми давно пішли, а їхні штольні досі повні руди. Головне — не заблукати в лабіринті ходів.',
+ dd_l_gems:'У стінах цієї печери ростуть камені, старші за королівства. Зрідка трапляються навіть камені V рівня.',
+ dd_l_leg:'Вогонь Горнила не згасав тисячу років. Хто дійде до нього — забере звідти легендарну річ.',
+ dd_l_ash:'Хранитель відлучився, і двері його сховища з Попелом прочинені. Але ненадовго.',
+ dd_l_scroll:'Відьма полетіла на шабаш, а в її скринях лишились Сувої вічності. Знайти б потрібну скриню.'});
+Object.assign(window.I18N.ru.t,{
+ dd_l_gold:'Заброшенные шахты, где во тьме ещё блестит золотая жила. Кто не боится обвалов — возвращается с полными карманами.',
+ dd_l_mats:'Гномы давно ушли, а их штольни до сих пор полны руды. Главное — не заблудиться в лабиринте ходов.',
+ dd_l_gems:'В стенах этой пещеры растут камни старше королевств. Изредка попадаются даже камни V уровня.',
+ dd_l_leg:'Огонь Горнила не угасал тысячу лет. Кто дойдёт до него — заберёт оттуда легендарную вещь.',
+ dd_l_ash:'Хранитель отлучился, и двери его хранилища с Пеплом приоткрыты. Но ненадолго.',
+ dd_l_scroll:'Ведьма улетела на шабаш, а в её сундуках остались Свитки вечности. Найти бы нужный сундук.'});
+Object.assign(window.I18N.en.t,{
+ dd_l_gold:'Abandoned mines where a golden vein still glints in the dark. Those unafraid of cave-ins come back with full pockets.',
+ dd_l_mats:'The dwarves left long ago, but their tunnels are still full of ore. Just don’t get lost in the maze.',
+ dd_l_gems:'Gems older than kingdoms grow in the walls of this cave. Now and then even level V gems turn up.',
+ dd_l_leg:'The Forge’s fire has burned for a thousand years. Whoever reaches it takes a legendary item from it.',
+ dd_l_ash:'The Keeper has stepped out, and the door to his Ash vault is ajar. But not for long.',
+ dd_l_scroll:'The Witch has flown off to her sabbath, leaving Scrolls of Eternity in her chests. If only you can find the right one.'});
