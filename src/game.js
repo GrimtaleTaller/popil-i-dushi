@@ -849,7 +849,7 @@ function ddRewTxt(k,r){return k==='gold'?'💰'+fmt(r.gold):k==='mats'?'⛏️'+
 function ddCard(){const D=V.dd;if(!D||!D.live)return'';
  const ms=Math.max(0,D.end-Date.now()),hh=Math.floor(ms/36e5),mm=Math.floor(ms%36e5/6e4);
  let h=`<div class="card dd"><div class="dd-art" style="background-image:url(assets/dd/${D.k}.jpg?v=1)"></div><div class="dd-hd"><div><h4>${DD_I[D.k]} ${T('dd_n_'+D.k)}</h4><p class="hint">${T('dd_l_'+D.k)}</p></div></div>
- <p class="sub">${T('dd_tier',{t:D.t})} · ${T('dd_used',{n:D.used,b:D.base})} · ${T('dd_next',{k:DD_I[D.next]+' '+T('dd_n_'+D.next),t:T('t_hm',{h:hh,m:mm})})}</p>`;
+ <p class="sub">${T('dd_tier',{t:D.t})} · ${T('dd_used',{n:D.used,b:D.base})}</p>`; /* 23.11 (Влад): не показувати, яке підземелля буде завтра */
  for(const x of D.ds){const lock=!x.open,weak=x.open&&!x.win;
   h+=`<div class="dd-row${lock?' lock':''}"><div><b>${T('diff_'+x.d)}</b><span>${T('dd_pay')}: ${ddCostTxt(x.c)}</span><span>${T('dd_get')}: ${ddRewTxt(D.k,x.r)} · ${RIS('tmk')}${x.r.marks}</span>${weak?`<span class="dn">💪 ${T('need_power',{n:fmt(x.need),m:fmt(V.hero?V.hero.power:0)})}</span>`:''}</div>
   <button class="btn${lock||weak?'':' pri'}" data-ddg="${x.d}" ${lock||weak||busy?'disabled':''}>${lock?'🔒':T('dd_go')}</button></div>`}
@@ -2078,7 +2078,7 @@ function wbGone(el,D){const R=D.res,hm=t=>{const d=new Date(t),z=n=>String(n).pa
  live('wboss',()=>api('wbInfo').then(r=>r.out),o=>{if(!o||same(o,wbData))return false;wbData=o;return true},6e4);
 }
 function renderWb(){
- if(V.wb&&V.wb.off&&!V.wb.gone){tab='arena';lastSub.arena='arena';showPane();return}
+ if(V.wb&&V.wb.off&&!V.wb.gone||wbHide()){tab='arena';lastSub.arena='arena';showPane();return}
  const W=V.wb,el=$('p-wboss');
  if(!W||(!W.gone&&G.maxStage<W.stage)){el.innerHTML=`<div class="empty">${T('sbx_unlock',{n:W?W.stage:15})}</div>`;return}
  if(wbData&&Date.now()-wbAt>(wbData.flee?8e3:6e4))wbData=null; // під час втечі Графа — частіше, щоб здоров'я й таймер рухались
@@ -2154,7 +2154,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off&&!V.wb.gone?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
+ const items=g==='hero'?null:g==='arena'?[['arena','sub_pvp'],...(V&&V.wb&&V.wb.off&&!V.wb.gone||wbHide()?[]:[['wboss','sub_wb']]),['top','sub_top']]:g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market'],['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
@@ -2169,9 +2169,11 @@ if($('rkBtn'))$('rkBtn').onclick=()=>{haptic('light');const p=rkPlace('power'),s
 setTimeout(rkLoad,4000);setInterval(rkLoad,18e4);setInterval(rkPaint,5e3);
 // 15.11 (Влад): анонс боса сервера — хто він, поки таємниця; поява — з новим ігровим днем (00:00 UTC = 02:00 Київ). Сам бос ще неактивний (рішення в Штабі)
 const SBOSS={at:Date.UTC(2026,10,16,0,0,0),on:0};
+// 23.11 (Влад: «плашка Графа ще лишилась»): після закриття тижня 16–22.11 (нд 19:00 UTC) — ні плашки, ні підвкладки боса; призи тижня видно в Рейтингах
+const wbHide=()=>!!(V&&V.wb&&V.wb.gone)&&Date.now()>=Date.UTC(2026,10,22,19,0,0);
 const sbLeft=()=>Math.max(0,SBOSS.at-Date.now());
 const sbHms=ms=>{const s=Math.floor(ms/1e3),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0')};
-function sbPaint(){const b=$('sBos');if(!b)return;if(!G){b.style.display='none';return}b.style.display='';
+function sbPaint(){const b=$('sBos');if(!b)return;if(!G||wbHide()){b.style.display='none';return}b.style.display='';
  if(V&&V.wb&&V.wb.gone){$('sBosT').textContent=T('sbx_gone_pill');$('sBosC').textContent='🏆';return} // 22.11 (Влад): після втечі — веде до підсумків тижня // нд 22.11 12:00: Граф утік — кнопки боса більше немає
  if(V&&V.wb&&!V.wb.off){$('sBosT').textContent=T('sub_wb');$('sBosC').textContent=G.maxStage<V.wb.stage?T('stage',{n:V.wb.stage}):V.wb.flee&&V.wb.flee>Date.now()?'🦇 '+mmss(V.wb.flee-Date.now()):wbData&&wbData.boss&&wbData.boss.back>Date.now()?'☠️ '+mmss(wbData.boss.back-Date.now()):'🎟️ '+V.wb.left+'/'+V.wb.free;return} // 15.11: бос відкритий — пігулка веде до бою
  const l=sbLeft();
