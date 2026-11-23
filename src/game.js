@@ -152,7 +152,10 @@ function askPm(){const w=tg();if(!w||!V||V.pm!==0||typeof w.requestWriteAccess!=
 function openBot(){const u='https://t.me/Grimtalebot';const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')}
 function openChat(){const w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(GAME_CHAT);else window.open(GAME_CHAT,'_blank','noopener')}
 function lnchSet(l){if($('lnchCh')&&!$('lnchCh').onclick){$('lnchCh').onclick=openCh;$('lnchCh').title=T('lnch_ch')}if(!l||!l.at)return;lnchAt=l.at;lnchOff=l.now-Date.now();lnchTick();if(!lnchIv&&lnchAt>Date.now()+lnchOff)lnchIv=setInterval(lnchTick,1000)}
+// 23.11 (Влад «А»): дія, що понад норму дня не дає очок Жнив, — підказка «+0», щоб не здавалось, що очки загубились
+function zhZero(o,n){if(!o||!n||!n.live||!n.c||!n.norm)return;for(const k in n.c){const a=o[k]||0,b=n.c[k]||0,nm=n.norm[k];if(nm&&!nm[1]&&b>a&&a>=nm[0]){setTimeout(()=>toast(T('zh_zero_t',{k:ZH_I[k]+' '+T('zh_k_'+k),n:nm[0]})),1500);return}}}
 function apply(v){
+ {const zo=V&&V.zh&&V.zh.live&&V.zh.c;if(zo&&v&&v.zh)zhZero(zo,v.zh)}
  if(v&&v.now){const d=v.now-__now0();SKEW=Math.abs(d)>6e4?d:0}
  V=v;G=v.s;H=v.hero;if(v&&'cu' in v)chatU=+v.cu||0;if(v&&'hum' in v)humF=+v.hum||0;if(v&&'cu' in v)nbSet(v.newb);if(v&&'mp' in v){MP=v.mp||null;if(MP&&!MP.prem&&MP.until>Date.now()&&!mpShown){mpShown=1;if(!NB)mpAuto(0)}}if(v&&v.pjoin)pjoinShow(v.pjoin);if(v&&v.cinv)cinvShow(v.cinv);heroPen();if(!afkAgain)afkLoc=0;afkPill();wdChip(v.usd);giftShow(v.gmsg);twinShow(v.twin);lnchSet(v.launch);{const lv=$('lvl');if(lv)lv.classList.toggle('vip',(G.vip||0)>Date.now())}pend={gold:0,xp:0,kills:0};
  Object.keys(dirty).forEach(k=>dirty[k]=1);renderBoss();paintArena();petFighter();
@@ -1735,7 +1738,8 @@ function zhCard(d){const Z=V&&V.zh;if(!Z||!Z.live)return'';
  <p class="sub">${T('zh_today',{d:Z.day,c:Z.cap})}${Z.x2?' · '+T('zh_x2',{a:ZH_I[Z.x2]+' '+T('zh_k_'+Z.x2)}):''}</p>
  <div class="zh-th">${Z.th.map((v,i)=>{const got=Z.got&(1<<i),ok=Z.pts>=v;return `<div class="${got?'got':ok?'ok':''}"><b>${got?'✅':ok?'🎁':'🔒'} ${v}</b><span>${zhRew(Z.thR[i])}</span></div>`}).join('')}</div>
  ${can?`<div class="row"><button class="btn pri glow" id="zhClaim" ${busy?'disabled':''}>🎁 ${T('claim_all')}</button></div>`:nx?`<p class="sub">${T('zh_next',{n:fmt(Math.ceil(nx-Z.pts))})}</p>`:''}
- <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>`<div class="zh-k"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k,k==='clan'&&Z.cm?{g:fmt(Z.cm.gold),a:Z.cm.ash,n:Z.cm.mn,m:MATN[Z.cm.m],s:fmt(Z.cm.sh)}:undefined)}</i><small>${(Z.c&&Z.c[k])||0}/${Z.norm[k][0]}</small></div>`).join('')}</details>
+ <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>{const c=(Z.c&&Z.c[k])||0,[f,hf]=Z.norm[k],dn=c>=f&&!hf,ls=c>=f&&hf; /* 23.11 (Влад «А»): норму дня виконано — видно одразу */
+  return `<div class="zh-k${dn?' zh-done':''}"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k,k==='clan'&&Z.cm?{g:fmt(Z.cm.gold),a:Z.cm.ash,n:Z.cm.mn,m:MATN[Z.cm.m],s:fmt(Z.cm.sh)}:undefined)}${dn?`<em>✅ ${T('zh_k_done')}</em>`:ls?`<em class="ls">⬇ ${T('dzh_over')}</em>`:''}</i><small>${dn?'✅ '+f:c}/${f}</small></div>`}).join('')}</details>
  <p class="hint">${Z.ok&&!V.twin?T('zh_cash_ok',{l:Z.lv}):T('zh_cash_no')}</p></div>`;
  return h}
 function zhList(d){
