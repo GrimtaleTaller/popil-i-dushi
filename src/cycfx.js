@@ -20,7 +20,7 @@
 @keyframes cfxBr{50%{transform:translateX(-50%) scale(1.015,1.03)}}
 .cfx .cy.hide{filter:brightness(0) blur(2px);transform:translateX(-50%) translateY(18%) scale(.9)}
 .cfx .cy.l{transform:translateX(-60%) rotate(-5deg)}.cfx .cy.r{transform:translateX(-40%) rotate(5deg)}.cfx .cy.up{transform:translateX(-50%) translateY(-8%)}
-.cfx .eye{position:absolute;width:12%;aspect-ratio:1;margin:-6% 0 0 -6%;border-radius:50%;background:radial-gradient(circle,#fff6c9 0,#ffb13b 35%,#ff5e1a66 60%,transparent 72%);opacity:0;transition:opacity .5s;mix-blend-mode:screen;pointer-events:none}
+.cfx .eye{position:absolute;z-index:4;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:radial-gradient(circle,#fff6c9 0,#ffb13b 35%,#ff5e1a66 60%,transparent 72%);opacity:0;transition:opacity .5s;mix-blend-mode:screen;pointer-events:none}
 .cfx .eye.on{opacity:1;animation:cfxGl 1.2s ease-in-out infinite}
 @keyframes cfxGl{50%{transform:scale(1.35)}}
 .cfx .tot{position:absolute;left:8px;top:8px;z-index:4;background:#000b;border:1px solid #ffffff22;border-radius:10px;padding:4px 9px;font-size:11px;opacity:.9}
@@ -70,7 +70,9 @@
 @media (prefers-reduced-motion:reduce){.cfx *{animation:none!important;transition:none!important}}`;
   let css = false;
   window.cycPlay = function (f, o) {
+    const open = document.querySelector('.cfx'); if (open) return open; // подвійне натискання — одне вікно
     const T = o.T, esc = o.esc, fmt = o.fmt, V = o.ver || 1, E = o.eye || [50, 16], L = f.log || [], R = f.res || [], B = f.buf || {}, TIME = 60;
+    const allDead = R.length > 0 && R.every((x) => x.t < TIME), END = allDead ? Math.max(...R.map((x) => x.t)) : TIME, hpR = R.map(() => 1);
     if (!css) { const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st); css = true; }
     const pimg = (x) => x.pet ? `assets/pet_${x.pet}${Math.min(3, Math.max(1, x.pf || 1))}.webp` : '';
     const el = document.createElement('div'); el.className = 'cfx';
@@ -78,9 +80,9 @@
 <div class="tb"><i data-k="tb"></i></div>
 <div class="bf">${[B.skin && T('cfx_skin', { n: B.skin }), B.dodge && T('cfx_dodge_b', { n: Math.round(B.dodge) }), B.sight && T('cfx_sight', { n: Math.round(B.sight) }), B.bite && T('cfx_bite', { n: Math.round(B.bite) }), B.rebirth && T('cfx_reb', { n: Math.round(B.rebirth) }), B.loot && T('cfx_loot', { n: Math.round(B.loot) })].filter(Boolean).map((x) => `<span>${x}</span>`).join('')}</div>
 <div class="ar" data-k="ar" style="background-image:url(assets/cyc/arena.jpg?v=${V})"><div class="tot">⚔️ ${T('cfx_tot')}<b data-k="tot">0</b></div>
-<div class="cy hide" data-k="cy"><img data-k="ci" src="assets/cyc/idle.webp?v=${V}" alt=""><div class="eye" data-k="eye" style="left:${E[0]}%;top:${E[1]}%"></div></div>
+<div class="cy hide" data-k="cy"><img data-k="ci" src="assets/cyc/idle.webp?v=${V}" alt=""></div><div class="eye" data-k="eye"></div>
 <div class="fx" data-k="fx"></div><div class="bn" data-k="bn"></div><div class="dk" data-k="dk"></div></div>
-<div class="pt">${R.map((x, i) => `<div class="m" data-m="${i}"><span class="tg"></span><div class="pc"><img class="hr" src="assets/hero.webp" alt="" style="filter:hue-rotate(${[0, 40, -35, 150, -90][i % 5]}deg)">${x.pet ? `<img class="pe" src="${pimg(x)}" alt="">` : ''}<span class="sk">💀</span></div><div class="n">${esc(x.name)}</div><div class="hp"><i></i></div><div class="s">${T('stage', { n: x.st })}</div></div>`).join('')}</div>
+<div class="pt" style="grid-template-columns:repeat(${Math.max(3, R.length)},minmax(0,1fr))">${R.map((x, i) => `<div class="m" data-m="${i}"><span class="tg"></span><div class="pc"><img class="hr" src="assets/hero.webp" alt="" style="filter:hue-rotate(${[0, 40, -35, 150, -90][i % 5]}deg)">${x.pet ? `<img class="pe" src="${pimg(x)}" alt="">` : ''}<span class="sk">💀</span></div><div class="n">${esc(x.name)}</div><div class="hp"><i></i></div><div class="s">${T('stage', { n: x.st })}</div></div>`).join('')}</div>
 <div class="ct"><button class="btn" data-k="sp">${T('cfx_speed', { n: 4 })}</button><button class="btn" data-k="sk">${T('cfx_skip')}</button></div><div data-k="rs"></div></div>`;
     document.body.appendChild(el);
     const q = (k) => el.querySelector(`[data-k="${k}"]`), M = [...el.querySelectorAll('.m')], ar = q('ar'), fx = q('fx'), cy = q('cy'), ci = q('ci');
@@ -93,7 +95,8 @@
     const slash = (c) => { const s = document.createElement('div'); s.className = 'sl' + (c ? ' c' : ''); s.style.left = (38 + Math.random() * 22) + '%'; s.style.top = (28 + Math.random() * 42) + '%'; s.style.setProperty('--r', (Math.random() * 120 - 60) + 'deg'); fx.appendChild(s); setTimeout(() => s.remove(), 340); };
     const card = (i) => { const c = M[i]; if (!c) return; c.classList.remove('hit'); void c.offsetWidth; c.classList.add('hit'); };
     const tag = (i, s, col) => { const g = M[i] && M[i].querySelector('.tg'); if (!g) return; g.textContent = s; g.style.color = col; g.classList.add('on'); later(900, () => g.classList.remove('on')); };
-    const hp = (i, r) => { const c = M[i]; if (!c) return; c.querySelector('.hp i').style.width = Math.max(0, Math.min(1, r)) * 100 + '%'; c.classList.toggle('lo', r < 0.3); };
+    const eyeAt = () => { const a = ar.getBoundingClientRect(), b = ci.getBoundingClientRect(), e = q('eye'); e.style.left = (b.left - a.left + b.width * E[0] / 100) + 'px'; e.style.top = (b.bottom - a.top - b.height * 0.92 + b.height * 0.92 * E[1] / 100) + 'px'; };
+    const hp = (i, r) => { hpR[i] = r; const c = M[i]; if (!c) return; c.querySelector('.hp i').style.width = Math.max(0, Math.min(1, r)) * 100 + '%'; c.classList.toggle('lo', r < 0.3); };
     const pose = (n, ms) => { ci.src = `assets/cyc/${n}.webp?v=${V}`; cy.classList.remove('idle'); if (n === 'swing') cy.classList.add('up'); later(ms, () => { ci.src = `assets/cyc/idle.webp?v=${V}`; cy.classList.remove('up', 'l', 'r'); cy.classList.add('idle'); }); };
     const hitOn = (h) => { const [i, v, r] = h; if (v < 0) { tag(i, T('cfx_dodge'), '#b8e6ff'); return; } card(i); hp(i, r); tag(i, '−' + fmt(v), '#ff6b78'); };
     function apply(e) {
@@ -112,19 +115,21 @@
       const dt = Math.min(0.1, (now - last) / 1000); last = now; t = Math.min(TIME, t + dt * speed);
       while (k < L.length && L[k][1] <= t) apply(L[k++]);
       q('ck').textContent = '⏳ ' + Math.ceil(TIME - t) + ' ' + T('cyc_s'); q('tb').style.width = (t / TIME * 100) + '%';
-      if (t >= TIME) return finish();
+      if (t >= TIME || (allDead && k >= L.length && t >= END)) return finish();
       raf = requestAnimationFrame(frame);
     }
     function finish() {
-      if (ph === 'end') return; ph = 'end'; cancelAnimationFrame(raf);
-      R.forEach((x, i) => { hp(i, x.t >= TIME ? 1 : 0); if (x.t < TIME) { M[i].classList.add('dd'); M[i].querySelector('.s').textContent = '💀 ' + x.t + ' ' + T('cyc_s'); } else M[i].classList.remove('dd'); });
-      for (; k < L.length; k++) { const e = L[k]; if (e[0] === 'a') tot += e[2].reduce((a, v) => a + v, 0); }
-      q('ck').textContent = '⏳ 0 ' + T('cyc_s'); q('tb').style.width = '100%'; q('tot').textContent = fmt(R.reduce((a, x) => a + x.dmg, 0));
+      if (ph === 'end') return; ph = 'end'; cancelAnimationFrame(raf); tm.forEach(clearTimeout); tm = []; k = L.length;
+      for (const e of L) { // здоров'я наприкінці — з усього журналу (відкладені ефекти скасовано вище)
+        if (e[0] === 's' && e[3] >= 0) hpR[e[2]] = e[4]; else if (e[0] === 'p') e[2].forEach((h) => { if (h[1] >= 0) hpR[h[0]] = h[2]; }); else if (e[0] === 'r') e[2].forEach((j) => { hpR[j] = e[3] / 100; }); }
+      R.forEach((x, i) => { const c = M[i]; c.classList.remove('hit'); c.querySelector('.tg').classList.remove('on'); if (x.t < TIME) { c.classList.add('dd'); hp(i, 0); c.querySelector('.s').textContent = '💀 ' + x.t + ' ' + T('cyc_s'); } else { c.classList.remove('dd'); hp(i, Math.max(hpR[i], 0.01)); c.querySelector('.s').textContent = T('stage', { n: x.st }); } });
+      fx.innerHTML = ''; ci.src = `assets/cyc/idle.webp?v=${V}`; q('eye').classList.remove('on');
+      q('ck').textContent = '⏳ ' + (allDead ? Math.max(0, TIME - END) : 0) + ' ' + T('cyc_s'); q('tb').style.width = (allDead ? END / TIME * 100 : 100) + '%'; q('tot').textContent = fmt(R.reduce((a, x) => a + x.dmg, 0));
       q('dk').style.opacity = 0; cy.className = 'cy idle';
-      ban(`${T('cfx_time')}<small>${T('cfx_away')}</small>`, 1500);
-      later(1300, () => { cy.className = 'cy hide'; q('eye').classList.remove('on'); });
-      q('sk').hidden = true;
-      q('rs').innerHTML = `<div class="rs"><h3>${T('cfx_res')}</h3>${R.map((x) => `<div class="rw">${x.pet ? `<img src="${pimg(x)}" alt="">` : '<span></span>'}<div><b>${esc(x.name)}</b><small>${T('cfx_dmg', { n: fmt(x.dmg) })}</small></div><span class="t ${x.t >= TIME ? 'ok' : 'die'}">${x.t >= TIME ? '✓ ' + TIME : '💀 ' + x.t} ${T('cyc_s')}</span><span class="p">${fmt(Math.round(x.pts))}<small>${T('cfx_pts')}</small></span></div>`).join('')}<p class="hint">${T('cfx_secs')}</p>${o.mine || ''}<button class="btn pri" data-k="ok" style="width:100%;margin-top:8px">${T('ok')}</button></div>`;
+      if (allDead) ban(`${T('cfx_fall', { n: END })}<small>${T('cfx_fall_s')}</small>`, 1800);
+      else { ban(`${T('cfx_time')}<small>${T('cfx_away')}</small>`, 1500); later(1300, () => { cy.className = 'cy hide'; }); }
+      q('sk').hidden = true; q('sp').hidden = true;
+      q('rs').innerHTML = `<div class="rs"><h3>${T('cfx_res')}</h3>${R.map((x) => `<div class="rw">${x.pet ? `<img src="${pimg(x)}" alt="">` : '<span></span>'}<div><b>${esc(x.name)}</b><small>${T('cfx_dmg', { n: fmt(x.dmg) })}</small></div><span class="t ${x.t >= TIME ? 'ok' : 'die'}">${x.t >= TIME ? '✓ ' + TIME : '💀 ' + x.t} ${T('cyc_s')}</span><span class="p">${fmt(Math.round(x.pts))}<small>${T('cfx_pts')}</small></span></div>`).join('')}<p class="hint">${T('cfx_secs')} ${T('cyc_res_h')}</p>${o.mine || ''}<button class="btn pri" data-k="ok" style="width:100%;margin-top:8px">${T('ok')}</button></div>`;
       q('ok').onclick = close;
     }
     function close() { tm.forEach(clearTimeout); cancelAnimationFrame(raf); ph = 'end'; el.remove(); o.onClose && o.onClose(); }
@@ -132,7 +137,7 @@
     q('sk').onclick = () => { tm.forEach(clearTimeout); tm = []; finish(); };
     R.forEach((x, i) => hp(i, 1));
     if (!L.length) { finish(); return el; }
-    later(250, () => { q('dk').style.opacity = 0.7; q('eye').classList.add('on'); ban(T('cfx_dark'), 1300); });
+    later(250, () => { eyeAt(); q('dk').style.opacity = 0.7; q('eye').classList.add('on'); ban(T('cfx_dark'), 1300); });
     later(1600, () => { shake(); q('dk').style.opacity = 0; cy.classList.remove('hide'); });
     later(2200, () => { ban(`${T('cfx_awake')}<small>${T('cfx_hold', { n: TIME })}</small>`, 1500); cy.classList.add('idle'); });
     later(3500, () => { q('eye').classList.remove('on'); ph = 'fight'; last = performance.now(); raf = requestAnimationFrame(frame); });
