@@ -1533,6 +1533,7 @@ function cycDo(a,args,cb){return act(a,args,r=>{if(r.out&&r.out.live!==undefined
 function cycRes(f,mine){if(!f||!f.res)return;
  const rows=f.res.map(x=>`<div><span>${PETE[x.pet]||'👤'} ${esc(x.name)} <small style="opacity:.6">${T('stage',{n:x.st})}</small></span><b>${x.t>=60?'✓':'💀'} ${x.t} ${T('cyc_s')} · ${fmt(Math.round(x.pts))}</b></div>`).join('');
  const m=mine?`<p>${T('cyc_mine',{n:mine.n,k:T('chest_'+mine.g),m:MATN[mine.mat],q:mine.matN})}${mine.ess?' · '+T('r_ess')+' +1':''}</p>`:'';
+ if(f.log&&f.log.length&&window.cycPlay){window.cycPlay(f,{T,esc,fmt,mine:m,eye:[54.8,18.7],ver:1});return} // 23.11 (Влад): бій — анімацією за журналом сервера; старі походи без журналу — таблицею
  modal(`<div class="nimg" style="background-image:url(assets/cyc/cave.jpg?v=1)"></div><h3>${T('cyc_t')} · ${T('cyc_d'+f.d)}</h3><div class="rooms cyc-res">${rows}</div><p class="hint">${T('cyc_res_h')}</p>${m}`,T('ok'))}
 function cycHtml(){const D=cycData;
  if(!D){if(!cycBusy){cycBusy=1;api('cycInfo').then(r=>{cycData=r.out;dirty.clan=1;flush()}).catch(e=>toast(errT(e))).finally(()=>{cycBusy=0})}return `<div class="empty">${T('loading')}</div>`}
@@ -1649,7 +1650,7 @@ function renderClan(){
  el.querySelectorAll('[data-cyk]').forEach(b=>b.onclick=()=>{const p=(cycData.open||[]).find(q=>q.id===+b.dataset.cyk),m=p&&p.members.find(q=>q.id===+b.dataset.cykp);if(!m)return; // 23.11 (Влад): лідер прибирає учасника до старту
   modal(`<h3>❌ ${T('cyc_kick')}</h3><p>${T('cyc_kick_q',{n:esc(m.name)})}</p>`,T('cyc_kick'),()=>cycDo('cycKick',{id:p.id,p:m.id},()=>toast(T('cyc_kick_ok',{n:m.name}))))});
  el.querySelectorAll('[data-cys]').forEach(b=>b.onclick=()=>cycDo('cycStart',{id:+b.dataset.cys},r=>cycRes(r.out.fight,r.out.mine)));
- el.querySelectorAll('[data-cyr]').forEach(b=>b.onclick=()=>{const x=(cycData.done||[]).find(q=>q.id===+b.dataset.cyr);if(x&&x.res)cycRes(x.res)});
+ el.querySelectorAll('[data-cyr]').forEach(b=>b.onclick=()=>{const x=(cycData.done||[]).find(q=>q.id===+b.dataset.cyr);if(!x)return;api('cycLog',{id:x.id}).then(r=>cycRes(r.out&&r.out.fight||x.res)).catch(()=>{if(x.res)cycRes(x.res)})}); // 23.11: повтор бою з журналом
  if(csub==='cyc')live('cyc',()=>api('cycInfo').then(r=>r.out),o=>{if(same(o,cycData))return false;cycData=o;return true},8000);
  el.querySelectorAll('[data-clf]').forEach(b=>b.onclick=()=>{clogF=b.dataset.clf;haptic('light');dirty.clan=1;flush()});
  el.querySelectorAll('[data-pj]').forEach(b=>b.onclick=()=>{const P=clanData.proj,go=()=>clanAct('clanProj',{s:P.done,cost:P.cost},()=>{toast(T('pj_done'));haptic('medium')}).then(r=>{if(!r){clanData=null;dirty.clan=1}}); // 10.11: підтвердження; після помилки — свіжі дані клану
