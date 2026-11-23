@@ -526,3 +526,10 @@ Object.assign(window.I18N.en.t,{
  dd_l_leg:'The Forge’s fire has burned for a thousand years. Whoever reaches it takes a legendary item from it.',
  dd_l_ash:'The Keeper has stepped out, and the door to his Ash vault is ajar. But not for long.',
  dd_l_scroll:'The Witch has flown off to her sabbath, leaving Scrolls of Eternity in her chests. If only you can find the right one.'});
+// 23.11 (Влад «А»): очки Жнив на картці підземелля + таблиця в «Як отримати очки»
+Object.assign(window.I18N.uk.t,{dzh_pts:'+{n} у Жнива за перемогу',dzh_x2:'сьогодні ×2',dzh_over:'норму дня виконано — далі менше',dzh_zero:'0 у Жнива — тир надто низький (очки дають тири від {f})',
+ zh_kp_dng:'за складністю (Звич. · Героїч. · Кошмар): свій найвищий тир — 10 · 13 · 16; на 1 нижче — 8 · 10 · 12; на 2 — 5 · 6 · 8; на 3 — 2 · 3 · 4; на 4 і нижче — 0; поразка — 30%'});
+Object.assign(window.I18N.ru.t,{dzh_pts:'+{n} в Жатву за победу',dzh_x2:'сегодня ×2',dzh_over:'норма дня выполнена — дальше меньше',dzh_zero:'0 в Жатву — тир слишком низкий (очки дают тиры от {f})',
+ zh_kp_dng:'по сложности (Обыч. · Героич. · Кошмар): свой высший тир — 10 · 13 · 16; на 1 ниже — 8 · 10 · 12; на 2 — 5 · 6 · 8; на 3 — 2 · 3 · 4; на 4 и ниже — 0; поражение — 30%'});
+Object.assign(window.I18N.en.t,{dzh_pts:'+{n} Harvest points per win',dzh_x2:'×2 today',dzh_over:'daily norm reached — less from now on',dzh_zero:'0 Harvest points — tier too low (points from tier {f})',
+ zh_kp_dng:'by difficulty (Normal · Heroic · Nightmare): your highest tier — 10 · 13 · 16; 1 lower — 8 · 10 · 12; 2 lower — 5 · 6 · 8; 3 lower — 2 · 3 · 4; 4+ lower — 0; a loss — 30%'});

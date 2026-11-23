@@ -822,10 +822,16 @@ function swampCard(){
   </div>
   <details class="dinfo"><summary>ℹ️ ${T('dng_how')}</summary><p>${T('sw_hint',{r:S.rooms,p:Math.round(S.scroll*100),m:Math.round((S.scMax||S.scroll)*100)})}</p></details>`;
 }
+// 23.11 (Влад «А»): скільки очок Жнив дає похід — та сама таблиця, що на сервері (ZH_DNG у logic.ts): [на скільки тирів нижче найвищого][складність]
+const ZH_DNG_C=[[10,13,16],[8,10,12],[5,6,8],[2,3,4]];
+function zhDngLine(t,d){const Z=V&&V.zh;if(!Z||!Z.live)return'';const mx=Math.max((G.dng&&G.dng.max)||0,t),b=(ZH_DNG_C[mx-t]||[])[Math.min(3,Math.max(1,d))-1]||0;
+ if(!b)return `<div class="sub dzh off">${RIS('zh')} ${T('dzh_zero',{t:mx,f:Math.max(1,mx-3)})}</div>`;
+ const x2=Z.x2==='dng',over=Z.c&&Z.norm&&Z.norm.dng&&(Z.c.dng||0)>=Z.norm.dng[0];
+ return `<div class="sub dzh">${RIS('zh')} ${T('dzh_pts',{n:b*(x2?2:1)})}${x2?' · '+T('dzh_x2'):''}${over?' · '+T('dzh_over'):''}</div>`}
 function dTierBody(Tt,DF,cd,left){const tr=T,rw=cd.rw,e=cd.est;
  const tiles=`<div class="rtiles sm">${rTile(chestIc(rw.chestG),'×'+rw.chests)}${rTile(RIC('m'+(rw.mat+1)),'×'+rw.matN+' '+MATN[rw.mat])}${rTile(RIC('souls'),rw.souls)}${rw.catChance?rTile(RIC('cat'),Math.round(rw.catChance*100)+'%'):''}${rw.essChance?rTile(RIC('ess'),Math.round(rw.essChance*100)+'%',RAR[6].c):''}</div>`;
  const fa=cd.d>(Tt.best||0)?15*Tt.t*cd.d:0; // 18.11 (Влад): Попіл за перше проходження складності — видно на картці (сервер: ASH.first 15 × тир × складність, один раз; серія ×10 не множить)
- return `${tiles}${fa?`<div class="sub dfa">${RIC('ash')} ${tr('dng_first',{n:fa})}</div>`:''}<div class="sub dil">${chestIc(rw.chestG)} ${tr('lvl',{n:G.lvl+'–'+(G.lvl+3)})}</div>${cd.need?dPow(cd.need):''}
+ return `${tiles}${fa?`<div class="sub dfa">${RIC('ash')} ${tr('dng_first',{n:fa})}</div>`:''}${zhDngLine(Tt.t,cd.d)}<div class="sub dil">${chestIc(rw.chestG)} ${tr('lvl',{n:G.lvl+'–'+(G.lvl+3)})}</div>${cd.need?dPow(cd.need):''}
   ${DF.length>1?`<div class="dseg">${DF.map(x=>`<button data-dt="${Tt.t}" data-dd="${x.d}" class="${x.d===cd.d?'act':''} ${x.open?'':'lockd'}">${x.open?'':'🔒 '}${tr('diff_'+x.d)}</button>`).join('')}</div>`:''}
   <div class="dbtns"><button class="btn pri dgo" data-dng="${Tt.t}" data-d="${cd.d}" data-e="${e}" ${busy||(!left&&!Tt.keys&&(G.ash||0)<Tt.pay)?'disabled':''}>${left?tr('enter_free'):Tt.keys?tr('enter_key',{n:Tt.keys}):tr('enter',{p:fmt(Tt.pay)})}</button>${(left+Tt.keys)>1?`<button class="btn" data-dngn="${Tt.t}" data-d="${cd.d}" data-e="${e}" ${busy?'disabled':''}>⚡ ${tr('batch',{n:Math.min(10,left+Tt.keys)})}</button>`:''}</div>`}
 function dngList(){
