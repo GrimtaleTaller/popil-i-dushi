@@ -889,6 +889,32 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 
 /* 20.11: довгі ніки без пробілів не виходять за картку */
 .item .nm,.chpick b,.rank span{overflow-wrap:anywhere;word-break:break-word}
+/* Жнива (з 23.11) */
+.card.zh{border-color:#7a5a26}
+.zh-pts{display:flex;align-items:baseline;gap:8px;margin:6px 0}
+.zh-pts b{font-size:28px;color:var(--gold)}
+.zh-pts span{opacity:.7;font-size:13px}
+.zh-th{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.zh-th>div{border:1px solid #3a3226;border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;opacity:.75}
+.zh-th>div b{font-size:13px}.zh-th>div span{font-size:11px;opacity:.85}
+.zh-th>div.ok{opacity:1;border-color:var(--gold);box-shadow:0 0 0 1px rgba(242,163,58,.25) inset}
+.zh-th>div.got{opacity:.55}
+.zh-how{margin:6px 0}.zh-how summary{cursor:pointer;color:var(--gold);font-size:13px;padding:4px 0}
+.zh-k{display:grid;grid-template-columns:1fr auto;gap:0 8px;padding:5px 0;border-bottom:1px solid #2a241c;font-size:13px}
+.zh-k i{grid-column:1/2;font-style:normal;opacity:.7;font-size:12px}
+.zh-k small{grid-column:2/3;grid-row:1/3;align-self:center;opacity:.8}
+.zh-all{margin:12px 0 6px}
+/* Щоденні підземелля (з 23.11) */
+.card.dd{border-color:#5a4a2a}
+.dd-hd{display:flex;gap:10px;align-items:flex-start}.dd-hd h4{margin:0 0 2px}.dd-hd .hint{margin:0}
+.dd-ic{font-size:34px;line-height:1}
+.dd-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #2a241c}
+.dd-row>div{display:flex;flex-direction:column;gap:2px;min-width:0}.dd-row span{font-size:12px;opacity:.85}
+.dd-row.lock{opacity:.5}.dd-row .btn{flex:0 0 auto}
+/* Печера Циклопа (з 23.11) */
+.cyc-d{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.cyc-d .btn{display:flex;flex-direction:column;gap:2px;padding:8px 4px;text-align:center;border-radius:12px;min-height:0}.cyc-d small{font-size:10px;opacity:.8;font-weight:400}
+.cyc-p .sub{font-size:12px}.cyc-res>div{display:flex;justify-content:space-between;gap:8px;padding:4px 0;opacity:1}
 
 /* 21.11 (гравець): ковадло прадавніх — вибір речей тапом */
 .apick{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.45;cursor:pointer}
@@ -902,6 +928,10 @@ h4 .hic.ico{width:24px;height:24px;vertical-align:-6px}
 .icx .lkb.on{background:#5a4320;border:2px solid #f0cf72;box-shadow:0 0 7px rgba(240,207,114,.75)}
 .icx .lkb:active{transform:scale(.9)}
 .sbx-flee{margin-top:4px;color:#ff8a65;font-weight:700;font-size:13px;text-shadow:0 1px 3px #000}
+/* картинки нових активностей (21.11, Higgsfield) */
+.dd-art{height:96px;margin:-9px -10px 10px;border-radius:14px 14px 0 0;background-size:cover;background-position:center;box-shadow:inset 0 -30px 30px -10px rgba(0,0,0,.65)}
+.nimg{height:120px;margin:-6px -6px 10px;border-radius:12px;background-size:cover;background-position:center}
+.dd-hd h4 .hic,.card.zh h4 .hic{width:22px;height:22px;vertical-align:-5px}
 
 /* 22.11 (Влад): Граф утік — підсумки тижня, банер нижчий */
 .sbx.sbx-gone{height:190px}.sbx.sbx-gone .sbx-v{object-position:center 22%}
