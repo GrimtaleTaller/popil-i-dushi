@@ -560,3 +560,7 @@ Object.assign(window.I18N.ru.t,{cfx_dark:'Что-то шевелится в те
 Object.assign(window.I18N.uk.t,{zh_k_done:'на сьогодні все — завтра знову',zh_zero_t:'🌾 +0 у Жнива: {k} — норму дня ({n}) уже виконано, завтра знову'});
 Object.assign(window.I18N.ru.t,{zh_k_done:'на сегодня всё — завтра снова',zh_zero_t:'🌾 +0 в Жатву: {k} — норма дня ({n}) уже выполнена, завтра снова'});
 Object.assign(window.I18N.en.t,{zh_k_done:'done for today — again tomorrow',zh_zero_t:'🌾 +0 Harvest: {k} — daily norm ({n}) already reached, again tomorrow'});
+// 23.11 (Влад): учасник загону після бою бачить, як пройшов похід на Циклопа
+Object.assign(window.I18N.uk.t,{cyf_t:'Твій загін бився з Циклопом',cyf_h:'Нагороду вже зараховано. Подивись, як пройшов бій.',cyf_go:'👁️ Подивитись бій'});
+Object.assign(window.I18N.ru.t,{cyf_t:'Твой отряд сразился с Циклопом',cyf_h:'Награда уже зачислена. Посмотри, как прошёл бой.',cyf_go:'👁️ Смотреть бой'});
+Object.assign(window.I18N.en.t,{cyf_t:'Your party fought the Cyclops',cyf_h:'Your reward is already in. Watch how the fight went.',cyf_go:'👁️ Watch the fight'});
