@@ -579,3 +579,5 @@ Object.assign(window.I18N.en.t,{mkt_pet_got_list:'Bought — {p} is in your coll
 Object.assign(window.I18N.uk.err,{pet_min_price:'Так дешево не можна: звичайного вихованця — від ⚱️150, рідкісного — від ⚱️300',pet_store_full:'Лігво повне (15) — спершу продай когось із Лігва'});
 Object.assign(window.I18N.ru.err,{pet_min_price:'Так дёшево нельзя: обычного питомца — от ⚱️150, редкого — от ⚱️300',pet_store_full:'Логово полное (15) — сначала продай кого-то из Логова'});
 Object.assign(window.I18N.en.err,{pet_min_price:'Too cheap: a common pet sells from ⚱️150, a rare one from ⚱️300',pet_store_full:'The Lair is full (15) — sell someone from it first'});
+// 24.11: вкладка «Партнери» — виконане завдання
+Object.assign(window.I18N.uk.t,{tk_done:'виконано'});Object.assign(window.I18N.ru.t,{tk_done:'выполнено'});Object.assign(window.I18N.en.t,{tk_done:'done'});
