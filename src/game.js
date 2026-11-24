@@ -247,7 +247,7 @@ function replayTick(dt){
 }
 
 // ---------- UI ----------
-const dirty={wd:1,tasks:1,quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,shop:1,clan:1,market:1};
+const dirty={wd:1,tasks:1,ptn:1,quest:1,ach:1,coll:1,wboss:1,pet:1,hero:1,bag:1,forge:1,dng:1,train:1,log:1,arena:1,top:1,prof:1,shop:1,clan:1,market:1};
 let tab='hero';
 let tt;function toast(t){const e=$('toast');e.innerHTML=String(t).replace(/<(?!\/?(?:span|i|b|small)(?:\s+(?:class|style)="[^"<>]*")*\s*>)/g,'&lt;'); /* 07.11 (критик): лише class/style, без onclick тощо */ /* 05.11: значок каменя має <i> (рівень) — раніше він показувався як текст */e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),1800)}
 const power=h=>h.power;
@@ -1009,7 +1009,7 @@ function renderLog(){$('p-log').innerHTML='<div class="log">'+(G.log.length?G.lo
 // 15.11 (Влад «гра фрізить»): після кожної відповіді сервера вкладка будувалась наново; якщо розмітка та сама — DOM не чіпаємо (лише обробники кнопок перепризначаються)
 const slp=ms=>new Promise(r=>setTimeout(r,ms)); // пауза перед повтором після помилки (15.11)
 function setH(el,h){if(!el)return;const a=SS.a+SS.t;if(el.__h===h&&el.__a===a&&el.childElementCount)return;el.__h=h;el.__a=a;el.innerHTML=h} // якщо гравець щось натискав — перемальовуємо завжди (кнопки з ⏳ мають відновитись)
-function flush(){if(G&&dirty[tab]){dirty[tab]=0;({tasks:renderTasks,quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,wd:renderWd,shop:renderShop,clan:renderClan,market:renderMarket})[tab]()}}
+function flush(){if(G&&dirty[tab]){dirty[tab]=0;({tasks:renderTasks,ptn:renderPtn,quest:renderQuest,ach:renderAch,coll:renderColl,wboss:renderWb,pet:renderPet,hero:renderHero,bag:renderBag,forge:renderForge,dng:renderDng,train:renderTrain,log:renderLog,arena:renderArena,top:renderRank,prof:renderProfile,wd:renderWd,shop:renderShop,clan:renderClan,market:renderMarket})[tab]()}}
 
 // ---------- профіль ----------
 let profData=null,profBusy=false,adminData=null;
@@ -2006,13 +2006,12 @@ function renderQuest(){
   const it=shopData&&shopData.items&&shopData.items.find(x=>x.k==='pass'),st=it?it.stars:125,soon=V.launch&&!V.isAdmin;
   h+=`<div class="card pt2-buy"><div class="pt2-buy-h">🎫 ${T('pass_buy_t')}</div><p class="pt2-buy-s">${T('pass_buy_sum')}</p><div class="pt2-buy-g">${S.ash?`<span>⚱️<b>${fmt(S.ash)}</b><small>${T('pass_s_ash')}</small></span>`:''}${S.gem?`<span>💠<b>×${S.gem}</b><small>${T('pass_s_gem')}</small></span>`:''}${S.ch?`<span>${chestIc(3)}<b>×${S.ch}</b><small>${T('pass_s_ch')}</small></span>`:''}${S.cat?`<span>💎<b>×${S.cat}</b><small>${T('pass_s_cat')}</small></span>`:''}${S.egg?`<span>🥚<b>×${S.egg}</b><small>${T('pass_s_egg')}</small></span>`:''}</div>
   <p class="hint" style="margin:8px 0">${T('pass_buy_h')}</p><div class="row shopb"><button class="btn pri" data-pbuy="stars"${soon?' disabled':''}>⭐ ${st}</button><button class="btn" data-pbuy="shop">💎 GRAM · 💵 USDT ›</button></div></div>`} // 13.11: купівля платної стежки одразу під прогресом пропуску
- const dr=rwTxt(P.dqR);
- const BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
- h+=`<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_in_tasks')}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`;
+ // 24.11 (Влад): квести дня — у «Щоденні», тут лише посилання
+ {const dn=P.dq.filter(q=>q.ok).length;h+=`<div class="card"><div class="row" style="align-items:center;gap:8px"><span style="flex:1">☀️ ${T('dq')}: ${dn}/${P.dq.length}<br><small class="hint">${T('dq_moved')}</small></span><button class="btn" id="qDqGo" style="flex:0 0 auto">${T('sub_tasks')} ›</button></div></div>`}
  h+=`<div class="card"><h4>📅 ${T('wq')}</h4>`+P.wq.map(q=>qRow(q,P.wPts,'')).join('')+`</div>`; // 09.11: тижневий Сувій прибрано (лише з Відьми в Болоті) → Сувій вічності
  
  h+=`<p class="hint">${T('pass_hint')}</p>`;
- el.innerHTML=pvT+h;passBuyBind(el);el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});if($('peAll'))$('peAll').onclick=()=>{passAll=!passAll;renderQuest()};
+ el.innerHTML=pvT+h;passBuyBind(el);if($('qDqGo'))$('qDqGo').onclick=()=>{const b=document.querySelector('#subtabs button[data-s="tasks"]');if(b)b.click()};el.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{passView=b.dataset.pv;renderQuest()});if($('peAll'))$('peAll').onclick=()=>{passAll=!passAll;renderQuest()};
  $('qClaim').onclick=()=>act('passClaim',{},r=>{const o=r.out;toast('🎁 '+rwTxt({gold:o.gold,shards:o.shards,matN:o.matN,mat:o.mat,ash:o.ash})+(o.chests?' 🧰×'+o.chests:'')+(o.gems?' 💠×'+o.gems:'')+(o.cat?' 💎'+o.cat:'')+(o.eggs?(o.eggs-(o.eggR||0)>0?' '+eggIc('c')+'×'+(o.eggs-(o.eggR||0)):'')+(o.eggR?' '+eggIc('r')+' '+T('egg_r')+' ×'+o.eggR:''):''));haptic('medium')});
 }
 // ---------- щоденні завдання (08.11): реклама, Stories, біо, наші канали, партнери ----------
@@ -2052,26 +2051,37 @@ const SUB_N={news:'@GRIMTALENEWS',chat:'@GRIMTALECHAT',pay:'@GRIMTALEPAYOUTS',se
 function tgOpen(u){const w=window.Telegram&&Telegram.WebApp;if(/^https:\/\/t\.me\//.test(u)&&w&&w.openTelegramLink)w.openTelegramLink(u);else if(w&&w.openLink)w.openLink(u);else window.open(u,'_blank')}
 var humF=0; // 15.11: гравець у чаті Grimtale, але ще не натиснув «Я людина» — підтвердити через @GrimtaleGuardBot
 function humGo(){const u='https://t.me/GrimtaleGuardBot?start=human',w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')}
+function dqCard(){const P=V.pass;if(!P||!P.dq)return'';const dr=rwTxt(P.dqR),BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
+ return `<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_below',{t:T('q_bio')})}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`}
 function renderTasks(){
- const K=V.tasks;if(!$('tkList'))$('p-tasks').innerHTML=`<div id="tkList"></div><div class="card" id="adTaskCard" hidden><h4>🎯 <span id="adtT"></span></h4><p class="hint" id="adtH" style="margin:0 0 6px"></p><div id="adTaskBox"></div><p class="hint" id="adtNone" style="margin:4px 0 0" hidden></p><p class="hint" id="adtD" style="margin:4px 0 0"></p></div>`;
+ const K=V.tasks;if(!$('tkList'))$('p-tasks').innerHTML=`<div id="tkList"></div>`;
  const el=$('tkList');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
  const A=K.ads,keyTxt=A.tier?'🗝️'+T('tier',{n:A.tier}):chestIc(A.xG||2); // 19.11 (Влад): кожен 5-й — епічна (xG 3)
- let h=`<p class="hint">${T('tk_hint')}</p>`+cardsBox();
+ let h=`<p class="hint">${T('tk_hint')}</p>`+dqCard()+cardsBox(); // 24.11 (Влад): квести дня — тут, не в «Пропуск»
  if(humF)h+=`<div class="card" style="border-color:#f2c14e"><h4>💬 ${T('hum_t')}</h4><p class="hint" style="margin:0 0 6px">${T('hum_h')}</p><button class="btn pri" id="qHum">✅ ${T('hum_btn')}</button></div>`;
  h+=`<div class="card"><h4>📺 ${T('ad_t')}</h4><p class="hint" style="margin:0 0 6px">${T('ad_hint',{c:(A.ash?'⚱️'+A.ash+' + ':'')+chestIc(A.chG||1)+'×'+A.ch,n:A.keyEvery,k:keyTxt})}</p><div class="bar"><i style="width:${A.n/A.max*100}%;background:#f2c14e"></i></div><div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('ad_cnt',{n:A.n,m:A.max})}</span><button class="btn pri" id="tkAd" ${A.n<A.max?'':'disabled'}>▶️ ${T('ad_btn')}</button></div></div>`;
  const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?'✅ '+T('share_again'):T('share_btn')}</button></div>`;
  const BI=V.bio||{};h+=`<div class="card"><h4>🔗 ${T('q_bio')} · ⚱️${BI.ash||10}</h4>`+(BI.taken?`<p class="hint">✅ ${T('tk_done_today')}</p>`:`<p class="hint" style="margin:0 0 6px">${T('bio_hint',{l:bioLink()})}</p><div class="row" style="gap:8px"><button class="btn" id="qBioCopy">📋 ${T('bio_copy')}</button><button class="btn pri" id="qBioChk">🔗 ${T('bio_check')}</button></div>`)+`</div>`;
- h+=K.subs.map(x=>`<div class="card"${x.ok?' style="opacity:.6"':''}><div class="row" style="align-items:center;gap:8px"><div style="flex:1;min-width:0"><h4 style="margin:0">${x.ok?'✅':'📢'} ${T('sub_one',{c:SUB_N[x.k]||x.chat})}</h4><span class="hint" style="margin:0">${T('tk_rw')}: ⚱️${x.ash||K.subAsh}</span></div>${x.ok?'':`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div></div>`).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
- if(K.ptn.length){h+=`<div class="card"><h4>🤝 ${T('ptn_t')}</h4>`+K.ptn.map(p=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0">${p.ok?'✅':'🎯'} ${esc(p.t[LANG]||p.t.en||p.id)} <span class="hint">· ${[p.ash?RIS('ash')+'×'+p.ash:'',p.ch?chestIc(1)+'×'+p.ch:'',p.key?'🗝️×'+p.key:''].filter(Boolean).join(' + ')}</span></span>${p.ok?'':`<button class="btn" style="flex:0 0 auto" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`}</div>`).join('')+`</div>`}
  el.innerHTML=h;
- mountAdTask(K);el.querySelectorAll('[data-cardc]').forEach(b=>b.onclick=cardClaim);
+ el.querySelectorAll('[data-cardc]').forEach(b=>b.onclick=cardClaim);
  if($('qHum'))$('qHum').onclick=()=>{humGo();humF=0;setTimeout(()=>{try{sync(true)}catch(e){}},8000)};
  $('tkAd').onclick=()=>{adEggDrop();watchAd()};$('qShare').onclick=shareStory;
  if($('qBioCopy')){$('qBioCopy').onclick=()=>copyText(bioLink());$('qBioChk').onclick=()=>act('bio',{},r=>{toast('🔗 +⚱️'+r.out.ash);haptic('medium')})}
+}
+// 24.11 (Влад): «Завдання з підпискою — у нову вкладку «Партнерські»»: підписки на канали, партнерські й рекламні (AdsGram) завдання
+function renderPtn(){
+ const K=V.tasks;if(!$('ptnList'))$('p-ptn').innerHTML=`<div id="ptnList"></div><div class="card" id="adTaskCard" hidden><h4>🎯 <span id="adtT"></span></h4><p class="hint" id="adtH" style="margin:0 0 6px"></p><div id="adTaskBox"></div><p class="hint" id="adtNone" style="margin:4px 0 0" hidden></p><p class="hint" id="adtD" style="margin:4px 0 0"></p></div>`;
+ const el=$('ptnList');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
+ let h=`<p class="hint">${T('ptn_hint')}</p>`;
+ h+=K.subs.map(x=>`<div class="card"${x.ok?' style="opacity:.6"':''}><div class="row" style="align-items:center;gap:8px"><div style="flex:1;min-width:0"><h4 style="margin:0">${x.ok?'✅':'📢'} ${T('sub_one',{c:SUB_N[x.k]||x.chat})}</h4><span class="hint" style="margin:0">${T('tk_rw')}: ⚱️${x.ash||K.subAsh}</span></div>${x.ok?'':`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div></div>`).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
+ if(K.ptn.length){h+=`<div class="card"><h4>🤝 ${T('ptn_t')}</h4>`+K.ptn.map(p=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0">${p.ok?'✅':'🎯'} ${esc(p.t[LANG]||p.t.en||p.id)} <span class="hint">· ${[p.ash?RIS('ash')+'×'+p.ash:'',p.ch?chestIc(1)+'×'+p.ch:'',p.key?'🗝️×'+p.key:''].filter(Boolean).join(' + ')}</span></span>${p.ok?'':`<button class="btn" style="flex:0 0 auto" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`}</div>`).join('')+`</div>`}
+ el.innerHTML=h;
+ mountAdTask(K);
  el.querySelectorAll('[data-sgo]').forEach(b=>b.onclick=()=>tgOpen('https://t.me/'+b.dataset.sgo.replace('@','')));
  el.querySelectorAll('[data-sck]').forEach(b=>b.onclick=()=>act('subCheck',{k:b.dataset.sck},r=>{toast('📢 +⚱️'+r.out.ash);haptic('medium')}));
  el.querySelectorAll('[data-pgo]').forEach(b=>b.onclick=()=>{const p=K.ptn.find(x=>x.id===b.dataset.pgo);tgOpen(p.url);act('ptnOpen',{id:p.id})});
  el.querySelectorAll('[data-pck]').forEach(b=>b.onclick=()=>act('ptnCheck',{id:b.dataset.pck},r=>{toast('🎯 '+[r.out.ash?'+'+r.out.ash+' ⚱️':'',r.out.ch?'+'+r.out.ch+'🧰':'',r.out.keyN?'+🗝️×'+r.out.keyN:''].filter(Boolean).join(' '));haptic('medium')}));
+
 }
 const SHARE_N=6,SHARE_IMG=()=>new URL('assets/share/s'+(Math.floor(Date.now()/864e5)%SHARE_N+1)+'.jpg',location.href).href; // колесо картинок Stories: щодня інша (07.11)
 function shareStory(){
@@ -2167,7 +2177,7 @@ const lastSub={hero:'hero',arena:'arena',bag:'bag',quest:'tasks',me:'prof',top:'
 // 04.11 (рішення Влада): «Герой» — спорядження на головному екрані; Сумка, Ринок, Вихованець, Тренування, Журнал, Профіль — у вікні героя на весь екран
 // 10.11 (Влад, Штаб #4): магазин — окрема виділена вкладка в центрі нижньої панелі (була підвкладка вікна Героя)
 // 13.11 (Влад): у вікні Сумки без Вихованця й Тренування (вони є кнопками на головному екрані), Журнал — у самому кінці, щоб легше знайти «💸 Вивід»
-const groupOf=t=>['bag','market','pet','train'].includes(t)?'bag':['prof','wd','log'].includes(t)?'me':t==='top'?'top':t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'?'quest':t;
+const groupOf=t=>['bag','market','pet','train'].includes(t)?'bag':['prof','wd','log'].includes(t)?'me':t==='top'?'top':t==='wboss'?'arena':t==='ach'||t==='coll'||t==='tasks'||t==='ptn'?'quest':t;
 // 23.11 (Влад): Сумка — лише речі (Сумка · Ринок); Профіль · Вивід · Журнал — з рівня в шапці; Рейтинги — окреме вікно з кнопки на «Герої»; в Арені — лише бої
 const SHEETS=['bag','me','top'];const openTab=t=>{tab=t;lastSub[groupOf(t)]=t;showPane()};
 function setScene(){const g=groupOf(tab),sc=g==='forge'||g==='clan'||g==='dng'?g:'';if(sc)document.body.dataset.scene=sc;else delete document.body.dataset.scene;const b=$('scene');b.style.backgroundImage='';
@@ -2202,7 +2212,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?(V&&V.wb&&V.wb.off&&!V.wb.gone||wbHide()?null:[['arena','sub_pvp'],['wboss','sub_wb']]):g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='me'?[['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='top'?null:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
+ const items=g==='hero'?null:g==='arena'?(V&&V.wb&&V.wb.off&&!V.wb.gone||wbHide()?null:[['arena','sub_pvp'],['wboss','sub_wb']]):g==='quest'?[['tasks','sub_tasks'],['ptn','sub_ptn'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='me'?[['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='top'?null:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
