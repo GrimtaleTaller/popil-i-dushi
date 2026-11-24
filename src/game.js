@@ -1745,18 +1745,19 @@ function pvpResult(o){
 }
 const usdF=x=>'$'+(LANG==='en'?Number(x).toFixed(2):Number(x).toFixed(2).replace('.',',')); // 16.11: сума призу з пулу
 // ===== Жнива (з 23.11): тижневий рейтинг активності — очки за дії, пороги для всіх, гроші топ-10 у 3 дивізіонах =====
+const ZH_TH=[300,1000,2000,3000],ZH_THR=[{ash:30,ch:[2,2]},{ash:80,ch:[3,3]},{ash:150,egg:'c'},{ash:250,egg:'r'}],ZH_X2D=['dng','arena','dq','sw','chest','ad','find']; // 24.11: копія ZH.th/thR/x2 сервера на випадок неповних даних
 const ZH_K=['dng','ddng','cyc','dq','arena','sw','chest','find','ad','clan'],ZH_I={dng:'🕳️',ddng:'📅',cyc:'👁️',dq:'📜',arena:'⚔️',sw:'🐸',chest:'🧰',find:'🐾',ad:'📺',clan:'🏰'},ZH_DV=['I','II','III'];let zhDv=0;
 function zhRew(r){return ['⚱️'+r.ash,r.ch?'🧰'+r.ch[1]+' '+T(r.ch[0]>=3?'zh_ch_e':'zh_ch_r'):'',r.egg?'🥚 '+T('egg_'+r.egg):''].filter(Boolean).join(' · ')}
-function zhCard(d){const Z=V&&V.zh;if(!Z||!Z.live)return'';
+function zhCard(d){const Z0=V&&V.zh;if(!Z0||!Z0.live)return'';const Z={th:ZH_TH,thR:ZH_THR,got:0,x2:ZH_X2D[(new Date().getUTCDay()+6)%7],norm:{},c:{},...Z0}; // 24.11: запасні пороги/нагороди — якщо сервер не прислав (збій f253bc2), вкладка не падає
  const nx=Z.th.find(v=>Z.pts<v),can=Z.th.some((v,i)=>Z.pts>=v&&!(Z.got&(1<<i)));
  let h=`<div class="card zh"><div class="dd-art" style="background-image:url(assets/news/n11.jpg?v=1)"></div><h4>${RIS('zh')} ${T('zh_t')}</h4><p class="hint">${T('zh_hint')}</p>
  <div class="zh-pts"><b>${fmt(Math.floor(Z.pts))}</b><span>${T('zh_week_pts')}</span></div>
  <p class="sub">${T('zh_today',{d:Z.day,c:Z.cap})}${Z.x2?' · '+T('zh_x2',{a:ZH_I[Z.x2]+' '+T('zh_k_'+Z.x2)}):''}</p>
  <div class="zh-th">${Z.th.map((v,i)=>{const got=Z.got&(1<<i),ok=Z.pts>=v;return `<div class="${got?'got':ok?'ok':''}"><b>${got?'✅':ok?'🎁':'🔒'} ${v}</b><span>${zhRew(Z.thR[i])}</span></div>`}).join('')}</div>
  ${can?`<div class="row"><button class="btn pri glow" id="zhClaim" ${busy?'disabled':''}>🎁 ${T('claim_all')}</button></div>`:nx?`<p class="sub">${T('zh_next',{n:fmt(Math.ceil(nx-Z.pts))})}</p>`:''}
- <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>{const c=(Z.c&&Z.c[k])||0,[f,hf]=Z.norm[k],dn=c>=f&&!hf,ls=c>=f&&hf; /* 23.11 (Влад «А»): норму дня виконано — видно одразу */
+ <details class="zh-how"><summary>${T('zh_how')}</summary><p class="hint">${T('zh_how_hint',{c:Z.cap})}</p>${ZH_K.map(k=>{const c=(Z.c&&Z.c[k])||0,[f,hf]=Z.norm[k]||[0,0],dn=c>=f&&!hf,ls=c>=f&&hf; /* 23.11 (Влад «А»): норму дня виконано — видно одразу */
   return `<div class="zh-k${dn?' zh-done':''}"><span>${ZH_I[k]} ${T('zh_k_'+k)}</span><i>${T('zh_kp_'+k,k==='clan'&&Z.cm?{g:fmt(Z.cm.gold),a:Z.cm.ash,n:Z.cm.mn,m:MATN[Z.cm.m],s:fmt(Z.cm.sh)}:undefined)}${dn?`<em>✅ ${T('zh_k_done')}</em>`:ls?`<em class="ls">⬇ ${T('dzh_over')}</em>`:''}</i><small>${dn?'✅ '+f:c}/${f}</small></div>`}).join('')}</details>
- <p class="hint">${Z.ok&&!V.twin?T('zh_cash_ok',{l:Z.lv}):T('zh_cash_no')}</p></div>`;
+ ${'ok' in Z?`<p class="hint">${Z.ok&&!V.twin?T('zh_cash_ok',{l:Z.lv}):T('zh_cash_no')}</p>`:''}</div>`;
  return h}
 function zhList(d){
  let h='';const dv=(d.div||[]),pot=d.dpot||0;
@@ -1791,7 +1792,7 @@ function renderRank(){
    h+=`<div class="card"><h4>🏆 ${T('prize_t')}</h4><p class="hint">${T('prize_hint')}</p>${hasPrize?`<div class="chips">${P.map(q=>`<span class="chip">${q.from===q.to?q.from:q.from+'–'+q.to}: ⚱️${q.ash}</span>`).join('')}</div>`:`<p class="hint">${T('prize_none')}</p>`}
    ${aw?`<p class="hint">${T('top_rating_w',{n:d.arenaMin||20})}</p><p class="hint">${T('top_rating_f',{f:d.me?Number(d.me.f)||0:0,n:d.arenaMin||20})}</p>`:''}${d.pot>0&&topKind!=='zh'?`<p class="hint">${T('cash_rank',{s:usdF(d.pot)})}</p>`:''}<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p>${(d.last||[]).length?`<p class="sub">${T('prize_last')} ${(d.last||[]).map(x=>x.kind==='racem'?'🏰 '+T('cyc_race')+' #'+x.place+' ⚱️'+x.ash:x.kind==='race'?'':/^zh\d$/.test(x.kind)?'🌾 '+T('zh_dv_n',{d:ZH_DV[+x.kind[2]-1]})+' #'+x.place:T('top_'+(x.kind==='max_stage'?'stage':x.kind))+' #'+x.place+' ⚱️'+x.ash).filter(Boolean).join(', ')}</p>`:''}</div>`}
   const row=r=>{const pl=aw?(r.cp||0):r.place;return `<div class="${r.me?'me':''}"${aw&&!r.cp?' style="opacity:.55"':''}><b>${!pl?'—':pl<=3?['🥇','🥈','🥉'][pl-1]:pl}</b><span>${penI(r.pn)}${r.frm==='moon'?FRM_MOON:''}${esc(r.name)}${hasPrize&&(aw?r.cp&&prizeOf(r.cp):prizeOf(r.place))?` <small style="color:var(--gold)">⚱️${prizeOf(aw?r.cp:r.place)}</small>`:''}${topKind==='zh'&&r.dv?` <small style="opacity:.6">· ${ZH_DV[r.dv-1]}</small>`:''}${topKind==='race'?raceSub(r):''}${r.usd?` <small style="color:#7ee08a">${usdF(r.usd)}</small>`:''}</span><i>${val(r)}</i></div>`};
-  if(topKind==='zh')h=h.replace('<div class="card">',zhCard(d)+'<div class="card">')+zhList(d);
+  if(topKind==='zh'){let zc='',zl='';try{zc=zhCard(d)}catch(e){console.error('zhCard',e)}try{zl=zhList(d)}catch(e){console.error('zhList',e)}h=h.replace('<div class="card">',zc+'<div class="card">')+zl} // 24.11: збій картки Жнив не ламає всю вкладку й кнопки
   if(topKind==='race'&&(!('my' in d)||d.err)){el.innerHTML=h.replace(raceCard(d),'')+`<div class="empty">${T('race_soon')}</div>`;el.querySelectorAll('[data-tk]').forEach(b=>b.onclick=()=>{topKind=b.dataset.tk;renderRank()});return} // 23.11: сервер ще без гонки / збій
   h+=(topKind==='zh'?`<h4 class="zh-all">🏆 ${T('zh_all')}</h4>`:'')+'<div class="rank">'+(d.rows.length?d.rows.map(row).join(''):`<div class="empty">${T('zh_empty')}</div>`)+'</div>';
   if(d.me&&!d.rows.some(r=>r.me))h+='<div class="rank" style="margin-top:8px">'+row(d.me)+'</div>';
