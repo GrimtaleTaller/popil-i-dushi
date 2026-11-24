@@ -1680,7 +1680,7 @@ function renderClan(){
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ct,q=el.querySelector(`[data-ktq="${t}"]`),n=Math.floor(+(q&&q.value)||1);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanTake',{t,n})});
  const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{if(!$('kgP').value){toast(T('key_pick_err'));return}const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
  el.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.cta,all:1}));
- {const rf=$('crRf');if(rf)rf.onclick=()=>{if(crBusy||Date.now()-crAt<5e3)return;haptic('light');crAt=0;dirty.clan=1;flush()}} // 24.11: оновити «🏁 Гонку»
+ {const rf=$('crRf');if(rf)rf.onclick=()=>{if(crBusy)return;if(Date.now()-crAt<3e4){toast(T('cr_wait30'));return}haptic('light');crGo=1;dirty.clan=1;flush()}} // 24.11: оновити «🏁 Гонку» — не частіше 30 с (сервер усе одно кешує 30 с)
  el.querySelectorAll('[data-cyo]').forEach(b=>b.onclick=()=>cycDo('cycOpen',{d:+b.dataset.cyo}));
  el.querySelectorAll('[data-cyj]').forEach(b=>b.onclick=()=>cycDo('cycJoin',{id:+b.dataset.cyj}));
  el.querySelectorAll('[data-cyl]').forEach(b=>b.onclick=()=>cycDo('cycLeave',{id:+b.dataset.cyl}));
@@ -1788,21 +1788,24 @@ function zhList(d){
  return h}
 let zhFirst=1;
 // 23.11 (Влад: «У рейтингу додай окремо гонка кланів»): Жнива + Циклоп 15 найкращих учасників клану (у клані 3+ дні) — ті самі місця, що й нагороди неділі
-let crData=null,crAt=0,crBusy=0,crFor=0; // 24.11: вкладка «🏁 Гонка» в Клані — дані clanRace; оновлюємо при відкритті (не частіше разу на хвилину) і кнопкою 🔄
+let crData=null,crAt=0,crBusy=0,crFor=0,crGo=0; // 24.11: вкладка «🏁 Гонка» в Клані — дані clanRace (лише читання); тягнемо один раз при відкритті, далі — лише кнопкою 🔄 (не частіше 30 с)
 function crHtml(C){
  const cid=C.clan.id;
- if((!crData||crFor!==cid||Date.now()-crAt>6e4)&&!crBusy){crBusy=1;api('clanRace').then(r=>{crData=r.out;crAt=Date.now();crFor=cid;dirty.clan=1;flush()}).catch(e=>{crAt=Date.now();toast(errT(e))}).finally(()=>{crBusy=0})}
- const D=crData&&crFor===cid?crData:null;if(!D)return `<div class="empty">${T('loading')}</div>`;if(!D.clan)return `<div class="empty">${T('race_noclan')}</div>`;
+ if((!crData||crFor!==cid||crGo)&&!crBusy){crBusy=1;crGo=0;api('clanRace').then(r=>{crData=r.out||{err:1}}).catch(()=>{crData={err:1}}).finally(()=>{crAt=Date.now();crFor=cid;crBusy=0;dirty.clan=1;flush()})}
+ const D=crData&&crFor===cid?crData:null,rb=`<button class="btn" id="crRf" style="flex:0 0 auto;padding:6px 10px" aria-label="🔄"${crBusy?' disabled':''}>${crBusy?'⏳':'🔄'}</button>`;
+ if(!D)return `<div class="empty">${T('loading')}</div>`;if(D.clan===false)return `<div class="empty">${T('race_noclan')}</div>`;
+ if(D.err||!D.wk)return `<div class="card"><h4 style="display:flex;align-items:center;gap:8px"><span style="flex:1">🏁 ${T('cyc_race')}</span>${rb}</h4><p class="hint">${T('race_soon')}</p></div>`;
  const p2=n=>String(n).padStart(2,'0'),w0=new Date(D.wk+'T00:00:00Z'),w1=new Date(w0.getTime()+6*864e5),wl=w0.getUTCMonth()===w1.getUTCMonth()?`${p2(w0.getUTCDate())}–${p2(w1.getUTCDate())}.${p2(w1.getUTCMonth()+1)}`:`${p2(w0.getUTCDate())}.${p2(w0.getUTCMonth()+1)}–${p2(w1.getUTCDate())}.${p2(w1.getUTCMonth()+1)}`;
  const ms=Math.max(0,(D.left||0)-(Date.now()-crAt)),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4),dt=t=>{const d=new Date(t);return `${p2(d.getDate())}.${p2(d.getMonth()+1)} ${p2(d.getHours())}:${p2(d.getMinutes())}`};
- let h=`<div class="card"><h4 style="display:flex;align-items:center;gap:8px"><span style="flex:1">🏁 ${T('cyc_race')} <small class="hint">· ${wl}</small></span><button class="btn" id="crRf" style="flex:0 0 auto;padding:6px 10px" aria-label="🔄">🔄</button></h4>`;
- h+=D.place?`<p><b>${T('cr_place',{p:D.place,n:D.n,v:fmt(D.v)})}</b>${D.bank?` · <span style="color:var(--gold)">${T('cr_bank',{a:D.bank})}</span>`:''}</p>${D.pa?`<p class="sub">🎁 ${T(D.place<=5?'cr_pa5':'cr_pa',{a:D.pa,m:D.min})}</p>`:''}`:`<p class="hint">${T('cr_noplace')}</p>`;
+ const pts=r=>`<small style="opacity:.65">🌾 ${fmt(r.zh)} · 👁️ ${fmt(r.cy)}</small>`;
+ let h=`<div class="card"><h4 style="display:flex;align-items:center;gap:8px"><span style="flex:1">🏁 ${T('cyc_race')} <small class="hint">· ${wl}</small></span>${rb}</h4>`;
+ h+=D.place?`<p><b>${T('cr_place',{p:D.place,n:D.n,v:fmt(D.v)})}</b>${D.bank?` · <span style="color:var(--gold)">${T('cr_bank',{a:D.bank})}</span>`:''}</p>${D.pa?`<p class="sub">🎁 ${T(D.place===1?'cr_pa1':D.place<=5?'cr_pa5':'cr_pa',{a:D.pa,m:D.min})}</p>`:''}`:`<p class="hint">${T('cr_noplace')}</p>`;
  h+=`<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p><p class="hint">${T('cr_h',{n:D.top,m:D.min})}</p>`;
  if(D.x)h+=`<p class="hint">${T('cr_x')}</p>`;
  const R=D.rows||[];
- h+=R.length?'<div class="rank">'+R.map(r=>(r.rn===D.top+1?`<div style="justify-content:center;opacity:.7"><small>── ${T('cr_out',{n:D.top})} ──</small></div>`:'')+`<div class="${r.me?'me':''}"${r.top?'':' style="opacity:.6"'}><b>${r.rn<=3?['🥇','🥈','🥉'][r.rn-1]:r.rn}</b><span>${esc(r.name)}${r.me?` <small>(${T('you')})</small>`:''}<br><small style="opacity:.65">🌾 ${fmt(r.zh)} · 👁️ ${fmt(r.cy)}</small></span><i>${fmt(r.s)}${r.top?' ✅':''}${r.pz?' 🎁':''}</i></div>`).join('')+'</div>':`<p class="hint">${T('cr_none')}</p>`;
+ h+=R.length?'<div class="rank">'+R.map(r=>(r.rn===D.top+1?`<div style="justify-content:center;opacity:.7"><small>── ${T('cr_out',{n:D.top})} ──</small></div>`:'')+`<div class="${r.me?'me':''}"${r.top?'':' style="opacity:.6"'}><b>${r.rn<=3&&r.s>0?['🥇','🥈','🥉'][r.rn-1]:r.rn}</b><span>${esc(r.name)}${r.me?` <small>(${T('you')})</small>`:''}<br>${pts(r)}</span><i>${fmt(r.s)}${r.top?' ✅':''}${r.pz?' 🎁':''}</i></div>`).join('')+'</div>':`<p class="hint">${T('cr_none')}</p>`;
  if(D.cut)h+=`<p class="hint">${T('cr_cut',{n:D.top,v:fmt(D.cut)})}</p>`;
- if((D.wait||[]).length)h+=`<p class="sub" style="margin-top:10px">${T('cr_wait_t')}</p><p class="hint">${D.wait.map(w=>`${w.me?'<b>':''}${esc(w.name)}${w.me?'</b>':''} — ${T('cr_from',{d:dt(w.at)})}`).join('<br>')}</p>`;
+ if((D.wait||[]).length)h+=`<p class="sub" style="margin-top:10px">${T('cr_wait_t')}</p><div class="rank">${D.wait.map(w=>`<div class="${w.me?'me':''}" style="opacity:.75"><b>⏳</b><span style="white-space:normal">${esc(w.name)}${w.me?` <small>(${T('you')})</small>`:''}<br>${pts(w)}<br><small style="opacity:.65">${T('cr_from',{d:dt(w.at)})}</small></span><i>${fmt(w.s)}${w.pz?' 🎁':''}</i></div>`).join('')}</div>`;
  if((D.late||[]).length)h+=`<p class="sub" style="margin-top:10px">${T('cr_late_t')}</p><p class="hint">${D.late.map(w=>`${w.me?'<b>':''}${esc(w.name)}${w.me?'</b>':''}`).join(', ')}</p>`;
  return h+'</div>'}
 const RACE_BANK=[1000,700,500,300,300];
