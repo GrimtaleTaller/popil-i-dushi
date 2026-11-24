@@ -514,7 +514,7 @@ let mktShow=(()=>{try{return JSON.parse(localStorage.getItem('gt_mkt_show')||'[]
 const mktShowSet=a=>{mktShow=a;mktF.hide=a.length?[2,3,4,5,6].filter(r=>!a.includes(r)):[];try{localStorage.setItem('gt_mkt_show',JSON.stringify(a))}catch(e){}};mktShowSet(mktShow);
 const curIc=c=>c==='gold'?'💰':'⚱️',curHave=c=>c==='gold'?G.gold:(G.ash||0);
 let mktErrN=0;
-const mkQ=()=>({...mktF,slot:mktTab==='pet'?'pet':mktF.slot||(mktTab==='mat'?'mat':'items'),t:mktTab==='mat'?mktF.t:0}); // 19.11: «Речі» — сервер віддає лоти без матеріалів
+const mkQ=()=>({...mktF,slot:mktTab==='pet'?'pet':mktF.slot||(mktTab==='mat'?'mat':'items'),t:mktTab==='mat'?mktF.t:0,...(mktTab==='pet'?{cur:'',hide:[]}:{})}); // 24.11: вихованці — лише за Попіл, фільтри валюти й рідкості речей їх не стосуються // 19.11: «Речі» — сервер віддає лоти без матеріалів
 function mktLoad(){if(mktBusy)return;mktBusy=true;act('market',mkQ(),r=>{mktData=r.out;const g=r.out.got;if(g&&g.n){const x=[g.ash?'⚱️'+fmt(g.ash):'',g.gold?'💰'+fmt(g.gold):''].filter(Boolean).join(' + ');modal(`<div class="big">⚱️</div><h3>${T('mkt_sold_t')}</h3><p>${T('mkt_sold',{n:g.n,x,p:Math.round(r.out.fee*100)})}</p>`,T('ok'))}dirty.market=1}).finally(()=>{mktBusy=false;if(!mktData){mktErrN=Math.min(6,mktErrN+1);setTimeout(()=>{dirty.market=1;flush()},800*Math.pow(2,mktErrN))}else mktErrN=0})} // 15.11 (критик): після помилки — наростаюча пауза 1,6…51 с, не шторм запитів
 const MKT_MAX={ash:1e6,gold:1e13}; // 18.11: межа ціни лота, як на сервері (MARKET.maxPrice) — гравець бачить, у чому помилка
 const MKT_MIN={4:{ash:100,gold:1e6},5:{ash:300},6:{ash:600}}; // 22.11 (Влад): мінімальні ціни речей, як на сервері (MARKET.minPrice); вище вічної — як вічна
