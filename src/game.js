@@ -1607,7 +1607,7 @@ function renderClan(){
   $('cMake').onclick=()=>{const n=$('cName').value.trim();if(n.length<3){toast(ERR.clan_name_bad);return}clanAct('clanCreate',{name:n})};
   el.querySelectorAll('[data-cj]').forEach(b=>b.onclick=()=>act('clanJoin',{id:+b.dataset.cj},r=>{if(r.out)clanData=r.out;dirty.clan=1;profData=null;if(r.out&&r.out.applied)toast(T('app_sent'))}));
   return}
- const S={main:'',keys:'',castle:'',members:'',log:'',chat:''}; // розділи клану (04.11): кожен — окрема підвкладка
+ const S={main:'',keys:'',castle:'',members:'',race:'',log:'',chat:''}; // розділи клану (04.11): кожен — окрема підвкладка; 24.11 — «🏁 Гонка»
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
  if(csub!=='chat')h+=`<div class="chero"><div class="chero-crest">${penI([C.clan.name,C.clan.pt],40)||cIc('banner')}</div><div class="chero-main"><div class="chero-nm">${esc(C.clan.name)}</div><div class="chero-role">${roleT(C.role)}</div></div><div class="chero-st"><div>${cIc('members')}<b>${C.clan.members}/${C.clan.max||C.max}</b></div><div class="chon">🟢<b>${T('m_onn',{n:(C.members||[]).filter(m=>isOn(m.seen)).length})}</b></div><div>⚔️<b>${fmt(C.clan.power)}</b></div></div></div>`; // 15.11 (Влад): шапка клану — герб, назва, роль, склад і сила на тлі замку
  if(C.clan.desc)S.main+=`<div class="cdesc${C.role==='leader'?' ed':''}">📜 ${esc(C.clan.desc).replace(/\n/g,'<br>')}${C.role==='leader'?`<button class="cdesced" id="cDescEd" aria-label="${T('clan_desc_t')}">✏️</button>`:''}</div>`; // 14.11 (Влад): опис клану
@@ -1673,12 +1673,14 @@ function renderClan(){
  if(C.role==='leader')S.main+=`<p class="hint">${T('clan_leader_hint')}</p>`;
  if(csub==='chat'){if($('chatRoot')&&CH.clan===C.clan.id){chPaint();renderSub();if(!CH.t&&!CH.busy)chPoll(1);return}S.chat=chShell()} // 14.11: чат клану — сам оновлюється, введене не губиться
  if(V&&V.cyc)S.cyc=cycHtml();
+ if(csub==='race')S.race=crHtml(C); // 24.11 (Влад «А»): внесок кожного учасника в гонку кланів
  if(!S[csub])csub='main';h+=csub==='chat'?S[csub]:cDecor(S[csub]);
  {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]});if(csub!=='chat')iconize(el)} /* 18.11 (Влад): у клані ті самі намальовані значки ресурсів, що й у Кузні */renderSub(); // 13.11: не губимо введене при автооновленні клану
  if(csub==='chat')chMount(C);else chStop();
  el.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ct,q=el.querySelector(`[data-ktq="${t}"]`),n=Math.floor(+(q&&q.value)||1);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanTake',{t,n})});
  const kgGo=$('kgGo');if(kgGo)kgGo.onclick=()=>{if(!$('kgP').value){toast(T('key_pick_err'));return}const n=Math.floor(+$('kgN').value||0);if(!(n>=1)){toast(T('bad_amount'));return}clanAct('clanGiveKeys',{pid:+$('kgP').value,t:+$('kgT').value,n})};
  el.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.cta,all:1}));
+ {const rf=$('crRf');if(rf)rf.onclick=()=>{if(crBusy||Date.now()-crAt<5e3)return;haptic('light');crAt=0;dirty.clan=1;flush()}} // 24.11: оновити «🏁 Гонку»
  el.querySelectorAll('[data-cyo]').forEach(b=>b.onclick=()=>cycDo('cycOpen',{d:+b.dataset.cyo}));
  el.querySelectorAll('[data-cyj]').forEach(b=>b.onclick=()=>cycDo('cycJoin',{id:+b.dataset.cyj}));
  el.querySelectorAll('[data-cyl]').forEach(b=>b.onclick=()=>cycDo('cycLeave',{id:+b.dataset.cyl}));
@@ -1786,6 +1788,23 @@ function zhList(d){
  return h}
 let zhFirst=1;
 // 23.11 (Влад: «У рейтингу додай окремо гонка кланів»): Жнива + Циклоп 15 найкращих учасників клану (у клані 3+ дні) — ті самі місця, що й нагороди неділі
+let crData=null,crAt=0,crBusy=0,crFor=0; // 24.11: вкладка «🏁 Гонка» в Клані — дані clanRace; оновлюємо при відкритті (не частіше разу на хвилину) і кнопкою 🔄
+function crHtml(C){
+ const cid=C.clan.id;
+ if((!crData||crFor!==cid||Date.now()-crAt>6e4)&&!crBusy){crBusy=1;api('clanRace').then(r=>{crData=r.out;crAt=Date.now();crFor=cid;dirty.clan=1;flush()}).catch(e=>{crAt=Date.now();toast(errT(e))}).finally(()=>{crBusy=0})}
+ const D=crData&&crFor===cid?crData:null;if(!D)return `<div class="empty">${T('loading')}</div>`;if(!D.clan)return `<div class="empty">${T('race_noclan')}</div>`;
+ const p2=n=>String(n).padStart(2,'0'),w0=new Date(D.wk+'T00:00:00Z'),w1=new Date(w0.getTime()+6*864e5),wl=w0.getUTCMonth()===w1.getUTCMonth()?`${p2(w0.getUTCDate())}–${p2(w1.getUTCDate())}.${p2(w1.getUTCMonth()+1)}`:`${p2(w0.getUTCDate())}.${p2(w0.getUTCMonth()+1)}–${p2(w1.getUTCDate())}.${p2(w1.getUTCMonth()+1)}`;
+ const ms=Math.max(0,(D.left||0)-(Date.now()-crAt)),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4),dt=t=>{const d=new Date(t);return `${p2(d.getDate())}.${p2(d.getMonth()+1)} ${p2(d.getHours())}:${p2(d.getMinutes())}`};
+ let h=`<div class="card"><h4 style="display:flex;align-items:center;gap:8px"><span style="flex:1">🏁 ${T('cyc_race')} <small class="hint">· ${wl}</small></span><button class="btn" id="crRf" style="flex:0 0 auto;padding:6px 10px" aria-label="🔄">🔄</button></h4>`;
+ h+=D.place?`<p><b>${T('cr_place',{p:D.place,n:D.n,v:fmt(D.v)})}</b>${D.bank?` · <span style="color:var(--gold)">${T('cr_bank',{a:D.bank})}</span>`:''}</p>${D.pa?`<p class="sub">🎁 ${T(D.place<=5?'cr_pa5':'cr_pa',{a:D.pa,m:D.min})}</p>`:''}`:`<p class="hint">${T('cr_noplace')}</p>`;
+ h+=`<p class="sub">⏳ ${T('prize_reset',{t:T('dhm',{d:dd,h:hh,m:mm})})}</p><p class="hint">${T('cr_h',{n:D.top,m:D.min})}</p>`;
+ if(D.x)h+=`<p class="hint">${T('cr_x')}</p>`;
+ const R=D.rows||[];
+ h+=R.length?'<div class="rank">'+R.map(r=>(r.rn===D.top+1?`<div style="justify-content:center;opacity:.7"><small>── ${T('cr_out',{n:D.top})} ──</small></div>`:'')+`<div class="${r.me?'me':''}"${r.top?'':' style="opacity:.6"'}><b>${r.rn<=3?['🥇','🥈','🥉'][r.rn-1]:r.rn}</b><span>${esc(r.name)}${r.me?` <small>(${T('you')})</small>`:''}<br><small style="opacity:.65">🌾 ${fmt(r.zh)} · 👁️ ${fmt(r.cy)}</small></span><i>${fmt(r.s)}${r.top?' ✅':''}${r.pz?' 🎁':''}</i></div>`).join('')+'</div>':`<p class="hint">${T('cr_none')}</p>`;
+ if(D.cut)h+=`<p class="hint">${T('cr_cut',{n:D.top,v:fmt(D.cut)})}</p>`;
+ if((D.wait||[]).length)h+=`<p class="sub" style="margin-top:10px">${T('cr_wait_t')}</p><p class="hint">${D.wait.map(w=>`${w.me?'<b>':''}${esc(w.name)}${w.me?'</b>':''} — ${T('cr_from',{d:dt(w.at)})}`).join('<br>')}</p>`;
+ if((D.late||[]).length)h+=`<p class="sub" style="margin-top:10px">${T('cr_late_t')}</p><p class="hint">${D.late.map(w=>`${w.me?'<b>':''}${esc(w.name)}${w.me?'</b>':''}`).join(', ')}</p>`;
+ return h+'</div>'}
 const RACE_BANK=[1000,700,500,300,300];
 function raceSub(r){return (r.place<=5?` <small style="color:var(--gold)">🏦⚱️${RACE_BANK[r.place-1]}</small>`:'')+`<br><small style="opacity:.65">${r.zh!=null?`🌾 ${fmt(r.zh)} · 👁️ ${fmt(r.cy)} · `:''}👥${r.lvl||0}</small>`}
 function raceCard(d){const m=d.my,ms=Math.max(0,d.resetIn||0),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),mm=Math.floor(ms%36e5/6e4);
@@ -2231,7 +2250,7 @@ function subDots(){const P=V&&V.pass,C=V&&V.cards;return{tasks:!!(C&&(C.a.ready|
 function renderSub(){
  setScene();
  const g=groupOf(tab),e=$('subtabs');
- const items=g==='hero'?null:g==='arena'?(V&&V.wb&&V.wb.off&&!V.wb.gone||wbHide()?null:[['arena','sub_pvp'],['wboss','sub_wb']]):g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll'],['ptn','sub_ptn']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='me'?[['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='top'?null:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
+ const items=g==='hero'?null:g==='arena'?(V&&V.wb&&V.wb.off&&!V.wb.gone||wbHide()?null:[['arena','sub_pvp'],['wboss','sub_wb']]):g==='quest'?[['tasks','sub_tasks'],['quest','sub_pass'],['ach','sub_ach'],['coll','sub_coll'],['ptn','sub_ptn']]:g==='bag'?[['bag','sub_bag'],['market','sub_market']]:g==='me'?[['prof','sub_prof'],['wd','sub_wd'],['log','sub_log']]:g==='top'?null:g==='shop'?[['deal','ssub_deal'],['ash','ssub_ash'],['vip','ssub_vip'],['conv','ssub_conv'],['mine','ssub_mine']]:g==='forge'?['res','gem','ench','myth','ast'].map(k=>[k,'sub_'+k]):g==='clan'&&clanData&&clanData.clan?['main','keys','castle','chat','members','race','log',...(V&&V.cyc?['cyc']:[])].map(k=>[k,'csub_'+k]):g==='dng'&&V&&(V.swamp||V.dd&&V.dd.live)?[['dng','dsub_dng'],...(V.dd&&V.dd.live&&G&&G.maxStage>=5?[['dd','dsub_dd']]:[]),...(V.swamp?[['sw','dsub_sw']]:[])]:null;
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
