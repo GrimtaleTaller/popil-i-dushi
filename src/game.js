@@ -554,7 +554,7 @@ function mktHist(){api('marketHist').then(r=>{const o=r.out||{},d=x=>{if(!x)retu
 // 24.11 (Влад): ринок вихованців — повтори з Лігва за Попіл, звичайний від 150, рідкісний (Привид, Фенікс) від 300
 const PET_RARE=['ghost','phoenix'],petMinOf=sp=>{const m=(mktData&&mktData.petMin)||{c:150,r:300};return PET_RARE.includes(sp)?m.r:m.c};
 function lotView(l){const it=l.item||{};
- if(it.kind==='pet'){const sp=it.sp,rare=PET_RARE.includes(sp),have=!!(G.pet&&G.pet.list&&G.pet.list[sp]);return {c:rare?'#b06cff':'#6fae6f',ic:petIc(sp,0,1),nm:T('pet_'+sp),sub:T(rare?'pet_kind_r':'pet_kind_c')+(it.b?' · '+T('mkt_pet_b'):''),st:have?'🐾 '+T('mkt_pet_have'):'✨ '+T('mkt_pet_new')}}
+ if(it.kind==='pet'){const sp=it.sp,rare=PET_RARE.includes(sp),hv=G.pet&&G.pet.list&&G.pet.list[sp];return {c:rare?'#b06cff':'#6fae6f',ic:petIc(sp,0,1),nm:T('pet_'+sp),sub:T(rare?'pet_kind_r':'pet_kind_c')+(it.b?' · '+T('mkt_pet_b'):''),st:hv&&hv.s<5?'⭐ '+((hv.d||0)>=1?T('mkt_pet_up2',{s2:hv.s+1}):T('mkt_pet_up',{s:hv.s,d:hv.d||0})):hv?'🐾 '+T('mkt_pet_have'):'✨ '+T('mkt_pet_new')}} // 24.11 (Влад «В»): вид нижче ★5 — куплений зливається в зірки
  if(it.kind==='mat'){const u=l.price/Math.max(1,it.n|0);return {c:'#8a7a5a',ic:RIC('m'+((it.m|0)+1)),nm:T('mat_w')+' '+MATN[it.m]+' ×'+fmt(it.n),sub:T('mkt_unit',{p:curIc(l.cur)+' '+(u>=100?fmt(Math.round(u)):String(Math.round(u*100)/100).replace('.',LANG==='en'?'.':','))}),st:''}} // 19.11: ціна за 1 шт
  if(!SLOT[it.slot])return null;const eq=G.eq[it.slot];
  return {c:RAR[it.r].c,ic:gearIc(it),nm:`<span style="color:${RAR[it.r].c}">${itemName(it)}</span>`,sub:RAR[it.r].n+' · '+T('lvl',{n:it.il})+powTag(it),st:statLine(it.st,eq?fullSt(eq):{},gemSum(it))}}
@@ -591,10 +591,11 @@ const v=lotView(l);if(!v)continue;n++;
  el.querySelectorAll('[data-mm]').forEach(b=>b.onclick=()=>{mktMat=+b.dataset.mm;renderMarket()});
  bindCur('mmCur',c=>mktCur=c);
  if($('mmGo'))$('mmGo').onclick=()=>{const q=Math.floor(+$('mmQty').value||0),p=Math.floor(+$('mmPrice').value||0);if(q<1||q>((G.mats||[])[mktMat]||0)){toast(ERR.no_mats);return}if(p<1){toast(T('mkt_price_bad'));return}if(p>MKT_MAX[mktCur]){toast(T('mkt_price_max',{n:fmt(MKT_MAX[mktCur]),c:curIc(mktCur)}));return}mktAct('marketSell',{kind:'mat',m:mktMat,n:q,price:p,cur:mktCur},()=>toast(T('mkt_listed')))};
- el.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>{const l=M.lots.find(x=>x.id===+b.dataset.mb),it=l&&l.item||{},buy=()=>mktAct('marketBuy',{lot:+b.dataset.mb},r=>{const g=r.out&&r.out.bought;toast(g&&g.kind==='pet'?T(g.to==='st'?'mkt_pet_got_st':'mkt_pet_got_list',{p:T('pet_'+g.sp)}):T('mkt_bought'));haptic('medium');if(g&&g.kind==='pet')dirty.pet=1});
+ el.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>{const l=M.lots.find(x=>x.id===+b.dataset.mb),it=l&&l.item||{},buy=()=>mktAct('marketBuy',{lot:+b.dataset.mb},r=>{const g=r.out&&r.out.bought;toast(g&&g.kind==='pet'?(g.to==='star'?T(g.d?'mkt_pet_got_dup':'mkt_pet_got_up',{p:T('pet_'+g.sp),s:g.s,d:g.d}):T(g.to==='st'?'mkt_pet_got_st':'mkt_pet_got_list',{p:T('pet_'+g.sp)})):T('mkt_bought'));haptic('medium');if(g&&g.kind==='pet')dirty.pet=1});
   if(it.kind!=='pet')return buy(); // 24.11: вихованець — підтвердження: куди він піде
-  const have=!!(G.pet&&G.pet.list&&G.pet.list[it.sp]),st=(G.pet&&G.pet.st)||[];if(have&&st.length>=pstMax()){toast(errT({message:'pet_store_full'}));return}
-  modal(`<div class="big">${petIc(it.sp,1,1)}</div><h3>${T('mkt_pet_buy_q',{p:T('pet_'+it.sp),n:fmt(l.price)})}</h3><p class="hint">${have?T('mkt_pet_have_h',{p:T('pet_'+it.sp),n:st.length,m:pstMax()}):T('mkt_pet_new_h')}</p>`,`⚱️ ${fmt(l.price)}`,buy)});
+  const hv=G.pet&&G.pet.list&&G.pet.list[it.sp],up=!!hv&&hv.s<5,st=(G.pet&&G.pet.st)||[];if(hv&&!up&&st.length>=pstMax()){toast(errT({message:'pet_store_full'}));return} // 24.11 (Влад «В»): у Лігво — лише вид на ★5
+  const s0=up?hv.s:0,d0=up?(hv.d||0):0,d1=d0+1,s2=d1>=2?s0+1:s0,d2=d1>=2?d1-2:d1,nm=T('pet_'+it.sp);
+  modal(`<div class="big">${petIc(it.sp,1,1)}</div><h3>${T('mkt_pet_buy_q',{p:nm,n:fmt(l.price)})}</h3><p class="hint">${up?T(s2>=5?'mkt_pet_up_h5':'mkt_pet_up_h',{p:nm,s:s0,d:d0,s2,d2}):hv?T('mkt_pet_have_h',{p:nm,n:st.length,m:pstMax()}):T('mkt_pet_new_h')}</p>`,`⚱️ ${fmt(l.price)}`,buy)});
  el.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>mktAct('marketCancel',{lot:+b.dataset.mc},()=>toast(T('mkt_cancelled'))));
 }
 function disMsg(o){return T('dismantled',{n:o.n})+(o.shards?' · +🔩'+fmt(o.shards):'')+(o.xp?' · +✨'+fmt(o.xp):'')}
