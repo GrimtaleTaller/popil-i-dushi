@@ -2054,7 +2054,7 @@ function humGo(){const u='https://t.me/GrimtaleGuardBot?start=human',w=tg();if(w
 function dqCard(){const P=V.pass;if(!P||!P.dq)return'';const dr=rwTxt(P.dqR),BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
  return `<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_below',{t:T('q_bio')})}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p><p class="hint">${T('dq_reset')}</p></div>`}
 function renderTasks(){
- const K=V.tasks;if(!$('tkList'))$('p-tasks').innerHTML=`<div id="tkList"></div>`;
+ const K=V.tasks;if(!$('tkList'))$('p-tasks').innerHTML=`<div id="tkList"></div><div class="card" id="adTaskCard" hidden><h4>🎯 <span id="adtT"></span></h4><p class="hint" id="adtH" style="margin:0 0 6px"></p><div id="adTaskBox"></div><p class="hint" id="adtNone" style="margin:4px 0 0" hidden></p><p class="hint" id="adtD" style="margin:4px 0 0"></p></div>`; // рекламні завдання AdsGram — у «Щоденні» (Влад 24.11 «А»)
  const el=$('tkList');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
  const A=K.ads,keyTxt=A.tier?'🗝️'+T('tier',{n:A.tier}):chestIc(A.xG||2); // 19.11 (Влад): кожен 5-й — епічна (xG 3)
  let h=`<p class="hint">${T('tk_hint')}</p>`+cardsBox()+dqCard(); // 24.11 (Влад): квести дня — тут, не в «Пропуск»
@@ -2063,20 +2063,19 @@ function renderTasks(){
  const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?'✅ '+T('share_again'):T('share_btn')}</button></div>`;
  const BI=V.bio||{};h+=`<div class="card"><h4>🔗 ${T('q_bio')} · ⚱️${BI.ash||10}</h4>`+(BI.taken?`<p class="hint">✅ ${T('tk_done_today')}</p>`:`<p class="hint" style="margin:0 0 6px">${T('bio_hint',{l:bioLink()})}</p><div class="row" style="gap:8px"><button class="btn" id="qBioCopy">📋 ${T('bio_copy')}</button><button class="btn pri" id="qBioChk">🔗 ${T('bio_check')}</button></div>`)+`</div>`;
  el.innerHTML=h;
- el.querySelectorAll('[data-cardc]').forEach(b=>b.onclick=cardClaim);
+ mountAdTask(K);el.querySelectorAll('[data-cardc]').forEach(b=>b.onclick=cardClaim);
  if($('qHum'))$('qHum').onclick=()=>{humGo();humF=0;setTimeout(()=>{try{sync(true)}catch(e){}},8000)};
  $('tkAd').onclick=()=>{adEggDrop();watchAd()};$('qShare').onclick=shareStory;
  if($('qBioCopy')){$('qBioCopy').onclick=()=>copyText(bioLink());$('qBioChk').onclick=()=>act('bio',{},r=>{toast('🔗 +⚱️'+r.out.ash);haptic('medium')})}
 }
-// 24.11 (Влад): «Завдання з підпискою — у нову вкладку «Партнерські»»: підписки на канали, партнерські й рекламні (AdsGram) завдання
+// 24.11 (Влад): «Завдання з підпискою — у нову вкладку «Партнерські»»: підписки на канали й партнерські завдання (рекламні AdsGram — у «Щоденні», Влад «А»)
 function renderPtn(){
- const K=V.tasks;if(!$('ptnList'))$('p-ptn').innerHTML=`<div id="ptnList"></div><div class="card" id="adTaskCard" hidden><h4>🎯 <span id="adtT"></span></h4><p class="hint" id="adtH" style="margin:0 0 6px"></p><div id="adTaskBox"></div><p class="hint" id="adtNone" style="margin:4px 0 0" hidden></p><p class="hint" id="adtD" style="margin:4px 0 0"></p></div>`;
+ const K=V.tasks;if(!$('ptnList'))$('p-ptn').innerHTML=`<div id="ptnList"></div>`;
  const el=$('ptnList');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
  let h=`<p class="hint">${T('ptn_hint')}</p>`;
  h+=K.subs.map(x=>`<div class="card"${x.ok?' style="opacity:.6"':''}><div class="row" style="align-items:center;gap:8px"><div style="flex:1;min-width:0"><h4 style="margin:0">${x.ok?'✅':'📢'} ${T('sub_one',{c:SUB_N[x.k]||x.chat})}</h4><span class="hint" style="margin:0">${T('tk_rw')}: ⚱️${x.ash||K.subAsh}</span></div>${x.ok?'':`<button class="btn" style="flex:0 0 auto" data-sgo="${x.chat}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-sck="${x.k}">${T('tk_check')}</button>`}</div></div>`).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
  if(K.ptn.length){h+=`<div class="card"><h4>🤝 ${T('ptn_t')}</h4>`+K.ptn.map(p=>`<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1;min-width:0">${p.ok?'✅':'🎯'} ${esc(p.t[LANG]||p.t.en||p.id)} <span class="hint">· ${[p.ash?RIS('ash')+'×'+p.ash:'',p.ch?chestIc(1)+'×'+p.ch:'',p.key?'🗝️×'+p.key:''].filter(Boolean).join(' + ')}</span></span>${p.ok?'':`<button class="btn" style="flex:0 0 auto" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" style="flex:0 0 auto" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`}</div>`).join('')+`</div>`}
  el.innerHTML=h;
- mountAdTask(K);
  el.querySelectorAll('[data-sgo]').forEach(b=>b.onclick=()=>tgOpen('https://t.me/'+b.dataset.sgo.replace('@','')));
  el.querySelectorAll('[data-sck]').forEach(b=>b.onclick=()=>act('subCheck',{k:b.dataset.sck},r=>{toast('📢 +⚱️'+r.out.ash);haptic('medium')}));
  el.querySelectorAll('[data-pgo]').forEach(b=>b.onclick=()=>{const p=K.ptn.find(x=>x.id===b.dataset.pgo);tgOpen(p.url);act('ptnOpen',{id:p.id})});
