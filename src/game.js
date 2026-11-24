@@ -2052,12 +2052,12 @@ function tgOpen(u){const w=window.Telegram&&Telegram.WebApp;if(/^https:\/\/t\.me
 var humF=0; // 15.11: гравець у чаті Grimtale, але ще не натиснув «Я людина» — підтвердити через @GrimtaleGuardBot
 function humGo(){const u='https://t.me/GrimtaleGuardBot?start=human',w=tg();if(w&&w.openTelegramLink)w.openTelegramLink(u);else window.open(u,'_blank','noopener')}
 function dqCard(){const P=V.pass;if(!P||!P.dq)return'';const dr=rwTxt(P.dqR),BQ=P.dq.find(q=>q.k==='bio'),BI=V.bio||{};
- return `<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_below',{t:T('q_bio')})}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p></div>`}
+ return `<div class="card"><h4>☀️ ${T('dq')}</h4>`+P.dq.map(q=>qRow(q,P.dPts,q.k==='bio'?dr+' ⚱️'+(BI.ash||10):dr)).join('')+(BQ&&!BI.taken?`<p class="hint" style="margin:6px 0">${T('bio_below',{t:T('q_bio')})}</p>`:'')+`<p class="hint">${P.db?'✅ ':''}${T('dq_all',{r:chestIc(2)+'×'+P.allCh+' ⚱️'+P.allAsh})}</p><p class="hint">${T('dq_reset')}</p></div>`}
 function renderTasks(){
  const K=V.tasks;if(!$('tkList'))$('p-tasks').innerHTML=`<div id="tkList"></div>`;
  const el=$('tkList');if(!K){el.innerHTML=`<div class="empty">${T('loading')}</div>`;return}
  const A=K.ads,keyTxt=A.tier?'🗝️'+T('tier',{n:A.tier}):chestIc(A.xG||2); // 19.11 (Влад): кожен 5-й — епічна (xG 3)
- let h=`<p class="hint">${T('tk_hint')}</p>`+dqCard()+cardsBox(); // 24.11 (Влад): квести дня — тут, не в «Пропуск»
+ let h=`<p class="hint">${T('tk_hint')}</p>`+cardsBox()+dqCard(); // 24.11 (Влад): квести дня — тут, не в «Пропуск»
  if(humF)h+=`<div class="card" style="border-color:#f2c14e"><h4>💬 ${T('hum_t')}</h4><p class="hint" style="margin:0 0 6px">${T('hum_h')}</p><button class="btn pri" id="qHum">✅ ${T('hum_btn')}</button></div>`;
  h+=`<div class="card"><h4>📺 ${T('ad_t')}</h4><p class="hint" style="margin:0 0 6px">${T('ad_hint',{c:(A.ash?'⚱️'+A.ash+' + ':'')+chestIc(A.chG||1)+'×'+A.ch,n:A.keyEvery,k:keyTxt})}</p><div class="bar"><i style="width:${A.n/A.max*100}%;background:#f2c14e"></i></div><div class="row" style="align-items:center;margin-top:6px"><span class="hint" style="flex:2;margin:0">${T('ad_cnt',{n:A.n,m:A.max})}</span><button class="btn pri" id="tkAd" ${A.n<A.max?'':'disabled'}>▶️ ${T('ad_btn')}</button></div></div>`;
  const S=V.share;h+=`<div class="card"><h4>📣 ${T('share')}</h4><p class="hint" style="margin:0 0 6px">${T('share_hint',{g:fmt(S.gold),a:S.ash})}</p><button class="btn pri" id="qShare">${S.taken?'✅ '+T('share_again'):T('share_btn')}</button></div>`;
@@ -2217,6 +2217,7 @@ function renderSub(){
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
  e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else if(g==='dng'){dsub=k;dirty.dng=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
+ {const a=e.querySelector('button.act');if(a&&(a.offsetLeft+a.offsetWidth>e.scrollLeft+e.clientWidth||a.offsetLeft<e.scrollLeft))e.scrollLeft=Math.max(0,a.offsetLeft-12)} // 24.11: активна підвкладка завжди видна (5 штук не влазять на вузькому екрані)
 }
 // 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває вікно «Рейтинги» (з 23.11 — окреме, не в Арені)
 const rkPlace=k=>{const d=topData&&topData[k];if(!d)return 0;const m=(d.rows||[]).find(r=>r.me)||d.me;return m&&m.place||0};
