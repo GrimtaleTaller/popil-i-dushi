@@ -1788,10 +1788,10 @@ function zhList(d){
  return h}
 let zhFirst=1;
 // 23.11 (Влад: «У рейтингу додай окремо гонка кланів»): Жнива + Циклоп 15 найкращих учасників клану (у клані 3+ дні) — ті самі місця, що й нагороди неділі
-let crData=null,crAt=0,crBusy=0,crFor=0,crGo=0; // 24.11: вкладка «🏁 Гонка» в Клані — дані clanRace (лише читання); тягнемо один раз при відкритті, далі — лише кнопкою 🔄 (не частіше 30 с)
+let crData=null,crAt=0,crBusy=0,crFor=0,crGo=0; // 24.11: вкладка «🏁 Гонка» в Клані — дані clanRace (лише читання, відповідь без екрана — тому chatApi, не api); тягнемо при відкритті вкладки (якщо дані старші 30 с), кнопкою 🔄 (не частіше 30 с) і раз на 5 хв, поки вкладка відкрита
 function crHtml(C){
  const cid=C.clan.id;
- if((!crData||crFor!==cid||crGo)&&!crBusy){crBusy=1;crGo=0;api('clanRace').then(r=>{crData=r.out||{err:1}}).catch(()=>{crData={err:1}}).finally(()=>{crAt=Date.now();crFor=cid;crBusy=0;dirty.clan=1;flush()})}
+ if((!crData||crFor!==cid||crGo||Date.now()-crAt>3e5)&&!crBusy){crBusy=1;crGo=0;chatApi('clanRace').then(o=>{crData=o||{err:1}}).catch(()=>{crData={err:1}}).finally(()=>{crAt=Date.now();crFor=cid;crBusy=0;dirty.clan=1;flush()})}
  const D=crData&&crFor===cid?crData:null,rb=`<button class="btn" id="crRf" style="flex:0 0 auto;padding:6px 10px" aria-label="🔄"${crBusy?' disabled':''}>${crBusy?'⏳':'🔄'}</button>`;
  if(!D)return `<div class="empty">${T('loading')}</div>`;if(D.clan===false)return `<div class="empty">${T('race_noclan')}</div>`;
  if(D.err||!D.wk)return `<div class="card"><h4 style="display:flex;align-items:center;gap:8px"><span style="flex:1">🏁 ${T('cyc_race')}</span>${rb}</h4><p class="hint">${T('race_soon')}</p></div>`;
@@ -2257,7 +2257,7 @@ function renderSub(){
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?csub:g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex';
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
- e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;dirty.clan=1;window.scrollTo(0,0)}else if(g==='dng'){dsub=k;dirty.dng=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
+ e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k;if(k==='race'&&Date.now()-crAt>3e4)crGo=1;dirty.clan=1;window.scrollTo(0,0)}else if(g==='dng'){dsub=k;dirty.dng=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
  {const a=e.querySelector('button.act');if(a&&(a.offsetLeft+a.offsetWidth>e.scrollLeft+e.clientWidth||a.offsetLeft<e.scrollLeft))e.scrollLeft=Math.max(0,a.offsetLeft-12)} // 24.11: активна підвкладка завжди видна (5 штук не влазять на вузькому екрані)
 }
 // 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває вікно «Рейтинги» (з 23.11 — окреме, не в Арені)
