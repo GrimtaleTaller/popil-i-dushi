@@ -101,8 +101,9 @@ var banWhy='';async function api(action,args){
  const body={action,args:args||{}};body.fp=devFp();body.ss={i:SS.i,v:MYV||0,t:SS.t,a:SS.a};const headers={'content-type':'application/json'};
  lastSync=Date.now();const base=VC;if(base&&VH)body.vh=VH; // дельта екрана (11.11): сервер не надсилає частини, які вже є
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
- let r;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body)})}catch(e){throw new Error('net')}
- const j=await r.json().catch(()=>({ok:false,err:'bad'}));
+ // 25.11: запит, що «завис» на поганому мобільному інтернеті, обриваємо (sync — 20 с, інші — 30 с), а не чекаємо хвилинами таймауту телефона
+ const ac=typeof AbortController!=='undefined'?new AbortController():null,tmo=ac?setTimeout(()=>{try{ac.abort()}catch(e){}},action==='sync'?20000:30000):0;
+ let r,j;try{r=await fetch(API,{method:'POST',headers,body:JSON.stringify(body),signal:ac?ac.signal:undefined});j=await r.json().catch(()=>({ok:false,err:'bad'}))}catch(e){throw new Error('net')}finally{clearTimeout(tmo)}
  if(!j.ok){if(j.err==='prelaunch'&&j.launch)lnchLock(j.maint?Object.assign({maint:1},j.launch):j.launch);if(j.err==='acc_banned')banWhy=j.why||'';throw new Error(j.err||'err')}
  if(j.view){if(j.vd){if(!base){VC=null;VH=null;throw new Error('net')}j.view=vmerge(base,j.view,j.vh)}VC=j.view;VH=j.vh||null}
  apply(j.view);
@@ -2003,7 +2004,8 @@ async function start(){
  if(w){try{w.ready();w.expand();w.setHeaderColor&&w.setHeaderColor('#19161d');w.setBackgroundColor&&w.setBackgroundColor('#0e0c10')}catch(e){}}
  if(!w&&!DEV){boot(T('only_tg'));return}
  boot(T('loading'));
- try{const r=await api('sync');boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r);setTimeout(askPm,4000);setTimeout(clanInvite,1200)}
+ try{let r,k=0;for(;;){try{r=await api('sync');break}catch(e){if(e.message!=='net'||++k>=3)throw e;await new Promise(f=>setTimeout(f,1500))}} // 25.11: перший вхід — до 3 спроб на новому з'єднанні
+ boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r);setTimeout(askPm,4000);setTimeout(clanInvite,1200)}
  catch(e){if(e.message==='prelaunch'){boot();return}if(e.message==='acc_banned'){boot(T('acc_banned')+(banWhy&&L.t['ban_'+banWhy]?' '+T('ban_'+banWhy):''));return}boot(errT(e),true)}
 }
 // ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
