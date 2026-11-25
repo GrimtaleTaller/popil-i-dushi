@@ -99,7 +99,7 @@ function afkPill(){let el=document.getElementById('afkP');const on=!!afkLv();if(
 function afkWake(){try{if(!afkLv())return;afkLoc=1;afkPill();setTimeout(()=>{try{if(syncing)afkAgain=1;else sync(true)}catch(e){}},300)}catch(e){}} // критик 14.11: якщо запит уже летить — повторити після нього
 var BOOTLT=null,T_JS=(window.performance&&performance.now)?Math.round(performance.now()):0; // 25.11: час завантаження коду гри від відкриття
 var banWhy='';async function api(action,args){
- const body={action,args:args||{}};body.fp=devFp();if(BOOTLT){body.lt=BOOTLT;BOOTLT=null}body.ss={i:SS.i,v:MYV||0,t:SS.t,a:SS.a};const headers={'content-type':'application/json'};
+ const body={action,args:args||{}};body.fp=devFp();if(BOOTLT&&Date.now()>=BOOTLT.at){delete BOOTLT.at;body.lt=BOOTLT;BOOTLT=null}body.ss={i:SS.i,v:MYV||0,t:SS.t,a:SS.a};const headers={'content-type':'application/json'};
  lastSync=Date.now();const base=VC;if(base&&VH)body.vh=VH; // дельта екрана (11.11): сервер не надсилає частини, які вже є
  const w=tg();if(w)body.initData=w.initData;else if(DEV){body.dev=DEV.user;headers['x-dev-key']=DEV.key}
  // 25.11: запит, що «завис» на поганому мобільному інтернеті, обриваємо (sync — 20 с, інші — 30 с), а не чекаємо хвилинами таймауту телефона
@@ -2006,8 +2006,11 @@ async function start(){
  if(!w&&!DEV){boot(T('only_tg'));return}
  boot(T('loading'));
  try{let r,k=0;const ts=Date.now();for(;;){try{r=await api('sync');break}catch(e){if(e.message!=='net'||++k>=3)throw e;await new Promise(f=>setTimeout(f,1500))}} // 25.11: перший вхід — до 3 спроб на новому з'єднанні
- try{BOOTLT={js:T_JS,sync:Date.now()-ts,tries:k+1,pf:(w&&w.platform)||'',tv:(w&&w.version)||''}}catch(e){} // діагностика повільного входу — піде з наступним запитом
- boot();B.hp=H.hp;spawn();flush();renderSub();afterSync(r);setTimeout(askPm,4000);setTimeout(clanInvite,1200)}
+ // 25.11 діагностика повільного входу (Haku: «книга» висить на 100% ~5 хв): час кроків після відповіді сервера + найдовше «зависання» сторінки за перші 20 с
+ const LT={js:T_JS,sync:Date.now()-ts,tries:k+1,pf:(w&&w.platform)||'',tv:(w&&w.version)||'',lag:0,at:Date.now()+20000};let q=Date.now();
+ boot();LT.rb=Date.now()-q;q=Date.now();B.hp=H.hp;spawn();LT.sp=Date.now()-q;q=Date.now();flush();LT.fl=Date.now()-q;q=Date.now();renderSub();LT.rs=Date.now()-q;q=Date.now();afterSync(r);LT.as=Date.now()-q;
+ try{let l0=Date.now();const lm=setInterval(()=>{const n=Date.now();LT.lag=Math.max(LT.lag,n-l0-250);l0=n},250);setTimeout(()=>clearInterval(lm),20000)}catch(e){}
+ BOOTLT=LT;setTimeout(askPm,4000);setTimeout(clanInvite,1200)}
  catch(e){if(e.message==='prelaunch'){boot();return}if(e.message==='acc_banned'){boot(T('acc_banned')+(banWhy&&L.t['ban_'+banWhy]?' '+T('ban_'+banWhy):''));return}boot(errT(e),true)}
 }
 // ---------- тижневий пропуск, квести дня, досягнення, колекція, світовий бос, «Поділитися» (02.11) ----------
