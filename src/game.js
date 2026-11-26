@@ -2132,7 +2132,7 @@ function renderPtn(){
  h+=bySt(K.subs,x=>x.ok).map(x=>card(x.ok,'📢',T('sub_one',{c:nm(SUB_N[x.k]||x.chat)}),RIS('ash')+' '+(x.ash||K.subAsh),`<button class="btn" data-sgo="${esc(x.url||x.chat)}">${T('tk_go')}</button><button class="btn pri" data-sck="${x.k}">${T('tk_check')}</button>`)).join('')+`<p class="hint">${T('sub_hint',{a:K.subAsh})}</p>`;
  if(K.ptn.length){h+=`<h4 class="tkc-h">🤝 ${T('ptn_t')}</h4>`+bySt(K.ptn,p=>p.ok).map(p=>card(p.ok,'🎯',esc(p.t[LANG]||p.t.en||p.id).replace(/(@\w+)/g,'<b>$1</b>'),[p.ash?RIS('ash')+' '+p.ash:'',p.ch?chestIc(1)+'×'+p.ch:'',p.key?'🗝️×'+p.key:''].filter(Boolean).join(' + '),`<button class="btn" data-pgo="${p.id}">${T('tk_go')}</button><button class="btn pri" data-pck="${p.id}" ${p.open?'':'disabled'}>${T('tk_check')}</button>`)).join('')}
  el.innerHTML=h;
- el.querySelectorAll('[data-sgo]').forEach(b=>b.onclick=()=>tgOpen(/^https:\/\/t\.me\//.test(b.dataset.sgo)?b.dataset.sgo:'https://t.me/'+b.dataset.sgo.replace('@',''))) // 26.11;
+ el.querySelectorAll('[data-sgo]').forEach(b=>b.onclick=()=>tgOpen(/^https:\/\/t\.me\//.test(b.dataset.sgo)?b.dataset.sgo:'https://t.me/'+b.dataset.sgo.replace('@',''))); // 26.11: url із сервера (запрошувальне посилання) або @канал
  el.querySelectorAll('[data-sck]').forEach(b=>b.onclick=()=>act('subCheck',{k:b.dataset.sck},r=>{toast('📢 +⚱️'+r.out.ash);haptic('medium')}));
  el.querySelectorAll('[data-pgo]').forEach(b=>b.onclick=()=>{const p=K.ptn.find(x=>x.id===b.dataset.pgo);tgOpen(p.url);act('ptnOpen',{id:p.id})});
  el.querySelectorAll('[data-pck]').forEach(b=>b.onclick=()=>act('ptnCheck',{id:b.dataset.pck},r=>{toast('🎯 '+[r.out.ash?'+'+r.out.ash+' ⚱️':'',r.out.ch?'+'+r.out.ch+'🧰':'',r.out.keyN?'+🗝️×'+r.out.keyN:''].filter(Boolean).join(' '));haptic('medium')}));
