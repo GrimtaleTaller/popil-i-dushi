@@ -978,3 +978,10 @@ details.clogd>summary h4{display:inline-flex;margin:0}
 details.clogd>summary::after{content:'▾';float:right;color:var(--mut);font-size:18px;line-height:1}
 details.clogd[open]>summary::after{content:'▴'}
 details.clogd[open]>summary{margin-bottom:8px}
+/* 27.11 (Влад): вікно реліквії і бонус Зали */
+.zala .zala-b{margin:8px 0 0;color:var(--gold);font-weight:600}
+.relw{text-align:center}
+.relw img{width:120px;height:120px;object-fit:contain;display:block;margin:4px auto 6px;filter:drop-shadow(0 0 10px #ffcf7a66) drop-shadow(0 4px 4px #000)}
+.relw h3{margin:4px 0 10px}
+.relw p{margin:6px 0}
+.relw .relg{color:var(--gold);font-weight:600}
