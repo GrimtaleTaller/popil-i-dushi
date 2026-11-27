@@ -985,3 +985,5 @@ details.clogd[open]>summary{margin-bottom:8px}
 .relw h3{margin:4px 0 10px}
 .relw p{margin:6px 0}
 .relw .relg{color:var(--gold);font-weight:600}
+/* 27.11: підказка про Печатку Вічності (будівлі, кування вічної, Болото) */
+.sealh{color:#7fe3e8;margin:6px 0 0}
