@@ -1423,10 +1423,10 @@ function adminHtml(){
 }
 // ---------- клан ----------
 let clanAt=0,clogF='all';let csub='castle',clanData=null,clanBusy=false,craftT=1,kbT=0,clanModeSel=null,resK='m0',cfLast='',clogOpen=false,chFrom=''; // 27.11 (Влад «А»): 5 вкладок клану — Замок (із Залою реліквій) першою; cfLast — остання з «Битв» (race / cyc)
-// 27.11 (Влад): Зала реліквій — артефакти Циклопа для 5 найкращих кланів гонки; зліва направо на постаментах банера, голова — посередині
-const RELK=['club','helm','head','armor','stone'],RELX=[12,30.9,49.9,69.1,88],RELY=[61.3,61.2,60.4,61.2,61.3];
-function zalaH(C){const R0=C.clan&&C.clan.relics,have=new Set((Array.isArray(R0)?R0:[]).map(r=>r&&r.k).filter(k=>RELK.includes(k))); // формат від сервера: [{k:'head',…}]; інше ігноруємо, щоб не впав екран клану
- return `<div class="card zala"><h4>🏛️ ${T('zala_t')}</h4><div class="zala-v"><img class="zala-bg" src="assets/clan/zala.jpg?v=1" alt="" decoding="async">${RELK.map((k,i)=>`<img class="zrel${have.has(k)?' on':''}" data-zr="${k}" style="left:${RELX[i]}%;top:${(RELY[i]-32.5).toFixed(1)}%" src="assets/relic/${k}.webp?v=1" alt="${esc(T('rel_'+k))}" decoding="async">`).join('')}</div><p class="hint zala-h">${have.size?T('zala_have',{n:have.size})+' ':''}${T('zala_h')}</p></div>`}
+// 27.11 (Влад «А», «7»): Зала реліквій — 7 однакових постаментів; реліквії клану стають по черзі від середини (кожна — з нової активності, перша — артефакт Циклопа для топ-5 гонки)
+const RELK=['head','helm','armor','club','stone'],RELX=[9.6,22.2,35.2,49.9,65,78,90.9],RELY=[65.5,65.5,65.3,64.9,65.5,65.3,65.5],RELS=[3,2,4,1,5,0,6];
+function zalaH(C){const R0=C.clan&&C.clan.relics,R=(Array.isArray(R0)?R0:[]).map(r=>r&&r.k).filter((k,i,a)=>RELK.includes(k)&&a.indexOf(k)===i).slice(0,7); // формат від сервера: [{k:'head',…}] у порядку здобуття; інше ігноруємо, щоб не впав екран клану
+ return `<div class="card zala"><h4>🏛️ ${T('zala_t')}</h4><div class="zala-v"><img class="zala-bg" src="assets/clan/zala.jpg?v=2" alt="" decoding="async">${R.map((k,i)=>{const s=RELS[i];return `<img class="zrel" data-zr="${k}" style="left:${RELX[s]}%;top:${(RELY[s]-26.3).toFixed(1)}%" src="assets/relic/${k}.webp?v=1" alt="${esc(T('rel_'+k))}" decoding="async">`}).join('')}</div><p class="hint zala-h">${R.length?T('zala_have',{n:R.length})+' ':''}${T('zala_h')}</p></div>`}
 function fightIn(){return csub==='race'||csub==='cyc'}
 function fightGo(){return (cfLast==='cyc'&&V&&V.cyc)?'cyc':'race'} // критик 27.11: за замовчуванням Гонка — Циклоп опитує сервер раз на 8 с, тож лише тим, хто сам його відкрив
 const roleT=r=>T('role_'+r);
@@ -1699,7 +1699,7 @@ function renderClan(){
  el.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>clanAct('clanTake',{t:+b.dataset.cta,all:1}));
  {const rf=$('crRf');if(rf)rf.onclick=()=>{if(crBusy)return;if(Date.now()-crAt<3e4){toast(T('cr_wait30'));return}haptic('light');crGo=1;dirty.clan=1;flush()}} // 24.11: оновити «🏁 Гонку» — не частіше 30 с (сервер усе одно кешує 30 с)
  el.querySelectorAll('[data-cfs]').forEach(b=>b.onclick=()=>{const k=b.dataset.cfs;if(k===csub)return;haptic('light');csub=cfLast=k;if(k==='race'&&Date.now()-crAt>3e4)crGo=1;dirty.clan=1;window.scrollTo(0,0);showPane()}); // 27.11: перемикач усередині «Битв»
- el.querySelectorAll('[data-zr]').forEach(b=>b.onclick=()=>{const k=b.dataset.zr,R=((C.clan&&C.clan.relics)||[]).find(r=>r.k===k);haptic('light');toast(T('rel_'+k)+' — '+T(R?'zala_got':'zala_wait'))}); // 27.11: тап по реліквії — назва й стан
+ el.querySelectorAll('[data-zr]').forEach(b=>b.onclick=()=>{haptic('light');toast(T('rel_'+b.dataset.zr)+' — '+T('zala_got'))}); // 27.11: тап по реліквії — назва
  {const d=$('cLogD');if(d)d.ontoggle=()=>{clogOpen=d.open}} // 27.11: журнал лишається розгорнутим після автооновлення клану
  el.querySelectorAll('[data-cyo]').forEach(b=>b.onclick=()=>cycDo('cycOpen',{d:+b.dataset.cyo}));
  el.querySelectorAll('[data-cyj]').forEach(b=>b.onclick=()=>cycDo('cycJoin',{id:+b.dataset.cyj}));
