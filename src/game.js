@@ -1422,13 +1422,13 @@ function adminHtml(){
   <div class="rank">${A.top.map((t,i)=>`<div><b>${i+1}</b><span>${esc(t.name)}</span><i>${T('stage',{n:t.stage})}</i></div>`).join('')}</div></div>`;
 }
 // ---------- клан ----------
-let clanAt=0,clogF='all';let csub='castle',clanData=null,clanBusy=false,craftT=1,kbT=0,clanModeSel=null,resK='m0',cfLast='',clogOpen=false; // 27.11 (Влад «А»): 5 вкладок клану — Замок (із Залою реліквій) першою; cfLast — остання з «Битв» (race / cyc)
+let clanAt=0,clogF='all';let csub='castle',clanData=null,clanBusy=false,craftT=1,kbT=0,clanModeSel=null,resK='m0',cfLast='',clogOpen=false,chFrom=''; // 27.11 (Влад «А»): 5 вкладок клану — Замок (із Залою реліквій) першою; cfLast — остання з «Битв» (race / cyc)
 // 27.11 (Влад): Зала реліквій — артефакти Циклопа для 5 найкращих кланів гонки; зліва направо на постаментах банера, голова — посередині
 const RELK=['club','helm','head','armor','stone'],RELX=[12,30.9,49.9,69.1,88],RELY=[61.3,61.2,60.4,61.2,61.3];
-function zalaH(C){const R=(C.clan&&C.clan.relics)||[],have=new Set(R.map(r=>r.k));
- return `<div class="card zala"><h4>🏛️ ${T('zala_t')}</h4><div class="zala-v"><img class="zala-bg" src="assets/clan/zala.jpg?v=1" alt="" decoding="async">${RELK.map((k,i)=>`<img class="zrel${have.has(k)?' on':''}" data-zr="${k}" style="left:${RELX[i]}%;top:${(RELY[i]-32.5).toFixed(1)}%" src="assets/relic/${k}.webp?v=1" alt="${esc(T('rel_'+k))}" decoding="async">`).join('')}</div><p class="hint zala-h">${T(R.length?'zala_have':'zala_h',{n:R.length})}</p></div>`}
+function zalaH(C){const R0=C.clan&&C.clan.relics,have=new Set((Array.isArray(R0)?R0:[]).map(r=>r&&r.k).filter(k=>RELK.includes(k))); // формат від сервера: [{k:'head',…}]; інше ігноруємо, щоб не впав екран клану
+ return `<div class="card zala"><h4>🏛️ ${T('zala_t')}</h4><div class="zala-v"><img class="zala-bg" src="assets/clan/zala.jpg?v=1" alt="" decoding="async">${RELK.map((k,i)=>`<img class="zrel${have.has(k)?' on':''}" data-zr="${k}" style="left:${RELX[i]}%;top:${(RELY[i]-32.5).toFixed(1)}%" src="assets/relic/${k}.webp?v=1" alt="${esc(T('rel_'+k))}" decoding="async">`).join('')}</div><p class="hint zala-h">${have.size?T('zala_have',{n:have.size})+' ':''}${T('zala_h')}</p></div>`}
 function fightIn(){return csub==='race'||csub==='cyc'}
-function fightGo(){return cfLast==='race'||cfLast==='cyc'&&V&&V.cyc?cfLast:V&&V.cyc?'cyc':'race'}
+function fightGo(){return (cfLast==='cyc'&&V&&V.cyc)?'cyc':'race'} // критик 27.11: за замовчуванням Гонка — Циклоп опитує сервер раз на 8 с, тож лише тим, хто сам його відкрив
 const roleT=r=>T('role_'+r);
 // 15.11 (Влад): хто з клану зараз у грі — останній запит до сервера не пізніше 3 хв тому (гра шле синхронізацію щохвилини)
 const isOn=s=>!!s&&Date.now()-new Date(s)<180e3;
@@ -1447,7 +1447,7 @@ async function chatApi(action,args){const body={action,args:args||{},fp:devFp(),
 // 14.11 (Влад: «незручно читати») — чат клану на весь екран: шапка з «назад», назвою клану й онлайном; системна «Назад» Telegram теж закриває
 function chShell(){const cn=(clanData&&clanData.clan&&clanData.clan.name)||'';return `<div id="chatRoot" class="chat full"><div class="chhead"><button class="chb chback" id="chBack" aria-label="back">←</button><div class="chht"><b>💬 ${esc(cn)}</b><span id="chOn"></span></div></div><div class="chtop"><span class="sub">${T('chat_hint')}</span></div><div id="chPin"></div><div class="chwrap"><div id="chFeed" class="chfeed"><p class="hint" style="text-align:center">${T('loading')}</p></div><button id="chDown" class="chdown" style="display:none">↓</button></div><div id="chTyping" class="chtyping"></div><div id="chReply"></div>
  <div class="chqp">${CHQ.map(k=>`<button data-chq="${k}">${T(k)}</button>`).join('')}</div><div class="chin" id="chIn"><button class="chb" id="chMem" title="${T('ch_mem')}">👥</button><button class="chb" id="chItem" title="${T('ch_item')}">🎒</button><textarea id="chText" rows="1" maxlength="300" placeholder="${T('ch_ph')}"></textarea><button class="chb chsend" id="chSend">➤</button></div></div>`}
-function chExit(){if(csub!=='chat')return;csub='castle';dirty.clan=1;showPane()}
+function chExit(){if(csub!=='chat')return;csub=chFrom||'castle';dirty.clan=1;showPane()} // 27.11: із чату — туди, звідки прийшов
 function chFull(on){document.body.classList.toggle('chfull',!!on);try{const b=tg()&&tg().BackButton;if(b){if(on){b.onClick(chExit);b.show()}else{b.offClick(chExit);b.hide()}}}catch(e){}}
 function chStop(){clearTimeout(CH.t);CH.t=null;if(document.body.classList.contains('chfull'))chFull(0)}
 function chMount(C){if(CH.clan!==C.clan.id){Object.assign(CH,{clan:C.clan.id,msgs:[],sys:[],pin:null,after:0,since:0,logAfter:0,first:1,reply:null,bottom:1})}
@@ -1623,6 +1623,7 @@ function renderClan(){
   return}
  const S={main:'',keys:'',castle:'',members:'',race:'',log:'',chat:''}; // розділи клану (04.11): кожен — окрема підвкладка; 24.11 — «🏁 Гонка»; 27.11 — 5 вкладок, частини зводяться наприкінці
  let cdH='',invH='',ftH=''; // 27.11: опис → Замок; запрошення, група в Telegram, «Оновити / Вийти» → Учасники
+ if(csub==='keys')csub='main';else if(csub==='log'){csub='members';clogOpen=true}else if(csub==='cyc'&&!(V&&V.cyc))csub='race'; // 27.11: старі вкладки «Ключі» й «Журнал» тепер усередині Казни й Учасників
  const K=C.clan.keys||{},lead=C.role==='leader'||C.role==='officer';
  if(csub!=='chat')h+=`<div class="chero"><div class="chero-crest${C.clan.race?' rc'+C.clan.race.p:''}">${penI([C.clan.name,C.clan.pt,C.clan.race&&C.clan.race.p],40)||cIc('banner')}</div><div class="chero-main"><div class="chero-nm">${esc(C.clan.name)}</div><div class="chero-role">${roleT(C.role)}</div>${C.clan.race?`<div class="chero-race rc${C.clan.race.p}">${C.clan.race.p<=3?'👑':'🌿'} <b>${T('race_ins_'+C.clan.race.p)}</b> · ${T('race_pl_'+C.clan.race.p)} ${T('race_in')}</div><div class="chero-rt">${T('race_till',{a:raceWk(C.clan.race.wk),b:raceTill(C.clan.race.until)})}</div>`:''}</div><div class="chero-st"><div>${cIc('members')}<b>${C.clan.members}/${C.clan.max||C.max}</b></div><div class="chon">🟢<b>${T('m_onn',{n:(C.members||[]).filter(m=>isOn(m.seen)).length})}</b></div><div>⚔️<b>${fmt(C.clan.power)}</b></div></div></div>`; // 15.11 (Влад): шапка клану — герб, назва, роль, склад і сила на тлі замку
  if(C.clan.desc)cdH+=`<div class="cdesc${C.role==='leader'?' ed':''}">📜 ${esc(C.clan.desc).replace(/\n/g,'<br>')}${C.role==='leader'?`<button class="cdesced" id="cDescEd" aria-label="${T('clan_desc_t')}">✏️</button>`:''}</div>`; // 14.11 (Влад): опис клану
@@ -1687,9 +1688,8 @@ function renderClan(){
  if(C.role==='leader')ftH+=`<p class="hint">${T('clan_leader_hint')}</p>`;
  if(csub==='chat'){if($('chatRoot')&&CH.clan===C.clan.id){chPaint();renderSub();if(!CH.t&&!CH.busy)chPoll(1);return}S.chat=chShell()} // 14.11: чат клану — сам оновлюється, введене не губиться
  if(V&&V.cyc)S.cyc=cycHtml();
- if(csub==='keys')csub='main';else if(csub==='log'){csub='members';clogOpen=true}else if(csub==='cyc'&&!(V&&V.cyc))csub='race'; // 27.11: старі вкладки «Ключі» й «Журнал» тепер усередині Казни й Учасників
  if(csub==='race')S.race=crHtml(C); // 24.11 (Влад «А»): внесок кожного учасника в гонку кланів
- S.castle=zalaH(C)+cdH+S.castle;S.main+=S.keys;S.members+=invH+S.log+ftH;S.keys=S.log=''; // 27.11 (Влад «А»): Замок = Зала реліквій + опис + проєкт і будівлі; Казна = внески + ключі; Учасники = заявки, налаштування, склад, запрошення, журнал
+ S.castle=zalaH(C)+cdH+S.castle;S.main+=S.keys;S.members=`<button class="cinvtop" id="cInvTop">🔗 ${T('cinv_t')}</button>`+S.members+invH+S.log+ftH; // критик 27.11: «🔗 Запросити» нагорі Учасників (рішення 14.11 «видно одразу») — прокручує до карткиS.keys=S.log=''; // 27.11 (Влад «А»): Замок = Зала реліквій + опис + проєкт і будівлі; Казна = внески + ключі; Учасники = заявки, налаштування, склад, запрошення, журнал
  if(fightIn()){cfLast=csub;const fc=V&&V.cyc?`<div class="chips cfch">${[['race','csub_race'],['cyc','csub_cyc']].map(([k,l])=>`<button data-cfs="${k}" class="${csub===k?'act':''}">${T(l)}</button>`).join('')}</div>`:'';if(S[csub])S[csub]=fc+S[csub]} // 27.11: «⚔️ Битви» — Гонка й Циклоп одним перемикачем (згодом — Цербер)
  if(!S[csub])csub='castle';h+=csub==='chat'?S[csub]:cDecor(S[csub]);
  {const keep={};el.querySelectorAll('input,textarea').forEach(i=>{if(i.id&&i.value)keep[i.id]=i.value});el.innerHTML=h;Object.keys(keep).forEach(k=>{const i=$(k);if(i)i.value=keep[k]});if(csub!=='chat')iconize(el)} /* 18.11 (Влад): у клані ті самі намальовані значки ресурсів, що й у Кузні */renderSub(); // 13.11: не губимо введене при автооновленні клану
@@ -1746,7 +1746,7 @@ function renderClan(){
   $('cKMax').onclick=()=>{inp.value=mx||'';upd();if(!mx)toast(ERR.clan_no_ash||T('err',{e:'clan_no_ash'}))};
   go.onclick=()=>{const n=Math.floor(+inp.value||0),t=craftT;if(go.disabled||n<1)return;go.disabled=true;go.textContent='⏳';haptic('light');clanAct('clanCraft',{t,n},()=>toast(T('craft_ok',{n,t,k:((clanData&&clanData.clan&&clanData.clan.keys)||{})[t]||n})))?.finally?.(()=>{dirty.clan=1;flush()})}}
  el.querySelectorAll('[data-cn]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const n=+b.dataset.cn,t=craftT,bs=el.querySelectorAll('[data-cn]');bs.forEach(x=>x.disabled=true);b.textContent='⏳';haptic('light');clanAct('clanCraft',{t,n},()=>toast(T('craft_ok',{n,t,k:((clanData&&clanData.clan&&clanData.clan.keys)||{})[t]||n})))?.finally?.(()=>{dirty.clan=1;flush()})}); // 09.11 (відео Влада): відповідь ~1–2 с без жодного відгуку — тепер ⏳, кнопки блокуються, підтвердження
- el.querySelectorAll('[data-cmsg]').forEach(b=>b.onclick=()=>{const n=b.dataset.cn,id=+b.dataset.cmsg;csub='chat';dirty.clan=1;showPane();let k=0;const w=()=>{if($('chText'))chMention(n,id);else if(++k<20)setTimeout(w,100)};w()}); // 20.11 (гравець): зі списку учасників одразу в чат зі згадкою саме цього гравця
+ el.querySelectorAll('[data-cmsg]').forEach(b=>b.onclick=()=>{const n=b.dataset.cn,id=+b.dataset.cmsg;chFrom=csub;csub='chat';dirty.clan=1;showPane();let k=0;const w=()=>{if($('chText'))chMention(n,id);else if(++k<20)setTimeout(w,100)};w()}); // 20.11 (гравець): зі списку учасників одразу в чат зі згадкою саме цього гравця
  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>modal(`<div class="big">✖</div><h3>${T('kick_q',{n:esc(b.dataset.cn||'')})}</h3><p class="hint">${T('kick_note')}</p>`,T('kick_yes'),()=>clanAct('clanKick',{pid:+b.dataset.ck}),null,'kick')); // 18.11 (гравець Хасан): підтвердження, щоб не виключити випадково
  el.querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>clanAct('clanRole',{pid:+b.dataset.cr,role:b.dataset.r}));
  if($('cRef'))$('cRef').onclick=()=>{clanData=null;renderClan()};
@@ -2283,7 +2283,7 @@ function renderSub(){
  if(!items){e.style.display='none';return}
  const cur=g==='forge'?fsub:g==='clan'?(fightIn()?'fight':csub==='keys'?'main':csub==='log'?'members':csub):g==='shop'?ssub:g==='dng'?dsub:tab;e.style.display='flex'; // 27.11: «Битви» підсвічені і в Гонці, і в Циклопі
  const sd=g==='quest'?subDots():{};e.innerHTML=items.map(([k,l])=>`<button data-s="${k}" class="${k===cur?'act':''}${sd[k]||(k==='chat'&&chatU&&cur!=='chat')?' sdot':''}${g==='clan'||g==='dng'||g==='forge'?' csb':''}">${g==='clan'?cIc(k)+T(l).replace(/^\S+\s+/,''):g==='dng'?DIC(k)+T(l):g==='forge'?`<img class="cic" src="assets/forge/${k}.webp?v=1" alt="">`+T(l):T(l)}</button>`).join(''); // 15.11: у клані — намальовані значки
- e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){csub=k==='fight'?fightGo():k;if(csub==='race'&&Date.now()-crAt>3e4)crGo=1;dirty.clan=1;window.scrollTo(0,0)}else if(g==='dng'){dsub=k;dirty.dng=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
+ e.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.s;if(g==='forge'){fsub=k;dirty.forge=1}else if(g==='shop'){ssub=k;dirty.shop=1;window.scrollTo(0,0)}else if(g==='clan'){if(k==='chat'&&csub!=='chat')chFrom=csub;csub=k==='fight'?fightGo():k;if(csub==='race'&&Date.now()-crAt>3e4)crGo=1;dirty.clan=1;window.scrollTo(0,0)}else if(g==='dng'){dsub=k;dirty.dng=1;window.scrollTo(0,0)}else{tab=k;lastSub[g]=k}showPane()});
  {const a=e.querySelector('button.act');if(a&&(a.offsetLeft+a.offsetWidth>e.scrollLeft+e.clientWidth||a.offsetLeft<e.scrollLeft))e.scrollLeft=Math.max(0,a.offsetLeft-12)} // 24.11: активна підвкладка завжди видна (5 штук не влазять на вузькому екрані)
 }
 // 13.11 (Влад): кнопка рейтингу на екрані бою — кубок і твоє місце за Силою; тап відкриває вікно «Рейтинги» (з 23.11 — окреме, не в Арені)
