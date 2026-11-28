@@ -518,8 +518,8 @@ function renderBag(){
 // ---------- ринок: за Попіл або Золото, речі й матеріали ----------
 let mktData=null,mktBusy=false,mktMat=0,mktCur='ash';const mktF={slot:'',r:0,t:0,sort:'price',cur:'',hide:[]};
 // 14.11 (Влад): «Показати лише» як у Сумці — сервер і далі отримує hide (решта рідкостей), show живе лише в клієнті
-let mktShow=(()=>{try{return JSON.parse(localStorage.getItem('gt_mkt_show')||'[]').filter(x=>x>=2&&x<=6)}catch(e){return[]}})();
-const mktShowSet=a=>{mktShow=a;mktF.hide=a.length?[2,3,4,5,6].filter(r=>!a.includes(r)):[];try{localStorage.setItem('gt_mkt_show',JSON.stringify(a))}catch(e){}};mktShowSet(mktShow);
+let mktShow=(()=>{try{const v=localStorage.getItem('gt_mkt_show2');return v===null?[4,5,6]:JSON.parse(v).filter(x=>x>=2&&x<=6)}catch(e){return[4,5,6]}})(); // 27.11 (Влад «Г»): за замовчуванням — легендарні й кращі; новий ключ, щоб діяло й для тих, хто вже щось вибирав
+const mktShowSet=a=>{mktShow=a;mktF.hide=a.length?[2,3,4,5,6].filter(r=>!a.includes(r)):[];try{localStorage.setItem('gt_mkt_show2',JSON.stringify(a))}catch(e){}};mktShowSet(mktShow);
 const curIc=c=>c==='gold'?'💰':'⚱️',curHave=c=>c==='gold'?G.gold:(G.ash||0);
 let mktErrN=0;
 const mkQ=()=>({...mktF,slot:mktTab==='pet'?'pet':mktF.slot||(mktTab==='mat'?'mat':'items'),t:mktTab==='mat'?mktF.t:0,...(mktTab==='pet'?{cur:'',hide:[]}:{})}); // 24.11: вихованці — лише за Попіл, фільтри валюти й рідкості речей їх не стосуються // 19.11: «Речі» — сервер віддає лоти без матеріалів
@@ -541,7 +541,7 @@ function marketSellDlg(id){const it=G.inv.find(i=>i.id===id);if(!it)return;const
 let mkMineF='all';
 function mktMine(){ // 18.11 (Влад «А»): «📦 Мої лоти» — кнопка в панелі ринку, усі свої лоти (речі й матеріали) з фільтром і «Зняти»
  const M=mktData||{mine:[],maxLots:10},isM=l=>l.item&&l.item.kind==='mat',L=M.mine.filter(l=>mkMineF==='all'||(mkMineF==='mat'?isM(l):!isM(l)));
- const row=l=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${curIc(l.cur)} ${fmt(l.price)}</div></div><div class="acts"><button class="btn" data-mmc="${l.id}">${T('mkt_cancel')}</button></div></div>`};
+ const row=l=>{const v=lotView(l);if(!v)return '';return `<div class="item" style="border-left-color:${v.c}"><div class="ic">${v.ic}</div><div class="info"><div class="nm">${v.nm}</div><div class="sub">${v.sub?v.sub+' · ':''}${curIc(l.cur)} ${fmt(l.price)}</div>${M.ttl&&Date.now()-Date.parse(l.created_at)>M.ttl?`<div class="sub" style="color:#e0a050">⌛ ${T('mkt_expired')}</div>`:''}</div><div class="acts"><button class="btn" data-mmc="${l.id}">${T('mkt_cancel')}</button></div></div>`};
  const nI=M.mine.filter(l=>!isM(l)).length,nM=M.mine.length-nI;
  modal(`<h3>📦 ${T('mkt_mine',{n:M.mine.length,m:M.maxLots})}</h3><div class="chips">${[['all',T('mkt_f_all')+' · '+M.mine.length],['it',T('mkt_f_items')+' · '+nI],['mat',T('mkt_f_mats')+' · '+nM]].map(([k,t])=>`<button data-mmf="${k}" class="${mkMineF===k?'act':''}">${t}</button>`).join('')}</div>
   <div class="mhist">${L.length?L.map(row).join(''):`<p class="hint">${T(M.mine.length?'mkt_f_none':'mkt_mine_none')}</p>`}</div>`,null,null,()=>{
