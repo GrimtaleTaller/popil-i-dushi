@@ -987,3 +987,4 @@ details.clogd[open]>summary{margin-bottom:8px}
 .relw .relg{color:var(--gold);font-weight:600}
 /* 27.11: підказка про Печатку Вічності (будівлі, кування вічної, Болото) */
 .sealh{color:#7fe3e8;margin:6px 0 0}
+.sqlist{display:grid;gap:4px;margin:6px 0 4px}.sqlist>div{display:flex;align-items:center;gap:6px;font-size:13px}.sqlist .pet-ic{width:28px;height:28px}.sqlist .up{margin-left:auto;color:var(--good,#7fd67f);white-space:nowrap}.sqcard.on{border-color:#7fd6a666;box-shadow:0 0 0 1px #7fd6a633 inset} /* 28.11: Загін вихованців */
